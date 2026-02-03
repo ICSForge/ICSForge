@@ -1,23 +1,23 @@
-# ICSForge
+# ICSForge™
 
-**ICSForge** is an open-source, enterprise-grade **OT/ICS security coverage validation lab** designed to help defenders, SOC teams, and OT security engineers **validate detection, visibility, and readiness** against real-world industrial attack techniques.
+**ICSForge™** is an open-source, enterprise-grade **OT/ICS security coverage validation lab** designed to help defenders, SOC teams, and OT security engineers **validate detection, visibility, and readiness** against real-world industrial attack techniques.
 
-ICSForge focuses on **what can actually be observed on the network** and generates **realistic OT traffic and PCAPs** aligned with **MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact.
+ICSForge™ focuses on **what can actually be observed on the network** and generates **realistic OT traffic and PCAPs** aligned with **MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact.
 
 ---
 
-## Why ICSForge?
+## Why ICSForge™?
 
 Most ICS security tools promise coverage - very few let you **prove it**.
 
-ICSForge helps you answer questions like:
+ICSForge™ helps you answer questions like:
 
 - Can my NSM/IDS actually see Modbus manipulation attempts?
 - Which MITRE ATT&CK for ICS techniques are observable on the wire?
 - Do my detections fire when realistic OT traffic is sent?
 - What do I miss today, and why?
 
-ICSForge is **defender-first**, **safe by design**, and **honest about limitations**.
+ICSForge™ is **defender-first**, **safe by design**, and **honest about limitations**.
 
 ---
 
@@ -49,7 +49,7 @@ ICSForge is **defender-first**, **safe by design**, and **honest about limitatio
 
 ---
 
-## What ICSForge Is Not
+## What ICSForge™ Is Not
 
 - Not an exploitation framework
 - Not a PLC hacking tool
