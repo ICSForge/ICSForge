@@ -88,6 +88,31 @@ Root privileges are required for real protocol ports.
 
 ---
 
+## Screenshots
+
+### Sender Dashboard
+![Sender Dashboard](screenshots/sender.png)
+
+### ATT&CK for ICS Matrix
+![ATT&CK Matrix](screenshots/attack_matrix.png)
+
+### SOC Mode – Coverage Validation
+![SOC Mode](screenshots/socmode.png)
+
+### Sender – Tools View
+![Receiver Live View](screenshots/tools.png)
+
+### Receiver – Live Traffic View
+![Receiver Live View](screenshots/receiver.png)
+
+### Receiver's ATT&CK for ICS Matrix
+![ATT&CK Matrix](screenshots/receiver_matrix.png)
+
+### Receiver – Tools View
+![Receiver Live View](screenshots/receiver_tools.png)
+
+---
+
 ## License
 
 GPLv3
