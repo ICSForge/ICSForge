@@ -1,0 +1,18 @@
+sector: food_beverage
+description: Continuous and batch food & beverage production.
+priority_techniques:
+- T0831
+- T0838
+- T0829
+- T0856
+- T0814
+protocols:
+- modbus
+- opcua
+- iec104
+- s7comm
+typical_assets:
+- PLC
+- Batch Controller
+- Historian
+- Safety System

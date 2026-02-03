@@ -1,0 +1,11 @@
+listen:
+  modbus: 502
+  s7comm: 102
+  dnp3: 20000
+  iec104: 2404
+  opcua: 4840
+  enip: 44818
+log:
+  receipts: ./receiver_out/receipts.jsonl
+safety:
+  max_payload: 8192

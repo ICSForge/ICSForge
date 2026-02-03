@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.tech.runnable{ border:1px solid rgba(0,0,0,0.10); }
+.tech.hostonly{ opacity:0.75; }
+.tech.executed{ outline:3px solid rgba(0,120,255,0.35); }
+.tech.detected{ box-shadow: 0 0 0 3px rgba(0,200,120,0.35) inset; }
+.tech.gap{ box-shadow: 0 0 0 3px rgba(255,140,0,0.35) inset; }
+.tech.precursor{ border:1px solid rgba(183,121,31,0.35); background: rgba(255,250,240,1); }
+.badge.warn{ background: rgba(255,190,120,0.25); border:1px solid rgba(183,121,31,0.35); }
+</style>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-size:22px;font-weight:900">ATT&CK v{{ matrix.x_mitre_version }} for ICS — Interactive Matrix</div>
+      <div class="small">Click a technique that is marked <span class="badge good">SUPPORTED</span> to generate realistic network traffic to your ICSForge Receiver.</div>
+      <div class="small" style="margin-top:6px">Non-supported techniques are shown for completeness and roadmap visibility.</div>
+    </div>
+    <div class="row">
+      <div class="field" style="min-width:320px">
+        <label>Receiver destination IP</label>
+        <input id="dst_ip" placeholder="e.g., 10.10.10.50" />
+        <div class="small">Saved locally in your browser.</div>
+      </div>
+      <button class="btn primary" onclick="saveDst()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="hr"></div>
+<div class="row" style="justify-content:space-between;align-items:flex-end">
+  <div class="field" style="min-width:360px">
+    <label>Overlay: Executed vs Detected (optional)</label>
+    <select id="run_sel"></select>
+    <div class="small">Load a run to color the matrix: Executed, Detected, and Gaps.</div>
+  </div>
+  <div class="row">
+    <button class="btn" onclick="loadRuns()">Load Runs</button>
+    <button class="btn primary" onclick="applyOverlay()">Apply Overlay</button>
+    <button class="btn" onclick="clearOverlay()">Clear</button>
+  </div>
+</div>
+</div>
+  </div>
+</div>
+
+<div class="card" style="padding:14px">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <div class="small">
+      Supported techniques in this build: <b class="mono">{{ supported|length }}</b>
+    </div>
+    <div class="row">
+      {% if ui_mode == 'sender' %}<span class="badge mono">Click = send live traffic</span>{% else %}<span class="badge mono">Receiver view: read-only</span>{% endif %}
+      {% if ui_mode == 'sender' %}<a class="btn" href="{{ url_for('web.sender') }}">Open Sender</a>{% endif %}
+            {% if ui_mode == 'sender' %}<a class="btn primary" href="{{ url_for('web.soc') }}">SOC Mode</a>{% endif %}
+    </div>
+  </div>
+</div>
+
+
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <strong>Filter:</strong>
+    <button class="btn" onclick="setFilter('all')">All</button>
+    <button class="btn" onclick="setFilter('runnable')">Runnable</button>
+    <button class="btn" onclick="setFilter('precursor')">Precursor</button>
+    <button class="btn" onclick="setFilter('not')">Not runnable</button>
+    <span style="margin-left:auto;color:#666;font-size:12px;">Runnable = safe network execution. Precursor = network-observable behavior associated with technique.</span>
+  </div>
+</div>
+<script>
+let currentFilter='all';
+function setFilter(f){ currentFilter=f; filterTiles(); }
+function filterTiles(){
+  document.querySelectorAll('.tech').forEach(t=>{
+    const isRun = t.classList.contains('runnable');
+    const isPre = t.classList.contains('precursor');
+    let show=true;
+    if(currentFilter==='runnable') show=isRun;
+    else if(currentFilter==='precursor') show=isPre;
+    else if(currentFilter==='not') show=(!isRun && !isPre);
+    t.style.display = show ? '' : 'none';
+  });
+}
+</script>
+
+<div class="matrix">
+  {% for tac in matrix.tactics %}
+  <div class="matrix-col">
+    <div class="matrix-head">
+      <div class="matrix-title">{{ tac.name }}</div>
+      <div class="small mono">{{ tac.shortname }}</div>
+    </div>
+    <div class="matrix-body">
+      {% for tech in tac.techniques %}
+      {% set st = status.get(tech.id, {'runnable': False, 'precursor': False}) %}
+      <div class="tech {{ "runnable" if st.get("runnable") else ("precursor" if st.get("precursor") else "") }}" data-techid="{{ tech.id }}" data-techname="{{ tech.name|e }}" data-runnable="{{ 1 if st.get("runnable") else 0 }}" data-precursor="{{ 1 if st.get("precursor") else 0 }}">
+        <div class="row" style="justify-content:space-between;gap:8px">
+          <div class="mono" style="font-weight:900">{{ tech.id }}</div>
+          {% if st.get("runnable") %}
+            <span class="badge good">RUNNABLE</span>
+          {% elif st.get("precursor") %}
+            <span class="badge warn">PRECURSOR</span>
+          {% else %}
+            <span class="badge">NOT RUNNABLE</span>
+          {% endif %}
+        </div>
+        <div style="margin-top:6px;font-weight:700">{{ tech.name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if ui_mode == 'sender' %}
+<div class="modal" id="modal" style="display:none">
+  <div class="modal-inner card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div style="font-size:18px;font-weight:900">Send Technique Traffic</div>
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>
+    <div class="hr"></div>
+    <div class="pills">
+      <span class="pill mono" id="m_tid">-</span>
+      <span class="pill" id="m_name">-</span>
+    </div>
+    <div class="hr"></div>
+    <div class="row" style="align-items:flex-end;gap:12px;flex-wrap:wrap">
+      <div class="field" style="min-width:300px">
+        <label>Destination IP (Receiver)</label>
+        <input id="m_dst" placeholder="Receiver IP" />
+      </div>
+      <div class="field" style="min-width:320px">
+        <label>Variant</label>
+        <select id="m_variant"></select>
+        <div class="small" id="m_vnote"></div>
+      </div>
+      <div class="field" style="min-width:240px">
+        <label>PCAP</label>
+        <select id="m_pcap">
+          <option value="0">No (live only)</option>
+          <option value="1">Yes (also build PCAP)</option>
+        </select>
+      </div>
+<div class="field" style="min-width:220px">
+  <label>Timeout (s)</label>
+  <input id="m_timeout" type="number" value="2.0" step="0.1" />
+</div>
+<div class="field" style="min-width:280px">
+  <label>Allowlist</label>
+  <input id="m_allow" placeholder="comma separated, defaults to dst" />
+</div>
+<div class="field" style="min-width:260px">
+  <label>Outdir</label>
+  <input id="m_outdir" value="out" />
+</div>
+<div class="field" style="min-width:240px">
+  <label>Source IP (artifacts)</label>
+  <input id="m_src" value="127.0.0.1" />
+</div>
+<div class="field" style="min-width:220px">
+  <label>Interface (L2)</label>
+  <input id="m_iface" placeholder="e.g. eth0 (optional)" />
+</div>
+      <button class="btn primary" onclick="sendTech()">Send now</button>
+    </div>
+    <div class="hr"></div>
+    <div class="codebox" id="m_out">Ready.</div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+let currentTech = null;
+
+function noop(){ /* non-clickable */ }
+
+function saveDst(){
+  const ip = document.getElementById("dst_ip").value.trim();
+  if(!ip){ toast("Missing IP","Enter receiver destination IP"); return; }
+  localStorage.setItem("icsforge.dst_ip", ip);
+  toast("Saved", "Destination IP stored");
+}
+
+function loadDst(){
+  const v = localStorage.getItem("icsforge.dst_ip") || "";
+  document.getElementById("dst_ip").value = v;
+  return v;
+}
+
+async function fetchVariants(tid){
+  const res = await fetch("{{ url_for('web.api_technique_variants') }}?technique="+encodeURIComponent(tid));
+  const data = await res.json();
+  const sel = document.getElementById("m_variant");
+  sel.innerHTML = "";
+  (data.variants||[]).forEach(v=>{
+    const o=document.createElement("option");
+    o.value=v.id;
+    o.textContent = `${v.label} [${v.proto}]`;
+    o.dataset.note = v.notes || "";
+    sel.appendChild(o);
+  });
+  const noteEl = document.getElementById("m_vnote");
+  const updateNote = ()=>{
+    const opt = sel.options[sel.selectedIndex];
+    noteEl.textContent = (opt && opt.dataset.note) ? opt.dataset.note : "";
+  };
+  sel.onchange = updateNote;
+  updateNote();
+}
+
+function runTech(tid, name){
+  currentTech = {tid, name};
+  const ip = loadDst();
+  document.getElementById("m_tid").textContent = tid;
+  document.getElementById("m_name").textContent = name;
+  document.getElementById("m_dst").value = ip;
+  fetchVariants(tid);
+  document.getElementById("m_out").textContent = "Ready to send.";
+  document.getElementById("modal").style.display = "block";
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display = "none";
+}
+
+async function sendTech(){
+  const dst_ip = document.getElementById("m_dst").value.trim();
+  if(!dst_ip){ toast("Missing IP","Enter receiver destination IP"); return; }
+  localStorage.setItem("icsforge.dst_ip", dst_ip);
+
+  const variant = document.getElementById("m_variant").value;
+  const also_build_pcap = document.getElementById("m_pcap").value === "1";
+  const timeout = parseFloat(document.getElementById("m_timeout").value||"2.0");
+  const allowlist = (document.getElementById("m_allow").value||"").trim();
+  const outdir = (document.getElementById("m_outdir").value||"out").trim();
+  const src_ip = (document.getElementById("m_src").value||"127.0.0.1").trim();
+  const iface = (document.getElementById("m_iface").value||"").trim();
+
+  document.getElementById("m_out").textContent = "Sending...";
+
+  const res = await fetch("{{ url_for('web.api_technique_send') }}", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({technique: currentTech.tid, variant, dst_ip, timeout, allowlist, outdir, src_ip, iface, also_build_pcap})
+  });
+
+  const data = await res.json();
+  if(data.error){
+    document.getElementById("m_out").textContent = data.error;
+    toast("Error", data.error);
+    return;
+  }
+  document.getElementById("m_out").textContent = JSON.stringify(data, null, 2);
+  toast("Sent", `run_id ${data.run_id}`);
+}
+
+loadDst();
+async function loadRuns(){
+  const data = await fetchJSON("{{ url_for('web.api_runs') }}");
+  const sel=document.getElementById("run_sel");
+  sel.innerHTML="";
+  const o0=document.createElement("option");
+  o0.value=""; o0.textContent="(no overlay)";
+  sel.appendChild(o0);
+  for(const r of (data.runs||[])){
+    const o=document.createElement("option");
+    o.value=r.run_id;
+    o.textContent=`${r.run_id} • ${r.scenario||"-"} • ${r.ts||""}`;
+    sel.appendChild(o);
+  }
+  toast("Runs loaded", `${(data.runs||[]).length} run(s)`);
+}
+
+async function applyOverlay(){
+  const run_id=document.getElementById("run_sel").value;
+  if(!run_id){ toast("No run selected","Pick a run or Clear overlay"); return; }
+  const data = await fetchJSON("{{ url_for('web.api_matrix_status') }}?run_id="+encodeURIComponent(run_id));
+  const st = data.status||{};
+  for(const el of document.querySelectorAll(".tech")){
+    const tid = el.querySelector(".mono")?.textContent?.trim();
+    if(!tid) continue;
+    const s = st[tid];
+    el.classList.remove("executed","detected","gap","hostonly","dim");
+    if(!s){ el.classList.add("dim"); continue; }
+    if(s.class==="host_or_process") el.classList.add("hostonly");
+    if(s.executed) el.classList.add("executed");
+    if(s.detected) el.classList.add("detected");
+    if(s.gap) el.classList.add("gap");
+  }
+  toast("Overlay applied", `run_id: ${run_id}`);
+}
+
+function clearOverlay(){
+  for(const el of document.querySelectorAll(".tech")){
+    el.classList.remove("executed","detected","gap","hostonly","dim");
+  }
+  toast("Overlay cleared","");
+}
+
+async function showWhy(tid){
+  const data = await fetchJSON("{{ url_for('web.api_matrix_status') }}");
+  const s = (data.status||{})[tid];
+  if(s && s.class==="host_or_process"){
+    toast("Host/Process technique", s.reason || "Not runnable via network in ICSForge.");
+  } else {
+    toast("Not runnable", "ICSForge does not currently implement a safe network scenario for this technique.");
+  }
+}
+
+</script>
+
+<style>
+.matrix{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(220px, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1400px){
+  .matrix{ grid-template-columns: repeat(4, minmax(220px, 1fr)); }
+}
+@media (max-width: 980px){
+  .matrix{ grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+}
+.matrix-col{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow:hidden;
+  box-shadow: var(--shadow);
+}
+.matrix-head{
+  padding: 12px 14px;
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
+  border-bottom: 1px solid var(--border);
+}
+.matrix-title{ font-weight: 900; }
+.matrix-body{
+  padding: 10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  max-height: 720px;
+  overflow:auto;
+}
+.tech{
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  cursor: default;
+}
+.tech.supported{
+  cursor: pointer;
+  border-color: rgba(37,99,235,.35);
+  box-shadow: 0 8px 18px rgba(37,99,235,.12);
+}
+.tech.supported:hover{
+  transform: translateY(-1px);
+  transition: all .12s ease;
+}
+.modal{
+  position: fixed; inset:0; background: rgba(2,6,23,.55);
+  display:flex; align-items:center; justify-content:center;
+  z-index: 60;
+  padding: 16px;
+}
+.modal-inner{ max-width: 900px; width: 100%; }
+.tech.precursor{ border:1px solid rgba(183,121,31,0.35); background: rgba(255,250,240,1); }
+.badge.warn{ background: rgba(255,190,120,0.25); border:1px solid rgba(183,121,31,0.35); }
+</style>
+<script>
+function wireMatrixClicks(){
+  document.querySelectorAll('.tech').forEach(el=>{
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', ()=>{
+      const run = el.dataset.runnable === '1';
+      const pre = el.dataset.precursor === '1';
+      const tid = el.dataset.techid;
+      const name = el.dataset.techname;
+      if(!(run || pre)){
+        if(typeof showWhy === 'function'){ showWhy(tid); }
+        return;
+      }
+      if(typeof runTech === 'function'){ runTech(tid, name, pre); }
+    });
+  });
+}
+{% if ui_mode == 'sender' %}
+document.addEventListener('DOMContentLoaded', wireMatrixClicks);
+{% endif %}
+</script>
+
+{% endblock %}

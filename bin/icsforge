@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""ICSForge launcher (smooth runtime).
+
+Usage:
+  ./bin/icsforge install
+  ./bin/icsforge web [--host 0.0.0.0 --port 8080] [--unprivileged]
+  ./bin/icsforge receiver [--host 0.0.0.0 --port 8080]
+  ./bin/icsforge selftest
+  ./bin/icsforge doctor
+"""
+
+import os, sys, subprocess, shutil, venv, json
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+VENV_DIR = REPO / ".venv"
+PY = VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+PIP = VENV_DIR / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
+REQ = REPO / "requirements.txt"
+
+def _ensure_venv():
+    if not PY.exists():
+        print("[*] Creating venv at .venv")
+        venv.EnvBuilder(with_pip=True, clear=False).create(VENV_DIR)
+    if REQ.exists():
+        print("[*] Installing requirements")
+        subprocess.check_call([str(PIP), "install", "-r", str(REQ)])
+
+def _need_root():
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+        s.close()
+        return False
+    except Exception:
+        return True
+
+def _rerun_with_sudo():
+    if os.name == "nt":
+        return False
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        return False
+    sudo = shutil.which("sudo")
+    if not sudo:
+        return False
+    print("[*] Elevating with sudo for raw-socket capability (live traffic).")
+    os.execvp(sudo, [sudo, "-E", str(PY)] + sys.argv[1:])
+
+def cmd_install(args):
+    _ensure_venv()
+    print("[+] Done. Use: ./bin/icsforge web  (or receiver/selftest/doctor)")
+
+def cmd_web(args):
+    _ensure_venv()
+    unpriv = "--unprivileged" in args
+    if not unpriv and _need_root():
+        _rerun_with_sudo()
+    host = "0.0.0.0"
+    port = "8080"
+    if "--host" in args:
+        host = args[args.index("--host")+1]
+    if "--port" in args:
+        port = args[args.index("--port")+1]
+    env = os.environ.copy()
+    env['ICSFORGE_UI_MODE'] = 'sender'
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
+    cmd = [str(PY), "-m", "icsforge.web", "--host", host, "--port", port]
+    subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
+def cmd_receiver(args):
+    _ensure_venv()
+    host = "0.0.0.0"
+    port = "8080"
+    if "--host" in args:
+        host = args[args.index("--host")+1]
+    if "--port" in args:
+        port = args[args.index("--port")+1]
+    env = os.environ.copy()
+    env['ICSFORGE_UI_MODE'] = 'receiver'
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
+    cmd = [str(PY), "-m", "icsforge.receiver", "--host", host, "--port", port]
+    subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
+def cmd_selftest(args):
+    _ensure_venv()
+    env = os.environ.copy()
+    env['ICSFORGE_UI_MODE'] = 'receiver'
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
+    cmd = [str(PY), "-m", "icsforge.cli", "selftest"]
+    subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
+def cmd_doctor(args):
+    _ensure_venv()
+    info = {"repo": str(REPO), "venv": str(VENV_DIR), "raw_socket_needed_for_live_send": _need_root()}
+    print(json.dumps(info, indent=2))
+    print("\nTips:")
+    print("- Live traffic send requires raw sockets (run via ./bin/icsforge web, which will sudo -E when needed).")
+    print("- PCAP generation does not require sudo.")
+    print("- On Kali, always use this launcher (venv) instead of system pip.")
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h","--help","help"):
+        print(__doc__)
+        sys.exit(0)
+    cmd = sys.argv[1]
+    args = sys.argv[2:]
+    if cmd == "install":
+        cmd_install(args)
+    elif cmd == "web":
+        cmd_web(args)
+    elif cmd == "receiver":
+        cmd_receiver(args)
+    elif cmd == "selftest":
+        cmd_selftest(args)
+    elif cmd == "doctor":
+        cmd_doctor(args)
+    else:
+        print(f"Unknown command: {cmd}")
+        print(__doc__)
+        sys.exit(2)
+
+if __name__ == "__main__":
+    main()

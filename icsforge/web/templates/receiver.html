@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Receiver Overview</h2>
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <div style="font-size:22px;font-weight:800">Passive Proof-of-Delivery Sink</div>
+        <div class="small">Read-only dashboard. No responses, no forwarding, no PLC writes.</div>
+      </div>
+      <div class="row">
+        <span class="badge good">PASSIVE</span>
+        <span class="badge mono">Receipts: {{ receipts_path }}</span>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div class="kpis">
+      <div class="kpi"><div id="k_total" class="v">{{ stats.total }}</div><div class="l">Packets received</div></div>
+      <div class="kpi"><div id="k_runs" class="v">{{ stats.runs }}</div><div class="l">Active runs</div></div>
+      <div class="kpi"><div id="k_tech" class="v">{{ stats.techniques }}</div><div class="l">Techniques observed</div></div>
+      <div class="kpi"><div id="k_proto" class="v">{{ stats.protocols }}</div><div class="l">Protocols seen</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Live Receipts</h2>
+      <div class="row">
+        <div class="field">
+          <label>Filter: run_id</label>
+          <input id="f_run" placeholder="e.g. a1b2c3d4e5f6">
+        </div>
+        <div class="field">
+          <label>Filter: technique</label>
+          <input id="f_tech" placeholder="e.g. T0855">
+        </div>
+        <div class="field">
+          <label>Filter: protocol</label>
+          <input id="f_proto" placeholder="e.g. modbus">
+        </div>
+        <button class="btn primary" onclick="reloadReceipts()">Apply</button>
+      </div>
+      <div class="hr"></div>
+      <table class="table" id="receipts_tbl">
+        <thead>
+          <tr>
+            <th>Time</th><th>Proto</th><th>Source</th><th>Technique</th><th>Run ID</th><th>Bytes</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="small">Auto-refresh every 2s • Click run_id to open details</div>
+    </div>
+
+    <div class="card">
+      <h2>Run Details</h2>
+      <div class="small">Select a run_id from the receipts table to view per-run evidence and technique summary.</div>
+      <div class="hr"></div>
+      <div class="small">Receipts over time</div>
+      <canvas id="spark_run" width="420" height="110" style="width:100%;height:110px;background:var(--panel2);border:1px solid var(--border);border-radius:16px"></canvas>
+      <div class="hr"></div>
+      <div id="run_panel" class="small">No run selected.</div>
+      <div class="hr"></div>
+      <div class="row"></div>
+    </div>
+  </div>
+
+<script>
+async function fetchJSON(url){ const r = await fetch(url); return await r.json(); }
+
+function rowLink(run_id){
+  return `<a class="mono" href="javascript:void(0)" onclick="loadRun('${run_id}')">${run_id}</a>`;
+}
+
+function badge(v){
+  if(!v) return `<span class="badge mono">-</span>`;
+  return `<span class="badge mono">${v}</span>`;
+}
+
+async function reloadReceipts(){
+  const run = document.getElementById("f_run").value.trim();
+  const tech = document.getElementById("f_tech").value.trim();
+  const proto = document.getElementById("f_proto").value.trim();
+  const qs = new URLSearchParams();
+  if(run) qs.set("run_id", run);
+  if(tech) qs.set("technique", tech);
+  if(proto) qs.set("proto", proto);
+  const data = await fetchJSON("{{ url_for('web.api_receipts') }}?"+qs.toString());
+  const tb = document.querySelector("#receipts_tbl tbody");
+  tb.innerHTML = "";
+  for(const r of data.items){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="mono">${r["@timestamp"]||""}</td>
+      <td>${badge(r["receiver.proto"])}</td>
+      <td class="mono">${(r["src_ip"]||"")}:${(r["src_port"]||"")}</td>
+      <td>${badge(r["technique"]||"")}</td>
+      <td>${r["run_id"] ? rowLink(r["run_id"]) : badge("")}</td>
+      <td class="mono">${r["bytes"]||0}</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+async function loadRun(run_id){
+  const data = await fetchJSON("{{ url_for('web.api_run_detail') }}?run_id="+encodeURIComponent(run_id));
+  const p = document.getElementById("run_panel");
+  if(!data.run_id){ p.innerHTML = "Run not found."; return; }
+  const techs = (data.techniques||[]).map(t=>`<span class="badge mono">${t}</span>`).join(" ");
+  if(data.bins){ const pts=(data.bins||[]).map((b,i)=>[i,b.count]); drawSparkline(document.getElementById('spark_run'), pts); }
+  p.innerHTML = `
+    <div class="row" style="justify-content:space-between">
+      <div><div style="font-size:18px;font-weight:800" class="mono">${data.run_id}</div>
+      <div class="small">Packets: <b>${data.packets}</b> • First: ${data.first_seen||"-"} • Last: ${data.last_seen||"-"}</div></div>
+      <div><span class="badge good">DELIVERED</span></div>
+    </div>
+    <div class="hr"></div>
+    <div class="small">Techniques observed:</div>
+    <div class="row" style="margin-top:8px">${techs || "<span class='badge mono'>none</span>"}</div>
+    <div class="hr"></div>
+    <div class="small">Evidence: receipts.jsonl contains correlation marker and source metadata.</div>
+  `;
+}
+
+
+async function reloadOverview(){
+  const data = await window.fetchJSON("{{ url_for('web.api_receiver_overview') }}");
+  if(!data) return;
+  const tot=document.getElementById("k_total");
+  const runs=document.getElementById("k_runs");
+  const tech=document.getElementById("k_tech");
+  const proto=document.getElementById("k_proto");
+  if(tot) tot.textContent = (data.total ?? 0);
+  if(tech) tech.textContent = (data.top_techniques ? data.top_techniques.length : 0);
+  if(proto) proto.textContent = (data.top_protocols ? data.top_protocols.length : 0);
+  // runs isn't derivable from receipts alone reliably; keep existing unless run_id present
+}
+
+reloadReceipts();
+reloadOverview();
+setInterval(() => { reloadReceipts(); reloadOverview(); }, 2000);
+
+</script>
+{% endblock %}

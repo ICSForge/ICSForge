@@ -1,0 +1,2457 @@
+# Auto-generated matrix technique variants
+scenarios:
+  T0800:
+    description: Matrix single-technique run for T0800 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0800
+      type: pcap
+  T0800__dnp3_operate:
+    description: "T0800 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0800
+      type: pcap
+  T0800__iec104_ctrl:
+    description: "T0800 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0800
+      type: pcap
+  T0800__modbus_write:
+    description: "T0800 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0800
+      type: pcap
+  T0801:
+    description: Matrix single-technique run for T0801 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0801
+      type: pcap
+  T0801__modbus_enum:
+    description: "T0801 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0801
+      type: pcap
+  T0801__opcua_browse:
+    description: "T0801 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0801
+      type: pcap
+  T0801__s7_read:
+    description: "T0801 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0801
+      type: pcap
+  T0802:
+    description: Matrix single-technique run for T0802 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0802
+      type: pcap
+  T0802__modbus_enum:
+    description: "T0802 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0802
+      type: pcap
+  T0802__opcua_browse:
+    description: "T0802 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0802
+      type: pcap
+  T0802__s7_read:
+    description: "T0802 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0802
+      type: pcap
+  T0803:
+    description: Matrix single-technique run for T0803 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0803
+      type: pcap
+  T0803__dnp3_operate:
+    description: "T0803 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0803
+      type: pcap
+  T0803__iec104_ctrl:
+    description: "T0803 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0803
+      type: pcap
+  T0803__modbus_write:
+    description: "T0803 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0803
+      type: pcap
+  T0804:
+    description: Matrix single-technique run for T0804 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0804
+      type: pcap
+  T0804__dnp3_operate:
+    description: "T0804 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0804
+      type: pcap
+  T0804__iec104_ctrl:
+    description: "T0804 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0804
+      type: pcap
+  T0804__modbus_write:
+    description: "T0804 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0804
+      type: pcap
+  T0805:
+    description: Matrix single-technique run for T0805 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0805
+      type: pcap
+  T0805__dnp3_operate:
+    description: "T0805 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0805
+      type: pcap
+  T0805__iec104_ctrl:
+    description: "T0805 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0805
+      type: pcap
+  T0805__modbus_write:
+    description: "T0805 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0805
+      type: pcap
+  T0806:
+    description: Matrix single-technique run for T0806 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0806
+      type: pcap
+  T0806__dnp3_operate:
+    description: "T0806 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0806
+      type: pcap
+  T0806__iec104_ctrl:
+    description: "T0806 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0806
+      type: pcap
+  T0806__modbus_write:
+    description: "T0806 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0806
+      type: pcap
+  T0807:
+    description: Matrix single-technique run for T0807 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0807
+      type: pcap
+  T0807__modbus_ops:
+    description: "T0807 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0807
+      type: pcap
+  T0807__s7_ops:
+    description: "T0807 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0807
+      type: pcap
+  T0809:
+    description: Matrix single-technique run for T0809 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0809
+      type: pcap
+  T0809__dnp3_operate:
+    description: "T0809 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0809
+      type: pcap
+  T0809__iec104_ctrl:
+    description: "T0809 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0809
+      type: pcap
+  T0809__modbus_write:
+    description: "T0809 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0809
+      type: pcap
+  T0811:
+    description: Matrix single-technique run for T0811 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0811
+      type: pcap
+  T0811__modbus_enum:
+    description: "T0811 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0811
+      type: pcap
+  T0811__opcua_browse:
+    description: "T0811 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0811
+      type: pcap
+  T0811__s7_read:
+    description: "T0811 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0811
+      type: pcap
+  T0812:
+    description: Matrix single-technique run for T0812 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0812
+      type: pcap
+  T0812__modbus_ops:
+    description: "T0812 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0812
+      type: pcap
+  T0812__s7_ops:
+    description: "T0812 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0812
+      type: pcap
+  T0813:
+    description: Matrix single-technique run for T0813 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0813
+      type: pcap
+  T0813__dnp3_operate:
+    description: "T0813 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0813
+      type: pcap
+  T0813__iec104_ctrl:
+    description: "T0813 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0813
+      type: pcap
+  T0813__modbus_write:
+    description: "T0813 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0813
+      type: pcap
+  T0814:
+    description: Matrix single-technique run for T0814 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0814
+      type: pcap
+  T0814__dnp3_operate:
+    description: "T0814 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0814
+      type: pcap
+  T0814__iec104_ctrl:
+    description: "T0814 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0814
+      type: pcap
+  T0814__modbus_write:
+    description: "T0814 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0814
+      type: pcap
+  T0815:
+    description: Matrix single-technique run for T0815 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0815
+      type: pcap
+  T0815__dnp3_operate:
+    description: "T0815 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0815
+      type: pcap
+  T0815__iec104_ctrl:
+    description: "T0815 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0815
+      type: pcap
+  T0815__modbus_write:
+    description: "T0815 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0815
+      type: pcap
+  T0816:
+    description: Matrix single-technique run for T0816 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0816
+      type: pcap
+  T0816__dnp3_operate:
+    description: "T0816 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0816
+      type: pcap
+  T0816__iec104_ctrl:
+    description: "T0816 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0816
+      type: pcap
+  T0816__modbus_write:
+    description: "T0816 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0816
+      type: pcap
+  T0817:
+    description: Matrix single-technique run for T0817 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0817
+      type: pcap
+  T0817__enip_identity:
+    description: "T0817 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0817
+      type: pcap
+  T0817__opcua_session:
+    description: "T0817 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0817
+      type: pcap
+  T0819:
+    description: Matrix single-technique run for T0819 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0819
+      type: pcap
+  T0819__enip_identity:
+    description: "T0819 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0819
+      type: pcap
+  T0819__opcua_session:
+    description: "T0819 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0819
+      type: pcap
+  T0820:
+    description: Matrix single-technique run for T0820 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0820
+      type: pcap
+  T0820__modbus_ops:
+    description: "T0820 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0820
+      type: pcap
+  T0820__s7_ops:
+    description: "T0820 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0820
+      type: pcap
+  T0821:
+    description: Matrix single-technique run for T0821 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0821
+      type: pcap
+  T0821__modbus_ops:
+    description: "T0821 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0821
+      type: pcap
+  T0821__s7_ops:
+    description: "T0821 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0821
+      type: pcap
+  T0822:
+    description: Matrix single-technique run for T0822 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0822
+      type: pcap
+  T0822__enip_identity:
+    description: "T0822 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0822
+      type: pcap
+  T0822__opcua_session:
+    description: "T0822 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0822
+      type: pcap
+  T0823:
+    description: Matrix single-technique run for T0823 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0823
+      type: pcap
+  T0823__modbus_ops:
+    description: "T0823 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0823
+      type: pcap
+  T0823__s7_ops:
+    description: "T0823 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0823
+      type: pcap
+  T0826:
+    description: Matrix single-technique run for T0826 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0826
+      type: pcap
+  T0826__dnp3_operate:
+    description: "T0826 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0826
+      type: pcap
+  T0826__iec104_ctrl:
+    description: "T0826 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0826
+      type: pcap
+  T0826__modbus_write:
+    description: "T0826 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0826
+      type: pcap
+  T0827:
+    description: Matrix single-technique run for T0827 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0827
+      type: pcap
+  T0827__dnp3_operate:
+    description: "T0827 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0827
+      type: pcap
+  T0827__iec104_ctrl:
+    description: "T0827 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0827
+      type: pcap
+  T0827__modbus_write:
+    description: "T0827 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0827
+      type: pcap
+  T0828:
+    description: Matrix single-technique run for T0828 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0828
+      type: pcap
+  T0828__dnp3_operate:
+    description: "T0828 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0828
+      type: pcap
+  T0828__iec104_ctrl:
+    description: "T0828 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0828
+      type: pcap
+  T0828__modbus_write:
+    description: "T0828 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0828
+      type: pcap
+  T0829:
+    description: Matrix single-technique run for T0829 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0829
+      type: pcap
+  T0829__dnp3_operate:
+    description: "T0829 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0829
+      type: pcap
+  T0829__iec104_ctrl:
+    description: "T0829 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0829
+      type: pcap
+  T0829__modbus_write:
+    description: "T0829 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0829
+      type: pcap
+  T0830:
+    description: Matrix single-technique run for T0830 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0830
+      type: pcap
+  T0830__modbus_enum:
+    description: "T0830 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0830
+      type: pcap
+  T0830__opcua_browse:
+    description: "T0830 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0830
+      type: pcap
+  T0830__s7_read:
+    description: "T0830 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0830
+      type: pcap
+  T0831:
+    description: Matrix single-technique run for T0831 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0831
+      type: pcap
+  T0831__dnp3_operate:
+    description: "T0831 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0831
+      type: pcap
+  T0831__iec104_ctrl:
+    description: "T0831 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0831
+      type: pcap
+  T0831__modbus_write:
+    description: "T0831 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0831
+      type: pcap
+  T0832:
+    description: Matrix single-technique run for T0832 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0832
+      type: pcap
+  T0832__dnp3_operate:
+    description: "T0832 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0832
+      type: pcap
+  T0832__iec104_ctrl:
+    description: "T0832 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0832
+      type: pcap
+  T0832__modbus_write:
+    description: "T0832 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0832
+      type: pcap
+  T0834:
+    description: Matrix single-technique run for T0834 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0834
+      type: pcap
+  T0834__modbus_ops:
+    description: "T0834 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0834
+      type: pcap
+  T0834__s7_ops:
+    description: "T0834 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0834
+      type: pcap
+  T0835:
+    description: Matrix single-technique run for T0835 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0835
+      type: pcap
+  T0835__dnp3_operate:
+    description: "T0835 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0835
+      type: pcap
+  T0835__iec104_ctrl:
+    description: "T0835 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0835
+      type: pcap
+  T0835__modbus_write:
+    description: "T0835 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0835
+      type: pcap
+  T0836:
+    description: Matrix single-technique run for T0836 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0836
+      type: pcap
+  T0836__dnp3_operate:
+    description: "T0836 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0836
+      type: pcap
+  T0836__iec104_ctrl:
+    description: "T0836 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0836
+      type: pcap
+  T0836__modbus_write:
+    description: "T0836 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0836
+      type: pcap
+  T0837:
+    description: Matrix single-technique run for T0837 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0837
+      type: pcap
+  T0837__dnp3_operate:
+    description: "T0837 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0837
+      type: pcap
+  T0837__iec104_ctrl:
+    description: "T0837 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0837
+      type: pcap
+  T0837__modbus_write:
+    description: "T0837 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0837
+      type: pcap
+  T0838:
+    description: Matrix single-technique run for T0838 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0838
+      type: pcap
+  T0838__dnp3_operate:
+    description: "T0838 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0838
+      type: pcap
+  T0838__iec104_ctrl:
+    description: "T0838 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0838
+      type: pcap
+  T0838__modbus_write:
+    description: "T0838 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0838
+      type: pcap
+  T0839:
+    description: Matrix single-technique run for T0839 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0839
+      type: pcap
+  T0839__dnp3_operate:
+    description: "T0839 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0839
+      type: pcap
+  T0839__iec104_ctrl:
+    description: "T0839 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0839
+      type: pcap
+  T0839__modbus_ops:
+    description: "T0839 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0839
+      type: pcap
+  T0839__modbus_write:
+    description: "T0839 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0839
+      type: pcap
+  T0839__s7_ops:
+    description: "T0839 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0839
+      type: pcap
+  T0840:
+    description: Matrix single-technique run for T0840 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0840
+      type: pcap
+  T0840__modbus_enum:
+    description: "T0840 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0840
+      type: pcap
+  T0840__opcua_browse:
+    description: "T0840 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0840
+      type: pcap
+  T0840__s7_read:
+    description: "T0840 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0840
+      type: pcap
+  T0842:
+    description: Matrix single-technique run for T0842 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0842
+      type: pcap
+  T0842__modbus_enum:
+    description: "T0842 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0842
+      type: pcap
+  T0842__opcua_browse:
+    description: "T0842 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0842
+      type: pcap
+  T0842__s7_read:
+    description: "T0842 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0842
+      type: pcap
+  T0843:
+    description: Matrix single-technique run for T0843 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0843
+      type: pcap
+  T0843__modbus_ops:
+    description: "T0843 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0843
+      type: pcap
+  T0843__s7_ops:
+    description: "T0843 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0843
+      type: pcap
+  T0845:
+    description: Matrix single-technique run for T0845 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0845
+      type: pcap
+  T0845__modbus_enum:
+    description: "T0845 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0845
+      type: pcap
+  T0845__opcua_browse:
+    description: "T0845 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0845
+      type: pcap
+  T0845__s7_read:
+    description: "T0845 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0845
+      type: pcap
+  T0846:
+    description: Matrix single-technique run for T0846 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0846
+      type: pcap
+  T0846__modbus_enum:
+    description: "T0846 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0846
+      type: pcap
+  T0846__opcua_browse:
+    description: "T0846 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0846
+      type: pcap
+  T0846__s7_read:
+    description: "T0846 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0846
+      type: pcap
+  T0847:
+    description: Matrix single-technique run for T0847 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0847
+      type: pcap
+  T0847__enip_identity:
+    description: "T0847 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0847
+      type: pcap
+  T0847__opcua_session:
+    description: "T0847 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0847
+      type: pcap
+  T0848:
+    description: Matrix single-technique run for T0848 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0848
+      type: pcap
+  T0848__enip_identity:
+    description: "T0848 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0848
+      type: pcap
+  T0848__opcua_session:
+    description: "T0848 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0848
+      type: pcap
+  T0849:
+    description: Matrix single-technique run for T0849 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0849
+      type: pcap
+  T0849__modbus_ops:
+    description: "T0849 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0849
+      type: pcap
+  T0849__s7_ops:
+    description: "T0849 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0849
+      type: pcap
+  T0851:
+    description: Matrix single-technique run for T0851 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0851
+      type: pcap
+  T0851__dnp3_operate:
+    description: "T0851 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0851
+      type: pcap
+  T0851__iec104_ctrl:
+    description: "T0851 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0851
+      type: pcap
+  T0851__modbus_ops:
+    description: "T0851 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0851
+      type: pcap
+  T0851__modbus_write:
+    description: "T0851 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0851
+      type: pcap
+  T0851__s7_ops:
+    description: "T0851 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0851
+      type: pcap
+  T0852:
+    description: Matrix single-technique run for T0852 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0852
+      type: pcap
+  T0852__modbus_enum:
+    description: "T0852 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0852
+      type: pcap
+  T0852__opcua_browse:
+    description: "T0852 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0852
+      type: pcap
+  T0852__s7_read:
+    description: "T0852 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0852
+      type: pcap
+  T0853:
+    description: Matrix single-technique run for T0853 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0853
+      type: pcap
+  T0853__modbus_ops:
+    description: "T0853 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0853
+      type: pcap
+  T0853__s7_ops:
+    description: "T0853 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0853
+      type: pcap
+  T0855:
+    description: Matrix single-technique run for T0855 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0855
+      type: pcap
+  T0855__dnp3_operate:
+    description: "T0855 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0855
+      type: pcap
+  T0855__iec104_ctrl:
+    description: "T0855 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0855
+      type: pcap
+  T0855__modbus_write:
+    description: "T0855 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0855
+      type: pcap
+  T0856:
+    description: Matrix single-technique run for T0856 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0856
+      type: pcap
+  T0856__dnp3_operate:
+    description: "T0856 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0856
+      type: pcap
+  T0856__iec104_ctrl:
+    description: "T0856 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0856
+      type: pcap
+  T0856__modbus_ops:
+    description: "T0856 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0856
+      type: pcap
+  T0856__modbus_write:
+    description: "T0856 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0856
+      type: pcap
+  T0856__s7_ops:
+    description: "T0856 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0856
+      type: pcap
+  T0857:
+    description: Matrix single-technique run for T0857 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0857
+      type: pcap
+  T0857__dnp3_operate:
+    description: "T0857 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0857
+      type: pcap
+  T0857__iec104_ctrl:
+    description: "T0857 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0857
+      type: pcap
+  T0857__modbus_ops:
+    description: "T0857 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0857
+      type: pcap
+  T0857__modbus_write:
+    description: "T0857 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0857
+      type: pcap
+  T0857__s7_ops:
+    description: "T0857 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0857
+      type: pcap
+  T0858:
+    description: Matrix single-technique run for T0858 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0858
+      type: pcap
+  T0858__modbus_ops:
+    description: "T0858 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0858
+      type: pcap
+  T0858__s7_ops:
+    description: "T0858 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0858
+      type: pcap
+  T0859:
+    description: Matrix single-technique run for T0859 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0859
+      type: pcap
+  T0859__modbus_ops:
+    description: "T0859 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0859
+      type: pcap
+  T0859__s7_ops:
+    description: "T0859 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0859
+      type: pcap
+  T0860:
+    description: Matrix single-technique run for T0860 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0860
+      type: pcap
+  T0860__enip_identity:
+    description: "T0860 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0860
+      type: pcap
+  T0860__opcua_session:
+    description: "T0860 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0860
+      type: pcap
+  T0861:
+    description: Matrix single-technique run for T0861 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0861
+      type: pcap
+  T0861__modbus_enum:
+    description: "T0861 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0861
+      type: pcap
+  T0861__opcua_browse:
+    description: "T0861 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0861
+      type: pcap
+  T0861__s7_read:
+    description: "T0861 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0861
+      type: pcap
+  T0862:
+    description: Matrix single-technique run for T0862 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0862
+      type: pcap
+  T0862__enip_identity:
+    description: "T0862 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0862
+      type: pcap
+  T0862__opcua_session:
+    description: "T0862 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0862
+      type: pcap
+  T0863:
+    description: Matrix single-technique run for T0863 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0863
+      type: pcap
+  T0863__modbus_ops:
+    description: "T0863 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0863
+      type: pcap
+  T0863__s7_ops:
+    description: "T0863 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0863
+      type: pcap
+  T0864:
+    description: Matrix single-technique run for T0864 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0864
+      type: pcap
+  T0864__enip_identity:
+    description: "T0864 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0864
+      type: pcap
+  T0864__opcua_session:
+    description: "T0864 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0864
+      type: pcap
+  T0865:
+    description: Matrix single-technique run for T0865 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0865
+      type: pcap
+  T0865__enip_identity:
+    description: "T0865 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0865
+      type: pcap
+  T0865__opcua_session:
+    description: "T0865 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0865
+      type: pcap
+  T0866:
+    description: Matrix single-technique run for T0866 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0866
+      type: pcap
+  T0866__enip_identity:
+    description: "T0866 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0866
+      type: pcap
+  T0866__modbus_ops:
+    description: "T0866 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0866
+      type: pcap
+  T0866__opcua_session:
+    description: "T0866 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0866
+      type: pcap
+  T0866__s7_ops:
+    description: "T0866 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0866
+      type: pcap
+  T0867:
+    description: Matrix single-technique run for T0867 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0867
+      type: pcap
+  T0867__modbus_ops:
+    description: "T0867 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0867
+      type: pcap
+  T0867__s7_ops:
+    description: "T0867 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0867
+      type: pcap
+  T0868:
+    description: Matrix single-technique run for T0868 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0868
+      type: pcap
+  T0868__modbus_enum:
+    description: "T0868 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0868
+      type: pcap
+  T0868__opcua_browse:
+    description: "T0868 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0868
+      type: pcap
+  T0868__s7_read:
+    description: "T0868 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0868
+      type: pcap
+  T0869:
+    description: Matrix single-technique run for T0869 (Baseline OT Telemetry (OPC
+      UA))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0869
+      type: pcap
+  T0869__baseline:
+    description: "T0869 \u2014 Baseline OT Telemetry (OPC UA)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0869
+      type: pcap
+  T0871:
+    description: Matrix single-technique run for T0871 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0871
+      type: pcap
+  T0871__modbus_ops:
+    description: "T0871 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0871
+      type: pcap
+  T0871__s7_ops:
+    description: "T0871 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0871
+      type: pcap
+  T0872:
+    description: Matrix single-technique run for T0872 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0872
+      type: pcap
+  T0872__modbus_ops:
+    description: "T0872 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0872
+      type: pcap
+  T0872__s7_ops:
+    description: "T0872 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0872
+      type: pcap
+  T0873:
+    description: Matrix single-technique run for T0873 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0873
+      type: pcap
+  T0873__modbus_ops:
+    description: "T0873 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0873
+      type: pcap
+  T0873__s7_ops:
+    description: "T0873 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0873
+      type: pcap
+  T0874:
+    description: Matrix single-technique run for T0874 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0874
+      type: pcap
+  T0874__modbus_ops:
+    description: "T0874 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0874
+      type: pcap
+  T0874__s7_ops:
+    description: "T0874 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0874
+      type: pcap
+  T0877:
+    description: Matrix single-technique run for T0877 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0877
+      type: pcap
+  T0877__modbus_enum:
+    description: "T0877 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0877
+      type: pcap
+  T0877__opcua_browse:
+    description: "T0877 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0877
+      type: pcap
+  T0877__s7_read:
+    description: "T0877 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0877
+      type: pcap
+  T0878:
+    description: Matrix single-technique run for T0878 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0878
+      type: pcap
+  T0878__dnp3_operate:
+    description: "T0878 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0878
+      type: pcap
+  T0878__iec104_ctrl:
+    description: "T0878 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0878
+      type: pcap
+  T0878__modbus_write:
+    description: "T0878 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0878
+      type: pcap
+  T0879:
+    description: Matrix single-technique run for T0879 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0879
+      type: pcap
+  T0879__dnp3_operate:
+    description: "T0879 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0879
+      type: pcap
+  T0879__iec104_ctrl:
+    description: "T0879 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0879
+      type: pcap
+  T0879__modbus_write:
+    description: "T0879 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0879
+      type: pcap
+  T0880:
+    description: Matrix single-technique run for T0880 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0880
+      type: pcap
+  T0880__dnp3_operate:
+    description: "T0880 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0880
+      type: pcap
+  T0880__iec104_ctrl:
+    description: "T0880 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0880
+      type: pcap
+  T0880__modbus_write:
+    description: "T0880 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0880
+      type: pcap
+  T0881:
+    description: Matrix single-technique run for T0881 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0881
+      type: pcap
+  T0881__dnp3_operate:
+    description: "T0881 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0881
+      type: pcap
+  T0881__iec104_ctrl:
+    description: "T0881 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0881
+      type: pcap
+  T0881__modbus_write:
+    description: "T0881 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0881
+      type: pcap
+  T0882:
+    description: Matrix single-technique run for T0882 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0882
+      type: pcap
+  T0882__dnp3_operate:
+    description: "T0882 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0882
+      type: pcap
+  T0882__iec104_ctrl:
+    description: "T0882 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0882
+      type: pcap
+  T0882__modbus_write:
+    description: "T0882 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0882
+      type: pcap
+  T0883:
+    description: Matrix single-technique run for T0883 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0883
+      type: pcap
+  T0883__enip_identity:
+    description: "T0883 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0883
+      type: pcap
+  T0883__opcua_session:
+    description: "T0883 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0883
+      type: pcap
+  T0884:
+    description: Matrix single-technique run for T0884 (Baseline OT Telemetry (OPC
+      UA))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0884
+      type: pcap
+  T0884__baseline:
+    description: "T0884 \u2014 Baseline OT Telemetry (OPC UA)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0884
+      type: pcap
+  T0885:
+    description: Matrix single-technique run for T0885 (Baseline OT Telemetry (OPC
+      UA))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0885
+      type: pcap
+  T0885__baseline:
+    description: "T0885 \u2014 Baseline OT Telemetry (OPC UA)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0885
+      type: pcap
+  T0886:
+    description: Matrix single-technique run for T0886 (OPC UA Session / Login)
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0886
+      type: pcap
+  T0886__enip_identity:
+    description: "T0886 \u2014 ENIP ListIdentity"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: enip
+      technique: T0886
+      type: pcap
+  T0886__modbus_ops:
+    description: "T0886 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0886
+      type: pcap
+  T0886__opcua_session:
+    description: "T0886 \u2014 OPC UA Session / Login"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0886
+      type: pcap
+  T0886__s7_ops:
+    description: "T0886 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0886
+      type: pcap
+  T0887:
+    description: Matrix single-technique run for T0887 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0887
+      type: pcap
+  T0887__modbus_enum:
+    description: "T0887 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0887
+      type: pcap
+  T0887__opcua_browse:
+    description: "T0887 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0887
+      type: pcap
+  T0887__s7_read:
+    description: "T0887 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0887
+      type: pcap
+  T0888:
+    description: Matrix single-technique run for T0888 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0888
+      type: pcap
+  T0888__modbus_enum:
+    description: "T0888 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0888
+      type: pcap
+  T0888__opcua_browse:
+    description: "T0888 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0888
+      type: pcap
+  T0888__s7_read:
+    description: "T0888 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0888
+      type: pcap
+  T0889:
+    description: Matrix single-technique run for T0889 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0889
+      type: pcap
+  T0889__modbus_ops:
+    description: "T0889 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0889
+      type: pcap
+  T0889__s7_ops:
+    description: "T0889 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0889
+      type: pcap
+  T0890:
+    description: Matrix single-technique run for T0890 (Baseline OT Telemetry (OPC
+      UA))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0890
+      type: pcap
+  T0890__baseline:
+    description: "T0890 \u2014 Baseline OT Telemetry (OPC UA)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: opcua
+      technique: T0890
+      type: pcap
+  T0891:
+    description: Matrix single-technique run for T0891 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0891
+      type: pcap
+  T0891__modbus_ops:
+    description: "T0891 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0891
+      type: pcap
+  T0891__s7_ops:
+    description: "T0891 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0891
+      type: pcap
+  T0892:
+    description: Matrix single-technique run for T0892 (IEC104 Control / Telemetry
+      mix)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0892
+      type: pcap
+  T0892__dnp3_operate:
+    description: "T0892 \u2014 DNP3 Operate / DirectOperate"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: dnp3
+      technique: T0892
+      type: pcap
+  T0892__iec104_ctrl:
+    description: "T0892 \u2014 IEC104 Control / Telemetry mix"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: iec104
+      technique: T0892
+      type: pcap
+  T0892__modbus_write:
+    description: "T0892 \u2014 Modbus Write-biased (random FC)"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0892
+      type: pcap
+  T0893:
+    description: Matrix single-technique run for T0893 (Modbus Read / Enum)
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0893
+      type: pcap
+  T0893__modbus_enum:
+    description: "T0893 \u2014 Modbus Read / Enum"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: modbus
+      technique: T0893
+      type: pcap
+  T0893__opcua_browse:
+    description: "T0893 \u2014 OPC UA Browse/Read"
+    steps:
+    - count: 8
+      interval: 0s
+      proto: opcua
+      technique: T0893
+      type: pcap
+  T0893__s7_read:
+    description: "T0893 \u2014 S7comm ReadVar"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0893
+      type: pcap
+  T0894:
+    description: Matrix single-technique run for T0894 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0894
+      type: pcap
+  T0894__modbus_ops:
+    description: "T0894 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0894
+      type: pcap
+  T0894__s7_ops:
+    description: "T0894 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0894
+      type: pcap
+  T0895:
+    description: Matrix single-technique run for T0895 (S7comm Ops (Read/Write/Start/Stop))
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0895
+      type: pcap
+  T0895__modbus_ops:
+    description: "T0895 \u2014 Modbus Ops (Read/Write)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: modbus
+      technique: T0895
+      type: pcap
+  T0895__s7_ops:
+    description: "T0895 \u2014 S7comm Ops (Read/Write/Start/Stop)"
+    steps:
+    - count: 6
+      interval: 0s
+      proto: s7comm
+      technique: T0895
+      type: pcap

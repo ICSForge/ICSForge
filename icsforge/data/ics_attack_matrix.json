@@ -1,0 +1,560 @@
+{
+  "domain": "ics",
+  "x_mitre_version": "18.1",
+  "tactics": [
+    {
+      "shortname": "initial-access",
+      "name": "Initial Access",
+      "description": "The adversary is trying to get into your ICS environment.\n\nInitial Access consists of techniques that adversaries may use as entry vectors to gain an initial foothold within an ICS environment. These techniques include compromising operational technology assets, IT resources in the OT network, and external remote services and websites. They may also target third party entities and users with privileged access. In particular, these initial access footholds may include devices and communication mechanisms with access to and privileges in both the IT and OT environments. IT resources in the OT environment are also potentially vulnerable to the same attacks as enterprise IT systems. Trusted third parties of concern may include vendors, maintenance personnel, engineers, external integrators, and other outside entities involved in expected ICS operations. Vendor maintained assets may include physical devices, software, and operational equipment. Initial access techniques may also leverage outside devices, such as radios, controllers, or removable media, to remotely interfere with and possibly infect OT operations.",
+      "techniques": [
+        {
+          "id": "T0817",
+          "name": "Drive-by Compromise",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0819",
+          "name": "Exploit Public-Facing Application",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0822",
+          "name": "External Remote Services",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0847",
+          "name": "Replication Through Removable Media",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0848",
+          "name": "Rogue Master",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0860",
+          "name": "Wireless Compromise",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0862",
+          "name": "Supply Chain Compromise",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0864",
+          "name": "Transient Cyber Asset",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0865",
+          "name": "Spearphishing Attachment",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0866",
+          "name": "Exploitation of Remote Services",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0883",
+          "name": "Internet Accessible Device",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0886",
+          "name": "Remote Services",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "execution",
+      "name": "Execution",
+      "description": "The adversary is trying to run code or manipulate system functions, parameters, and data in an unauthorized way.\n\nExecution consists of techniques that result in adversary-controlled code running on a local or remote system, device, or other asset. This execution may also rely on unknowing end users or the manipulation of device operating modes to run. Adversaries may infect remote targets with programmed executables or malicious project files that operate according to specified behavior and may alter expected device behavior in subtle ways. Commands for execution may also be issued from command-line interfaces, APIs, GUIs, or other available interfaces. Techniques that run malicious code may also be paired with techniques from other tactics, particularly to aid network [Discovery](https://attack.mitre.org/tactics/TA0102) and [Collection](https://attack.mitre.org/tactics/TA0100), impact operations, and inhibit response functions.",
+      "techniques": [
+        {
+          "id": "T0807",
+          "name": "Command-Line Interface",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0821",
+          "name": "Modify Controller Tasking",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0823",
+          "name": "Graphical User Interface",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0834",
+          "name": "Native API",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0853",
+          "name": "Scripting",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0858",
+          "name": "Change Operating Mode",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0863",
+          "name": "User Execution",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0871",
+          "name": "Execution through API",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0874",
+          "name": "Hooking",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0895",
+          "name": "Autorun Image",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "persistence",
+      "name": "Persistence",
+      "description": "The adversary is trying to maintain their foothold in your ICS environment.\n\nPersistence consists of techniques that adversaries use to maintain access to ICS systems and devices across restarts, changed credentials, and other interruptions that could cut off their access. Techniques used for persistence include any access, action, or configuration changes that allow them to secure their ongoing activity and keep their foothold on systems. This may include replacing or hijacking legitimate code, firmware, and other project files, or adding startup code and downloading programs onto devices.",
+      "techniques": [
+        {
+          "id": "T0839",
+          "name": "Module Firmware",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0857",
+          "name": "System Firmware",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0859",
+          "name": "Valid Accounts",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0873",
+          "name": "Project File Infection",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0889",
+          "name": "Modify Program",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0891",
+          "name": "Hardcoded Credentials",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "privilege-escalation",
+      "name": "Privilege Escalation",
+      "description": "The adversary is trying to gain higher-level permissions.\n\nPrivilege Escalation consists of techniques that adversaries use to gain higher-level permissions on a system or network. Adversaries can often enter and explore a network with unprivileged access but require elevated permissions to follow through on their objectives. Common approaches are to take advantage of system weaknesses, misconfigurations, and vulnerabilities.",
+      "techniques": [
+        {
+          "id": "T0874",
+          "name": "Hooking",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0890",
+          "name": "Exploitation for Privilege Escalation",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "evasion",
+      "name": "Evasion",
+      "description": "The adversary is trying to avoid security defenses.\n\nEvasion consists of techniques that adversaries use to avoid technical defenses throughout their campaign. Techniques used for evasion include removal of indicators of compromise, spoofing communications, and exploiting software vulnerabilities. Adversaries may also leverage and abuse trusted devices and processes to hide their activity, possibly by masquerading as master devices or native software. Methods of defense evasion for this purpose are often more passive in nature.",
+      "techniques": [
+        {
+          "id": "T0820",
+          "name": "Exploitation for Evasion",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0849",
+          "name": "Masquerading",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0851",
+          "name": "Rootkit",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0856",
+          "name": "Spoof Reporting Message",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0858",
+          "name": "Change Operating Mode",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0872",
+          "name": "Indicator Removal on Host",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0894",
+          "name": "System Binary Proxy Execution",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "discovery",
+      "name": "Discovery",
+      "description": "The adversary is locating information to assess and identify their targets in your environment.\n\nDiscovery consists of techniques that adversaries use to survey your ICS environment and gain knowledge about the internal network, control system devices, and how their processes interact. These techniques help adversaries observe the environment and determine next steps for target selection and Lateral Movement. They also allow adversaries to explore what they can control and gain insight on interactions between various control system processes. Discovery techniques are often an act of progression into the environment which enable the adversary to orient themselves before deciding how to act. Adversaries may use Discovery techniques that result in Collection, to help determine how available resources benefit their current objective. A combination of native device communications and functions, and custom tools are often used toward this post-compromise information-gathering objective.",
+      "techniques": [
+        {
+          "id": "T0840",
+          "name": "Network Connection Enumeration",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0842",
+          "name": "Network Sniffing",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0846",
+          "name": "Remote System Discovery",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0887",
+          "name": "Wireless Sniffing",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0888",
+          "name": "Remote System Information Discovery",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "lateral-movement",
+      "name": "Lateral Movement",
+      "description": "The adversary is trying to move through your ICS environment.\n\nLateral Movement consists of techniques that adversaries use to enter and control remote systems on a network. These techniques abuse default credentials, known accounts, and vulnerable services, and may also leverage dual-homed devices and systems that reside on both the IT and OT networks. The adversary uses these techniques to pivot to their next point in the environment, positioning themselves to where they want to be or think they should be. Following through on their primary objective often requires [Discovery](https://attack.mitre.org/tactics/TA0102) of the network and [Collection](https://attack.mitre.org/tactics/TA0100) to develop awareness of unique ICS devices and processes, in order to find their target and subsequently gain access to it. Reaching this objective often involves pivoting through multiple systems, devices, and accounts. Adversaries may install their own remote tools to accomplish Lateral Movement or leverage default tools, programs, and manufacturer set or other legitimate credentials native to the network, which may be stealthier.",
+      "techniques": [
+        {
+          "id": "T0812",
+          "name": "Default Credentials",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0843",
+          "name": "Program Download",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0859",
+          "name": "Valid Accounts",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0866",
+          "name": "Exploitation of Remote Services",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0867",
+          "name": "Lateral Tool Transfer",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0886",
+          "name": "Remote Services",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0891",
+          "name": "Hardcoded Credentials",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "collection",
+      "name": "Collection",
+      "description": "The adversary is trying to gather data of interest and domain knowledge on your ICS environment to inform their goal.\n\nCollection consists of techniques adversaries use to gather domain knowledge and obtain contextual feedback in an ICS environment. This tactic is often performed as part of [Discovery](https://attack.mitre.org/tactics/TA0102), to compile data on control systems and targets of interest that may be used to follow through on the adversary\u2019s objective. Examples of these techniques include observing operation states, capturing screenshots, identifying unique device roles, and gathering system and diagram schematics. Collection of this data can play a key role in planning, executing, and even revising an ICS-targeted attack. Methods of collection depend on the categories of data being targeted, which can include protocol specific, device specific, and process specific configurations and functionality. Information collected may pertain to a combination of system, supervisory, device, and network related data, which conceptually fall under high, medium, and low levels of plan operations. For example, information repositories on plant data at a high level or device specific programs at a low level. Sensitive floor plans, vendor device manuals, and other references may also be at risk and exposed on the internet or otherwise publicly accessible.",
+      "techniques": [
+        {
+          "id": "T0801",
+          "name": "Monitor Process State",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0802",
+          "name": "Automated Collection",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0811",
+          "name": "Data from Information Repositories",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0830",
+          "name": "Adversary-in-the-Middle",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0845",
+          "name": "Program Upload",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0852",
+          "name": "Screen Capture",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0861",
+          "name": "Point & Tag Identification",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0868",
+          "name": "Detect Operating Mode",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0877",
+          "name": "I/O Image",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0887",
+          "name": "Wireless Sniffing",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0893",
+          "name": "Data from Local System",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "command-and-control",
+      "name": "Command and Control",
+      "description": "The adversary is trying to communicate with and control compromised systems, controllers, and platforms with access to your ICS environment.\n\nCommand and Control consists of techniques that adversaries use to communicate with and send commands to compromised systems, devices, controllers, and platforms with specialized applications used in ICS environments. Examples of these specialized communication devices include human machine interfaces (HMIs), data historians, SCADA servers, and engineering workstations (EWS). Adversaries often seek to use commonly available resources and mimic expected network traffic to avoid detection and suspicion. For instance, commonly used ports and protocols in ICS environments, and even expected IT resources, depending on the target network. Command and Control may be established to varying degrees of stealth, often depending on the victim\u2019s network structure and defenses.",
+      "techniques": [
+        {
+          "id": "T0869",
+          "name": "Standard Application Layer Protocol",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0884",
+          "name": "Connection Proxy",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0885",
+          "name": "Commonly Used Port",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "inhibit-response-function",
+      "name": "Inhibit Response Function",
+      "description": "The adversary is trying to prevent your safety, protection, quality assurance, and operator intervention functions from responding to a failure, hazard, or unsafe state.\n\nInhibit Response Function consists of techniques that adversaries use to hinder the safeguards put in place for processes and products. This may involve the inhibition of safety, protection, quality assurance, or operator intervention functions to disrupt safeguards that aim to prevent the loss of life, destruction of equipment, and disruption of production. These techniques aim to actively deter and prevent expected alarms and responses that arise due to statuses in the ICS environment. Adversaries may modify or update system logic, or even outright prevent responses with a denial-of-service. They may result in the prevention, destruction, manipulation, or modification of programs, logic, devices, and communications. As prevention functions are generally dormant, reporting and processing functions can appear fine, but may have been altered to prevent failure responses in dangerous scenarios. Unlike [Evasion](https://attack.mitre.org/tactics/TA0103), Inhibit Response Function techniques may be more intrusive, such as actively preventing responses to a known dangerous scenario. Adversaries may use these techniques to follow through with or provide cover for [Impact](https://attack.mitre.org/tactics/TA0105) techniques.",
+      "techniques": [
+        {
+          "id": "T0800",
+          "name": "Activate Firmware Update Mode",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0803",
+          "name": "Block Command Message",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0804",
+          "name": "Block Reporting Message",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0805",
+          "name": "Block Serial COM",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0809",
+          "name": "Data Destruction",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0814",
+          "name": "Denial of Service",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0816",
+          "name": "Device Restart/Shutdown",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0835",
+          "name": "Manipulate I/O Image",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0838",
+          "name": "Modify Alarm Settings",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0851",
+          "name": "Rootkit",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0857",
+          "name": "System Firmware",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0878",
+          "name": "Alarm Suppression",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0881",
+          "name": "Service Stop",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0892",
+          "name": "Change Credential",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "impair-process-control",
+      "name": "Impair Process Control",
+      "description": "The adversary is trying to manipulate, disable, or damage physical control processes.\n\nImpair Process Control consists of techniques that adversaries use to disrupt control logic and cause determinantal effects to processes being controlled in the target environment. Targets of interest may include active procedures or parameters that manipulate the physical environment. These techniques can also include prevention or manipulation of reporting elements and control logic. If an adversary has modified process functionality, then they may also obfuscate the results, which are often self-revealing in their impact on the outcome of a product or the environment. The direct physical control these techniques exert may also threaten the safety of operators and downstream users, which can prompt response mechanisms. Adversaries may follow up with or use [Inhibit Response Function](https://attack.mitre.org/tactics/TA0107) techniques in tandem, to assist with the successful abuse of control processes to result in [Impact](https://attack.mitre.org/tactics/TA0105).",
+      "techniques": [
+        {
+          "id": "T0806",
+          "name": "Brute Force I/O",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0836",
+          "name": "Modify Parameter",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0839",
+          "name": "Module Firmware",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0855",
+          "name": "Unauthorized Command Message",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0856",
+          "name": "Spoof Reporting Message",
+          "is_subtechnique": false
+        }
+      ]
+    },
+    {
+      "shortname": "impact",
+      "name": "Impact",
+      "description": "The adversary is trying to manipulate, interrupt, or destroy your ICS systems, data, and their surrounding environment.\n\nImpact consists of techniques that adversaries use to disrupt, compromise, destroy, and manipulate the integrity and availability of control system operations, processes, devices, and data. These techniques encompass the influence and effects resulting from adversarial efforts to attack the ICS environment or that tangentially impact it. Impact techniques can result in more instantaneous disruption to control processes and the operator, or may result in more long term damage or loss to the ICS environment and related operations. The adversary may leverage [Impair Process Control](https://attack.mitre.org/tactics/TA0106) techniques, which often manifest in more self-revealing impacts on operations, or [Impair Process Control](https://attack.mitre.org/tactics/TA0106) techniques to hinder safeguards and alarms in order to follow through with and provide cover for Impact. In some scenarios, control system processes can appear to function as expected, but may have been altered to benefit the adversary\u2019s goal over the course of a longer duration. These techniques might be used by adversaries to follow through on their end goal or to provide cover for a confidentiality breach.\n\n[Loss of Productivity and Revenue](https://attack.mitre.org/techniques/T0828), [Theft of Operational Information](https://attack.mitre.org/techniques/T0882), and [Damage to Property](https://attack.mitre.org/techniques/T0879) are meant to encompass some of the more granular goals of adversaries in targeted and untargeted attacks. These techniques in and of themselves are not necessarily detectable, but the associated adversary behavior can potentially be mitigated and/or detected.",
+      "techniques": [
+        {
+          "id": "T0813",
+          "name": "Denial of Control",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0815",
+          "name": "Denial of View",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0826",
+          "name": "Loss of Availability",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0827",
+          "name": "Loss of Control",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0828",
+          "name": "Loss of Productivity and Revenue",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0829",
+          "name": "Loss of View",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0831",
+          "name": "Manipulation of Control",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0832",
+          "name": "Manipulation of View",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0837",
+          "name": "Loss of Protection",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0879",
+          "name": "Damage to Property",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0880",
+          "name": "Loss of Safety",
+          "is_subtechnique": false
+        },
+        {
+          "id": "T0882",
+          "name": "Theft of Operational Information",
+          "is_subtechnique": false
+        }
+      ]
+    }
+  ]
+}

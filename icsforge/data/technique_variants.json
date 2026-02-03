@@ -1,0 +1,2151 @@
+{
+  "version": "18.1",
+  "variants": {
+    "T0817": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0819": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0822": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0847": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0848": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0860": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0862": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0864": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0865": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0866": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0883": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0886": [
+      {
+        "id": "opcua_session",
+        "label": "OPC UA Session / Login",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "enip_identity",
+        "label": "ENIP ListIdentity",
+        "proto": "enip",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0807": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0821": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0823": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0834": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0853": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0858": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0863": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0871": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0874": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0895": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0839": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0857": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0859": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0873": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0889": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0891": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0890": [
+      {
+        "id": "baseline",
+        "label": "Baseline OT Telemetry (OPC UA)",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
+      }
+    ],
+    "T0820": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0849": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0851": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0856": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0872": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0894": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0840": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0842": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0846": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0887": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0888": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0812": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0843": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0867": [
+      {
+        "id": "s7_ops",
+        "label": "S7comm Ops (Read/Write/Start/Stop)",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_ops",
+        "label": "Modbus Ops (Read/Write)",
+        "proto": "modbus",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0801": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0802": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0811": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0830": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0845": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0852": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0861": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0868": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0877": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0893": [
+      {
+        "id": "modbus_enum",
+        "label": "Modbus Read / Enum",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "opcua_browse",
+        "label": "OPC UA Browse/Read",
+        "proto": "opcua",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "s7_read",
+        "label": "S7comm ReadVar",
+        "proto": "s7comm",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0869": [
+      {
+        "id": "baseline",
+        "label": "Baseline OT Telemetry (OPC UA)",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
+      }
+    ],
+    "T0884": [
+      {
+        "id": "baseline",
+        "label": "Baseline OT Telemetry (OPC UA)",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
+      }
+    ],
+    "T0885": [
+      {
+        "id": "baseline",
+        "label": "Baseline OT Telemetry (OPC UA)",
+        "proto": "opcua",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
+      }
+    ],
+    "T0800": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0803": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0804": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0805": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0809": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0814": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0816": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0835": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0838": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0878": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0881": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0892": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0806": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0836": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0855": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0813": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0815": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0826": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0827": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0828": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0829": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0831": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0832": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0837": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0879": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0880": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ],
+    "T0882": [
+      {
+        "id": "iec104_ctrl",
+        "label": "IEC104 Control / Telemetry mix",
+        "proto": "iec104",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "dnp3_operate",
+        "label": "DNP3 Operate / DirectOperate",
+        "proto": "dnp3",
+        "count": 6,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      },
+      {
+        "id": "modbus_write",
+        "label": "Modbus Write-biased (random FC)",
+        "proto": "modbus",
+        "count": 8,
+        "interval": "0s",
+        "mode": "live",
+        "notes": ""
+      }
+    ]
+  }
+}

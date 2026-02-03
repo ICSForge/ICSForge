@@ -1,0 +1,16 @@
+sector: power
+description: Power generation/transmission OT environments.
+priority_techniques:
+- T0855
+- T0831
+- T0804
+- T0829
+protocols:
+- iec104
+- s7comm
+- modbus
+typical_assets:
+- RTU
+- PLC
+- HMI
+- Engineering Workstation

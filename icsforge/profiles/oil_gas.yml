@@ -1,0 +1,15 @@
+sector: oil_gas
+description: Oil & gas upstream/midstream/downstream environments.
+priority_techniques:
+- T0831
+- T0848
+- T0856
+protocols:
+- modbus
+- opcua
+- enip
+typical_assets:
+- PLC
+- HMI
+- Historian
+- Remote Access Gateway

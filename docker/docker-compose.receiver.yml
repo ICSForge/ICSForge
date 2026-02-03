@@ -1,0 +1,9 @@
+version: "3.8"
+services:
+  icsforge-receiver:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.receiver
+    network_mode: host
+    volumes:
+      - ./receiver_out:/app/receiver_out

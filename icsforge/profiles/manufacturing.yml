@@ -1,0 +1,20 @@
+sector: manufacturing
+description: Discrete and hybrid manufacturing (automotive/electronics/general automation).
+priority_techniques:
+- T0855
+- T0831
+- T0832
+- T0829
+- T0846
+- T0840
+protocols:
+- modbus
+- s7comm
+- opcua
+- enip
+- profinet_dcp
+typical_assets:
+- PLC
+- Robot Controller
+- HMI
+- MES Gateway

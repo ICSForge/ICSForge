@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <div class="card-title">Alert Ingest</div>
+    <div class="small">Import sensor alerts (Suricata EVE JSONL / generic JSONL) into <code>out/alerts/</code>.</div>
+
+    <div class="row" style="margin-top:10px; align-items:flex-end">
+      <div class="field" style="min-width:360px">
+        <label>Input path (relative to repo)</label>
+        <input id="alert_path" placeholder="out/suricata/eve.json">
+      </div>
+      <div class="field" style="min-width:180px">
+        <label>Run ID (optional)</label>
+        <input id="alert_run" placeholder="run_...">
+      </div>
+      <div class="field" style="min-width:200px">
+        <label>Profile</label>
+        <select id="alert_profile">
+          <option value="suricata_eve">Suricata EVE</option>
+          <option value="generic_jsonl">Generic JSONL</option>
+        </select>
+      </div>
+      <button class="btn primary" onclick="ingestAlerts()">Ingest</button>
+    </div>
+
+    <div class="codebox" id="alert_out" style="margin-top:10px">Ready.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Notes</div>
+    <ul class="small">
+      <li>Place alert exports under <code>out/</code> (e.g., <code>out/suricata/eve.json</code>).</li>
+      <li>Ingested outputs are written to <code>out/alerts/</code> as normalized JSONL.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+async function ingestAlerts(){
+  const path = document.getElementById("alert_path").value.trim();
+  const run_id = document.getElementById("alert_run").value.trim();
+  const profile = document.getElementById("alert_profile").value;
+  const data = await fetch("{{ url_for('web.api_alerts_ingest') }}", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({path, run_id, profile})
+  }).then(r=>r.json());
+  document.getElementById("alert_out").textContent = JSON.stringify(data, null, 2);
+}
+</script>
+{% endblock %}

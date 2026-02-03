@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Tools</h2>
+    <div class="small">Convenience UI for key workflows. Sender mode includes offline artifacts and replay. Receiver mode is read-only and minimal.</div>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <h2>Health & Self-Test</h2>
+      <div class="small">Quick sanity checks for demo readiness.</div>
+      <div class="hr"></div>
+      <div class="row" style="align-items:center; gap:12px; flex-wrap:wrap">
+        <button class="btn" onclick="healthCheck()">Health</button>
+        <button class="btn" onclick="selfTest()">Selftest</button>
+        <button class="btn" onclick="matrixStatus()">Matrix status</button>
+      </div>
+      <div class="hr"></div>
+      <div class="field">
+        <label>Output</label>
+        <textarea id="health_log" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Interfaces</h2>
+      <div class="small">Discover local network interfaces (useful for replay and live send).</div>
+      <div class="hr"></div>
+      <div class="row" style="align-items:center; gap:12px">
+        <button class="btn" onclick="loadIfaces()">Refresh</button>
+      </div>
+      <div class="hr"></div>
+      <pre id="ifaces_box" style="margin:0; max-height:220px; overflow:auto"></pre>
+    </div>
+
+    {% if ui_mode == 'sender' %}
+    <div class="card">
+      <h2>Offline Generate</h2>
+      <div class="small">Generate ground-truth JSONL and optional PCAP from <span class="mono">icsforge/scenarios/scenarios.yml</span> without live sending.</div>
+      <div class="hr"></div>
+
+      <div class="row">
+        <div class="field">
+          <label>Scenario</label>
+          <input id="g_filter" placeholder="filter scenarios (e.g. T0855 / modbus)" style="margin-bottom:6px">
+          <select id="g_name"></select>
+          <div class="small">Choose a scenario</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Outdir</label>
+          <input id="g_outdir" value="out">
+        </div>
+        <div class="field">
+          <label>Dst IP (for artifacts)</label>
+          <input id="g_dst" value="198.51.100.42">
+        </div>
+        <div class="field">
+          <label>Src IP (for artifacts)</label>
+          <input id="g_src" value="127.0.0.1">
+        </div>
+      </div>
+
+      <div class="row" style="align-items:center; gap:12px; flex-wrap:wrap">
+        <label class="small"><input type="checkbox" id="g_pcap"> Also build PCAP</label>
+        <button class="btn primary" onclick="offlineGenerate()">Generate</button>
+      </div>
+
+      <div class="hr"></div>
+      <div class="field">
+        <label>Result</label>
+        <textarea id="g_log" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>PCAP Replay</h2>
+      <div class="small">Replay a PCAP toward a destination IP (requires sudo/root for raw send on many systems).</div>
+      <div class="hr"></div>
+      <div class="row">
+        <div class="field">
+          <label>PCAP path</label>
+          <input id="r_pcap" placeholder="pcaps/example.pcap">
+        </div>
+        <div class="field">
+          <label>Destination IP</label>
+          <input id="r_dst" value="198.51.100.42">
+        </div>
+        <div class="field">
+          <label>Interval (seconds)</label>
+          <input id="r_interval" value="0.05">
+        </div>
+      </div>
+      <div class="row" style="align-items:center; gap:12px">
+        <button class="btn primary" onclick="replayTool()">Replay</button>
+      </div>
+      <div class="hr"></div>
+      <div class="field">
+        <label>Result</label>
+        <textarea id="r_log" readonly></textarea>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <script>
+    async function fetchJSON(url){
+      const res = await fetch(url);
+      try { return await res.json(); } catch(e){ return {error:"Invalid JSON response"}; }
+    }
+
+    async function healthCheck(){
+      document.getElementById("health_log").value = "Working...";
+      const data = await fetchJSON("{{ url_for('web.api_health') }}");
+      document.getElementById("health_log").value = JSON.stringify(data, null, 2);
+    }
+
+    async function selfTest(){
+      document.getElementById("health_log").value = "Working...";
+      const data = await fetchJSON("{{ url_for('web.api_selftest') }}");
+      document.getElementById("health_log").value = JSON.stringify(data, null, 2);
+    }
+
+    async function matrixStatus(){
+      document.getElementById("health_log").value = "Working...";
+      const data = await fetchJSON("{{ url_for('web.api_matrix_status') }}");
+      document.getElementById("health_log").value = JSON.stringify(data, null, 2);
+    }
+
+    async function loadIfaces(){
+      const data = await fetchJSON("{{ url_for('web.api_interfaces') }}");
+      if(data.error){ document.getElementById("ifaces_box").textContent = data.error; return; }
+      document.getElementById("ifaces_box").textContent = (data.interfaces||[]).join("\n") || "(none)";
+    }
+
+    {% if ui_mode == 'sender' %}
+    let _g_all = [];
+    async function loadGenerateScenarios(){
+      const data = await fetchJSON("{{ url_for('web.api_scenarios') }}");
+      _g_all = (data.scenarios || []);
+      renderGenerateScenarioOptions(_g_all);
+    }
+    function renderGenerateScenarioOptions(list){
+      const sel=document.getElementById("g_name");
+      sel.innerHTML="";
+      (list||[]).forEach(n=>{
+        const o=document.createElement("option"); o.value=n; o.textContent=n; sel.appendChild(o);
+      });
+      if(sel.options.length>0) sel.selectedIndex=0;
+    }
+    function filterGenerateScenarios(){
+      const q=(document.getElementById("g_filter").value||"").toLowerCase();
+      const filt = (_g_all||[]).filter(x => (x||"").toLowerCase().includes(q));
+      renderGenerateScenarioOptions(filt);
+    }
+    async function offlineGenerate(){
+      const name = document.getElementById("g_name").value.trim();
+      const outdir = document.getElementById("g_outdir").value.trim();
+      const dst_ip = document.getElementById("g_dst").value.trim();
+      const src_ip = document.getElementById("g_src").value.trim();
+      const build_pcap = document.getElementById("g_pcap").checked;
+      document.getElementById("g_log").value = "Working...";
+      const res = await fetch("{{ url_for('web.api_generate_offline') }}",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({name, outdir, dst_ip, src_ip, build_pcap})
+      });
+      const data = await res.json();
+      document.getElementById("g_log").value = JSON.stringify(data, null, 2);
+    }
+    async function replayTool(){
+      const pcap_path = document.getElementById("r_pcap").value.trim();
+      const dst_ip = document.getElementById("r_dst").value.trim();
+      const interval = parseFloat(document.getElementById("r_interval").value.trim() || "0.05");
+      document.getElementById("r_log").value = "Working...";
+      const res = await fetch("{{ url_for('web.api_pcap_replay') }}",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({pcap_path, dst_ip, interval})
+      });
+      const data = await res.json();
+      document.getElementById("r_log").value = JSON.stringify(data, null, 2);
+    }
+    {% endif %}
+
+    // Init
+    loadIfaces();
+    {% if ui_mode == 'sender' %}
+    loadGenerateScenarios();
+    const f=document.getElementById("g_filter"); if(f){ f.addEventListener("input", filterGenerateScenarios); }
+    {% endif %}
+  </script>
+{% endblock %}

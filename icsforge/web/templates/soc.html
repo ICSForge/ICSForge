@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:12px;">
+  <h3>How SOC Mode works</h3>
+  <ol>
+    <li><b>Execute</b> scenarios from <b>Sender</b> (or from the ATT&CK Matrix). Each run produces a <code>run_id</code>.</li>
+    <li><b>Proof of delivery</b>: if you have a Receiver on the network, it records received packets (with matching run_id markers).</li>
+    <li><b>Detection evidence</b>: import your IDS/NSM alerts (e.g., Suricata EVE JSON, Zeek logs, vendor exports) and map them to techniques/ports.</li>
+    <li><b>Compare</b>: SOC Mode correlates <i>Executed</i> vs <i>Delivered</i> vs <i>Detected</i> and generates a coverage report.</li>
+  </ol>
+  <div class="small">Tip: For a live demo flow, run Sender → send a technique → Receiver confirms delivery → refresh SOC Mode to see coverage.</div>
+</div>
+
+  <div class="card">
+    <h2>SOC Mode</h2>
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <div style="font-size:22px;font-weight:800">Live Demo Flow: Send → Receive → Alert → Validate → Export</div>
+        <div class="small">Designed for on-stage demos: run scenarios, prove delivery, correlate with alerts, and export a report.</div>
+      </div>
+      <div class="row">
+        <span class="badge good">DEMO READY</span>
+        <button class="btn" onclick="refreshRuns()">Refresh Runs</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1) Select a Run</h2>
+      <div class="row">
+        <div class="field">
+          <label>Recent runs</label>
+          <select id="run_sel"></select>
+        </div>
+        <button class="btn primary" onclick="loadRun()">Load</button>
+        <button class="btn" onclick="openReceiver()"> </button>
+      </div>
+      <div class="hr"></div>
+      <div id="run_meta" class="small">No run loaded.</div>
+      <div class="hr"></div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="min-width:220px">
+          <label>Title (optional)</label>
+          <input id="run_title" placeholder="e.g., Demo Day 1 – Nozomi sensor">
+        </div>
+        <div class="field" style="min-width:260px">
+          <label>Tags (comma-separated)</label>
+          <input id="run_tags" placeholder="vendor:nozomi, site:lab, shift:a">
+        </div>
+        <button class="btn" onclick="saveMeta()">Save Tag / Rename</button>
+      </div>
+      <div class="hr"></div>
+      <div class="row">
+        <button class="btn primary" onclick="exportRun()">Export HTML Report</button>
+        <a class="btn" id="dl_link" style="display:none" target="_blank">Download report</a>
+        <button class="btn" onclick="exportBundle()">Export Bundle</button>
+        <a class="btn" id="bundle_link" style="display:none" target="_blank">Download bundle</a>
+      </div>
+      <div class="small">Tip: Bundles include events, PCAP, receipts extract, alerts, and validation (if present).</div>
+    </div>
+
+    <div class="card">
+      <h2>2) Delivery Evidence</h2>
+      <div class="small">Receipts binned over time (sparkline) + last 20 receipts.</div>
+      <div class="hr"></div>
+      <canvas id="spark" width="520" height="110" style="width:100%;height:110px;background:var(--panel2);border:1px solid var(--border);border-radius:16px"></canvas>
+      <div class="hr"></div>
+      <div class="codebox" id="evidence_box">Load a run to view evidence.</div>
+      <div class="hr"></div>
+      <h3 style="margin:0 0 10px 0">Replay PCAP</h3>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="min-width:240px">
+          <label>PCAP path (from run)</label>
+          <input id="replay_pcap" placeholder="out/pcaps/<run_id>.pcap">
+        </div>
+        <div class="field" style="min-width:180px">
+          <label>Destination IP</label>
+          <input id="replay_dst" placeholder="Receiver IP">
+        </div>
+        <div class="field" style="min-width:140px">
+          <label>Interval (s)</label>
+          <input id="replay_int" value="0.05">
+        </div>
+        <button class="btn primary" onclick="replay()">Replay</button>
+      </div>
+      <div class="small">Requires sudo/root. Destination must be private/test/link-local/loopback.</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>3) Paste Alerts (Optional)</h2>
+      <div class="small">Paste alerts JSONL from your SIEM/NSM (normalized or raw). ICSForge will store and correlate.</div>
+      <div class="hr"></div>
+      <div class="field">
+        <label>Alerts JSONL</label>
+        <textarea id="alerts" placeholder='{"ts":"...","signature":"...","src_ip":"...","technique":"T0855"}'></textarea>
+      </div>
+      <div class="row">
+        <button class="btn primary" onclick="saveAlerts()">Save Alerts</button>
+        <button class="btn" onclick="clearAlerts()">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4) Validate & Coverage</h2>
+      <div class="small">Correlate ground truth events with receipts + alerts and produce a coverage summary.</div>
+      <div class="hr"></div>
+      <div class="row">
+        <button class="btn primary" onclick="validate()">Run Validation</button>
+        <span class="badge mono" id="val_path">-</span>
+      </div>
+      <div class="hr"></div>
+      <div class="codebox" id="val_box">Validation output will appear here.</div>
+    </div>
+  </div>
+
+<script>
+async function fetchJSON(url, opts){ const r = await fetch(url, opts||{}); return await r.json(); }
+
+async function refreshRuns(){
+  const data = await fetchJSON("{{ url_for('web.api_runs') }}");
+  const sel = document.getElementById("run_sel");
+  sel.innerHTML="";
+  for(const r of data.runs){
+    const o=document.createElement("option");
+    o.value=r.run_id;
+    o.textContent = `${r.run_id} • ${r.scenario||"-"} • ${r.ts||""}`;
+    sel.appendChild(o);
+  }
+  if(data.runs.length) toast("Runs loaded", `${data.runs.length} run(s) available`);
+}
+
+async function loadRun(){
+  const run_id = document.getElementById("run_sel").value;
+  if(!run_id){ toast("No run", "Select a run first"); return; }
+  const data = await fetchJSON("{{ url_for('web.api_run_full') }}?run_id="+encodeURIComponent(run_id));
+  if(data.error){ toast("Error", data.error); return; }
+  document.getElementById("run_meta").innerHTML = `
+    <div class="pills">
+      <span class="pill mono">run_id: ${data.run_id}</span>
+      <span class="pill">scenario: ${data.scenario||"-"}</span>
+      <span class="pill mono">events: ${data.events||"-"}</span>
+      <span class="pill mono">pcap: ${data.pcap||"-"}</span>
+    </div>
+    <div class="small" style="margin-top:10px">Techniques: ${(data.techniques||[]).map(t=>`<span class="badge mono">${t}</span>`).join(" ")}</div>
+  `;
+  document.getElementById("evidence_box").textContent = (data.receipts_preview||[]).map(x=>JSON.stringify(x)).join("\n");
+  const pts = (data.bins||[]).map((b,i)=>[i, b.count]);
+  drawSparkline(document.getElementById("spark"), pts);
+  toast("Run loaded", run_id);
+}
+
+function openReceiver(){ window.location.href = "{{ url_for('web.receiver') }}"; }
+
+async function saveAlerts(){
+  const run_id = document.getElementById("run_sel").value;
+  const text = document.getElementById("alerts").value || "";
+  const data = await fetchJSON("{{ url_for('web.api_alerts_save') }}", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({run_id, alerts_jsonl: text})
+  });
+  if(data.error){ toast("Error", data.error); return; }
+  toast("Saved", "Alerts stored for correlation");
+}
+
+function clearAlerts(){ document.getElementById("alerts").value=""; }
+
+async function validate(){
+  const run_id = document.getElementById("run_sel").value;
+  const data = await fetchJSON("{{ url_for('web.api_validate_run') }}", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({run_id})
+  });
+  if(data.error){ toast("Error", data.error); return; }
+  document.getElementById("val_path").textContent = data.report_path || "-";
+  document.getElementById("val_box").textContent = JSON.stringify(data.report, null, 2);
+  toast("Validation complete", "Coverage report generated");
+}
+
+async function saveMeta(){
+  const run_id = document.getElementById("run_sel").value;
+  const title = document.getElementById("run_title").value || "";
+  const tags = (document.getElementById("run_tags").value || "").split(",").map(x=>x.trim()).filter(Boolean);
+  if(title){
+    await fetchJSON("{{ url_for('web.api_run_rename') }}", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({run_id, title})});
+  }
+  await fetchJSON("{{ url_for('web.api_run_tag') }}", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({run_id, tags})});
+  toast("Saved", "Run metadata updated");
+  refreshRuns();
+}
+
+async function exportBundle(){
+  const run_id = document.getElementById("run_sel").value;
+  const data = await fetchJSON("{{ url_for('web.api_run_export_bundle') }}?run_id="+encodeURIComponent(run_id));
+  if(data.error){ toast("Error", data.error); return; }
+  const a=document.getElementById("bundle_link");
+  a.style.display="inline-flex";
+  a.href = data.download_url;
+  a.textContent = "Download bundle";
+  toast("Bundle ready", "ZIP created");
+}
+
+async function replay(){
+  const pcap_path = document.getElementById("replay_pcap").value;
+  const dst_ip = document.getElementById("replay_dst").value;
+  const interval = parseFloat(document.getElementById("replay_int").value || "0.05");
+  const data = await fetchJSON("{{ url_for('web.api_pcap_replay') }}", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({pcap_path, dst_ip, interval})});
+  if(data.error){ toast("Error", data.error); return; }
+  toast("Replay complete", `Sent ${data.sent} packets`);
+}
+
+
+async function exportRun(){
+  const run_id = document.getElementById("run_sel").value;
+  const data = await fetchJSON("{{ url_for('web.api_export_run') }}?run_id="+encodeURIComponent(run_id));
+  if(data.error){ toast("Error", data.error); return; }
+  const a=document.getElementById("dl_link");
+  a.style.display="inline-flex";
+  a.href = data.download_url;
+  a.textContent = "Download report";
+  toast("Export ready", "HTML report generated");
+}
+
+refreshRuns();
+</script>
+{% endblock %}

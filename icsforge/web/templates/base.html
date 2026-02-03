@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title or "ICSForge" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="nav">
+      <a class="brand" href="{{ url_for('web.index') }}">
+        <picture>
+          <source srcset="{{ url_for('static', filename='images/icsforge.png') }}" type="image/webp">
+          <img src="{{ url_for('static', filename='images/icsforge.png') }}" alt="ICSForge">
+        </picture>
+        <div class="title">
+          <strong>ICSForge</strong>
+          <span>{{ subtitle or "OT/ICS Telemetry Lab" }}</span>
+        </div>
+      </a>
+      <div class="row">
+        <span class="chip">{{ env_label }}</span>
+        <button class="btn" onclick="toggleTheme()" title="Toggle light/dark">
+          <span>Theme</span>
+          <span class="badge mono">☾/☀</span>
+        </button>
+        {% if active_tab %}
+  {% if ui_mode == 'receiver' %}
+    <a class="btn primary" href="{{ url_for('web.receiver') }}">Receiver</a>
+    <a class="btn" href="{{ url_for('web.matrix') }}">ATT&CK Matrix</a>
+    <a class="btn" href="{{ url_for('web.tools') }}">Tools</a>
+  {% else %}
+    <a class="btn primary" href="{{ url_for('web.sender') }}">Sender</a>
+    <a class="btn primary" href="{{ url_for('web.soc') }}">SOC Mode</a>
+    <a class="btn" href="{{ url_for('web.matrix') }}">ATT&CK Matrix</a>
+    <a class="btn" href="{{ url_for('web.tools') }}">Tools</a>
+  {% endif %}
+{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    {% block content %}{% endblock %}
+    <div class="footer">
+      <div>ICSForge • Enterprise-grade OT/ICS security coverage validation • GPLv3</div>
+      <div class="mono">v{{ version }}</div>
+    </div>
+  </div>
+</body>
+</html>

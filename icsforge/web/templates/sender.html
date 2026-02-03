@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <div>
+      <h1>Sender</h1>
+      <p class="muted">Select a scenario and send live traffic to a safe destination. Preview updates automatically.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('web.matrix') }}">ATT&CK Matrix</a>
+      <a class="btn" href="{{ url_for('web.tools') }}">Tools</a>
+      <a class="btn primary" href="{{ url_for('web.soc') }}">SOC Mode</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Scenario</h2>
+
+      <div class="field">
+        <label>Scenario</label>
+        <select id="scenario" class="select"></select>
+        <div id="scenario_status" class="hint"></div>
+      </div>
+
+      <div class="field">
+        <label>Destination IP (receiver)</label>
+        <input id="dst_ip" class="input" placeholder="198.51.100.42" value="198.51.100.42" />
+        <div class="hint">Use loopback or TEST-NET ranges, or your controlled receiver host.</div>
+      </div>
+
+      <div class="field">
+        <label>Source IP (for PCAP crafting)</label>
+        <input id="src_ip" class="input" placeholder="127.0.0.1" value="127.0.0.1" />
+      </div>
+
+      <div class="field">
+        <label>Interface (optional)</label>
+        <input id="iface" class="input" placeholder="eth0 (leave blank = auto)" value="" />
+      </div>
+
+      <div class="field">
+        <label>Timeout (seconds)</label>
+        <input id="timeout" class="input" placeholder="2.0" value="2.0" />
+      </div>
+
+      <div class="row">
+        <label class="check"><input id="pcap" type="checkbox" /> Also build a PCAP (saved in out/)</label>
+      </div>
+      <div class="row">
+        <label class="check"><input id="confirm" type="checkbox" /> I understand this sends **synthetic** traffic to a safe destination.</label>
+      </div>
+
+      <div class="row actions">
+                <button id="btn_clear" class="btn">Clear</button>
+        <button id="btn_send" class="btn primary">Run Live Send</button>
+      </div>
+
+      <pre id="log" class="log"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Scenario Preview</h2>
+      <div id="preview" class="preview"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  function logln(msg){
+    const el = $("log");
+    el.textContent += (msg + "\n");
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function loadScenarios(){
+    const data = await window.fetchJSON("{{ url_for('web.api_scenarios') }}");
+    const sel = $("scenario");
+    sel.innerHTML = "";
+    const list = (data && data.scenarios) ? data.scenarios : [];
+    for(const name of list){
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+    $("scenario_status").textContent = list.length ? `Loaded ${list.length} scenarios.` : "No scenarios loaded.";
+    if(list.length){
+      sel.selectedIndex = 0;
+    }
+  }
+
+  async function doPreview(){
+    const name = $("scenario").value;
+    if(!name){ $("preview").textContent = "No scenario selected."; return; }
+    const data = await window.fetchJSON("{{ url_for('web.api_preview') }}?name="+encodeURIComponent(name));
+    if(data.error){ $("preview").textContent = data.error; return; }
+
+    const techs = (data.techniques||[]).map(t=>`<span class="badge mono">${t}</span>`).join(" ");
+    const steps = (data.steps||[]).map(s=>{
+      const proto = s.proto || s.schema || "n/a";
+      const kind  = s.kind || s.action || "send";
+      const count = s.count || 1;
+      const note  = s.note || "";
+      return `<div class="step"><div><b>${proto}</b> <span class="muted">${kind}</span></div><div class="muted small">count=${count} ${note}</div></div>`;
+    }).join("");
+
+    $("preview").innerHTML = `
+      <div class="muted">Techniques</div>
+      <div class="pillrow">${techs || "<span class='muted'>—</span>"}</div>
+      <hr/>
+      <div class="muted">Steps</div>
+      <div class="steps">${steps || "<div class='muted'>—</div>"}</div>
+    `;
+  }
+
+  async function doSend(){
+    if(!$("confirm").checked){
+      logln("[BLOCKED] Please confirm safety checkbox.");
+      return;
+    }
+    const name = $("scenario").value;
+    const dst_ip = ($("dst_ip").value || "").trim();
+    const src_ip = ($("src_ip").value || "127.0.0.1").trim();
+    const iface  = ($("iface").value || "").trim();
+    const timeout = parseFloat($("timeout").value || "2.0");
+    const also_build_pcap = $("pcap").checked;
+
+    if(!name){ logln("[ERROR] No scenario selected."); return; }
+    if(!dst_ip){ logln("[ERROR] Destination IP missing."); return; }
+
+    logln(`[SEND] scenario=${name} dst=${dst_ip} src=${src_ip} iface=${iface||"auto"} pcap=${also_build_pcap}`);
+    const payload = { name, dst_ip, src_ip, iface, timeout, also_build_pcap };
+
+    const data = await window.fetchJSON("{{ url_for('web.api_send') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+
+    if(data.error){
+      logln("[ERROR] " + data.error);
+      return;
+    }
+    logln("[OK] " + JSON.stringify(data));
+  }
+
+  function doClear(){
+    $("log").textContent = "";
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    $("btn_clear").addEventListener("click", (e)=>{ e.preventDefault(); doClear(); });
+    $("btn_send").addEventListener("click", (e)=>{ e.preventDefault(); doSend(); });
+    $("scenario").addEventListener("change", ()=>{ doPreview(); });
+
+    await loadScenarios();
+    await doPreview();
+  });
+})();
+</script>
+{% endblock %}

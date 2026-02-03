@@ -1,0 +1,334 @@
+{
+  "T0800": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0801": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0802": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0803": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0804": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0805": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0806": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0807": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0809": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0811": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0812": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0813": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0814": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0815": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0816": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0817": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0819": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0820": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0821": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0822": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0823": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0826": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0827": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0828": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0829": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0830": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0831": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0832": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0834": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0835": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0836": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0837": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0838": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0839": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0840": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0842": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0843": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0845": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0846": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0847": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0848": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0849": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0851": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0852": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0853": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0855": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0856": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0857": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0858": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0859": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0860": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0861": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0862": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0863": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0864": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0865": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0866": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0867": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0868": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0869": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0871": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0872": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0873": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0874": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0877": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0878": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0879": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0880": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0881": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0882": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0883": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0884": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0885": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0886": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0887": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0888": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0889": {
+    "class": "unknown",
+    "reason": ""
+  },
+  "T0890": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0891": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0892": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0893": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0894": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  },
+  "T0895": {
+    "class": "host_or_process",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+  }
+}

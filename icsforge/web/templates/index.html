@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>ICSForge</h2>
+    <div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="max-width:820px">
+        <div style="font-size:30px;font-weight:900;margin:6px 0 8px 0">OT/ICS Attack Simulation • Delivery Proof • SOC Readiness</div>
+        <div class="small">
+          ICSForge generates realistic industrial network telemetry (live or PCAP) aligned to ATT&CK for ICS, and helps you prove
+          <b>Executed</b> → <b>Delivered</b> → <b>Detected</b> coverage in a safe lab or production-like OT network.
+        </div>
+        <div class="small" style="margin-top:8px">
+          <b>Safe by design:</b> destination IP validation + cooperative receiver option; no destructive payloads.
+        </div>
+      </div>
+      <div class="row" style="gap:10px;align-items:flex-start;flex-wrap:wrap">
+        {% if ui_mode == 'receiver' %}
+          <a class="btn primary" href="{{ url_for('web.receiver') }}">Open Receiver</a>
+          <a class="btn" href="{{ url_for('web.matrix') }}">Open ATT&CK Matrix</a>
+          <a class="btn" href="{{ url_for('web.tools') }}">Tools</a>
+        {% else %}
+          <a class="btn primary" href="{{ url_for('web.sender') }}">Open Sender</a>
+          <a class="btn primary" href="{{ url_for('web.soc') }}">SOC Mode</a>
+          <a class="btn" href="{{ url_for('web.matrix') }}">ATT&CK Matrix</a>
+          <a class="btn" href="{{ url_for('web.tools') }}">Tools</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="v">{{ kpis.scenarios }}</div><div class="l">Scenarios</div></div>
+      <div class="kpi"><div class="v">{{ kpis.techniques }}</div><div class="l">Techniques referenced</div></div>
+      <div class="kpi"><div class="v">{{ kpis.protocols }}</div><div class="l">Protocols</div></div>
+      <div class="kpi"><div class="v">{{ kpis.profiles }}</div><div class="l">Industry profiles</div></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:12px">
+    <div class="card">
+      <h3>Quick start</h3>
+      <ol>
+        <li>Start a receiver on a safe destination IP in your OT lab (or use loopback for a local demo).</li>
+        <li>Open Sender → pick a scenario → set receiver destination → run.</li>
+        <li>Use the ATT&CK Matrix to browse techniques and launch runnable variants.</li>
+        <li>Use SOC Mode to correlate <b>Executed</b> (ICSForge) with <b>Detected</b> (your NSM/IDS exports).</li>
+      </ol>
+      <div class="small">Tip: For best IDS/NSM realism, use original protocol ports and run with sudo when required.</div>
+    </div>
+
+    <div class="card">
+      <h3>Scenario packs</h3>
+      <div class="small">Packs group scenarios by theme (ATT&CK v18, protocol families, demo flows).</div>
+      <div class="hr"></div>
+      {% for p in pack_cards[:12] %}
+        <div class="row" style="justify-content:space-between;gap:12px;align-items:center">
+          <div>
+            <b>{{ p.name }}</b>
+            <div class="small">{{ p.count }} scenarios • {{ p.protocols|length }} protocols • {{ p.techniques|length }} techniques</div>
+          </div>
+          <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            {% for pr in p.protocols[:6] %}
+              <span class="badge">{{ pr }}</span>
+            {% endfor %}
+            {% if p.protocols|length > 6 %}<span class="badge">+{{ p.protocols|length-6 }}</span>{% endif %}
+          </div>
+        </div>
+        {% if not loop.last %}<div class="hr"></div>{% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <h3>Technique coverage (top referenced)</h3>
+      <div class="small">These techniques appear most often across scenarios (great starting points for demos).</div>
+      <div class="hr"></div>
+      <div style="max-height:420px;overflow:auto">
+        <table>
+          <thead>
+            <tr><th style="width:110px">Technique</th><th>Name</th><th style="width:130px">Scenario refs</th></tr>
+          </thead>
+          <tbody>
+            {% for t in top_techniques[:30] %}
+              <tr>
+                <td><code>{{ t.id }}</code></td>
+                <td>{{ t.name }}</td>
+                <td>{{ t.scenario_refs }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="small" style="margin-top:8px">Want to run by technique? Open the ATT&CK Matrix and click runnable tiles.</div>
+    </div>
+
+    <div class="card">
+      <h3>Browse scenarios</h3>
+      <div class="small">A quick peek into the catalog (sorted by your new consistent IDs).</div>
+      <div class="hr"></div>
+      <input id="sc_search" placeholder="Filter scenarios (e.g. T0855 or modbus or precursor)" style="width:100%;margin-bottom:8px">
+      <div style="max-height:420px;overflow:auto">
+        <table id="sc_table">
+          <thead>
+            <tr><th style="width:58%">Scenario ID</th><th>Title</th></tr>
+          </thead>
+          <tbody>
+            {% for s in scenarios_sample %}
+              <tr>
+                <td><code>{{ s.id }}</code></td>
+                <td class="small">{{ s.title }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <script>
+        (function(){
+          const q = document.getElementById('sc_search');
+          const tbl = document.getElementById('sc_table');
+          if(!q || !tbl) return;
+          q.addEventListener('input', ()=>{
+            const v = (q.value||'').toLowerCase();
+            tbl.querySelectorAll('tbody tr').forEach(tr=>{
+              const txt = tr.innerText.toLowerCase();
+              tr.style.display = txt.indexOf(v) >= 0 ? '' : 'none';
+            });
+          });
+        })();
+      </script>
+      <div class="small" style="margin-top:8px">For full execution and exports, open Sender → Run Scenario.</div>
+    </div>
+  </div>
+{% endblock %}

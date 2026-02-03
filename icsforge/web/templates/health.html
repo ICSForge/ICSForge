@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <div class="card-title">Diagnostics</div>
+    <div class="small">Checks packs, dependencies, raw-socket privilege, and optional receiver reachability.</div>
+
+    <div class="row" style="margin-top:10px; align-items:flex-end">
+      <div class="field" style="min-width:320px">
+        <label>Receiver URL (optional)</label>
+        <input id="receiver_url" placeholder="http://10.0.0.50:8080">
+      </div>
+      <button class="btn primary" onclick="runHealth()">Run checks</button>
+    </div>
+
+    <div class="codebox" id="health_out" style="margin-top:10px">Ready.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Quick checklist</div>
+    <ul class="small">
+      <li><b>Scenario packs</b> &gt; 0</li>
+      <li><b>Scapy</b>: true</li>
+      <li><b>Raw socket</b>: true (run sender with <code>sudo -E</code>)</li>
+      <li><b>Receiver OK</b>: true (if URL provided)</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+async function runHealth(){
+  const receiver = document.getElementById("receiver_url").value.trim();
+  const base = "{{ url_for('web.api_health') }}";
+  const url = receiver ? (base + "?receiver=" + encodeURIComponent(receiver)) : base;
+  const data = await fetch(url).then(r=>r.json());
+  document.getElementById("health_out").textContent = JSON.stringify(data, null, 2);
+}
+</script>
+{% endblock %}

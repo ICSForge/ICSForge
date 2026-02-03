@@ -1,0 +1,3077 @@
+scenarios:
+  T0855__unauthorized_command_message__modbus__seq_write_multiple_registers_read_holding__flow:
+    description: 'Quick Modbus command sequence: write burst then read-back (T0855
+      + T0801)'
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0855
+      count: 12
+      interval: 0s
+      style: write_multiple_registers
+    - type: pcap
+      proto: modbus
+      technique: T0801
+      count: 6
+      interval: 0.2s
+      style: read_holding
+    title: T0855 - Unauthorized Command Message (modbus) [seq_write_multiple_registers_read_holding]
+    tags:
+    - legacy_id:quick_modbus_unauth_write
+  T0848__rogue_master__dnp3__read__flow:
+    description: 'DNP3 rogue master: connection enumeration then operate burst (T0840
+      + T0848)'
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0840
+      count: 8
+      interval: 0s
+      style: read
+    - type: pcap
+      proto: dnp3
+      technique: T0848
+      count: 10
+      interval: 0s
+    title: T0848 - Rogue Master (dnp3) [read]
+    tags:
+    - legacy_id:dnp3_rogue_master_operate
+  T0831__manipulation_of_control__s7comm__sequence__flow:
+    description: S7 STOP then WriteVar (Denial of Control + Manipulation of Control)
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0813
+      count: 3
+      interval: 0s
+    - type: pcap
+      proto: s7comm
+      technique: T0831
+      count: 6
+      interval: 0s
+    title: T0831 - Manipulation of Control (s7comm) [sequence]
+    tags:
+    - legacy_id:s7_stop_then_write
+  T0855__unauthorized_command_message__iec104__single_command__flow:
+    description: 'IEC-104 control chain: control commands then view disruption (T0855
+      + T0815)'
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0855
+      count: 10
+      interval: 0s
+      style: single_command
+    - type: pcap
+      proto: iec104
+      technique: T0815
+      count: 10
+      interval: 0.15s
+    title: T0855 - Unauthorized Command Message (iec104) [single_command]
+    tags:
+    - legacy_id:iec104_control_chain
+  T0831__manipulation_of_control__opcua__seq_hello_opn__flow:
+    description: OPC UA session + write like audit trail (Valid Accounts / Unauthorized
+      write patterns)
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0859
+      count: 2
+      interval: 0s
+      style: hello
+    - type: pcap
+      proto: opcua
+      technique: T0831
+      count: 6
+      interval: 0s
+      style: opn
+    title: T0831 - Manipulation of Control (opcua) [seq_hello_opn]
+    tags:
+    - legacy_id:opcua_anonymous_login_and_write
+  T0888__remote_system_information_discovery__enip__register_session__single:
+    description: EtherNet/IP register session sweep (Remote System Information Discovery)
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0888
+      count: 8
+      interval: 0s
+      style: register_session
+    title: T0888 - Remote System Information Discovery (enip) [register_session]
+    tags:
+    - legacy_id:enip_register_session_sweep
+  T0840__network_connection_enumeration__profinet_dcp__event__single:
+    description: PROFINET DCP discovery frames (Network Connection Enumeration / Discovery)
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0840
+      count: 12
+      interval: 0s
+    title: T0840 - Network Connection Enumeration (profinet_dcp) [event]
+    tags:
+    - legacy_id:profinet_dcp_discovery
+  T0855__unauthorized_command_message__multi__cross_protocol__flow:
+    description: 'Manufacturing demo chain: discovery → unauthorized command → loss
+      of view'
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0840
+      count: 8
+      interval: 0s
+    - type: pcap
+      proto: enip
+      technique: T0888
+      count: 6
+      interval: 0s
+      style: register_session
+    - type: pcap
+      proto: modbus
+      technique: T0855
+      count: 10
+      interval: 0s
+      style: write_multiple_registers
+    - type: pcap
+      proto: s7comm
+      technique: T0829
+      count: 6
+      interval: 0s
+    title: T0855 - Unauthorized Command Message (multi) [cross_protocol]
+    tags:
+    - legacy_id:manufacturing_line_disruption_demo
+  T0827__loss_of_control__multi__cross_protocol__flow:
+    description: 'Food & Beverage demo: OPC UA tag activity → Modbus write burst →
+      loss of control'
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0801
+      count: 8
+      interval: 0s
+      style: hello
+    - type: pcap
+      proto: modbus
+      technique: T0806
+      count: 12
+      interval: 0s
+    - type: pcap
+      proto: s7comm
+      technique: T0827
+      count: 4
+      interval: 0s
+    title: T0827 - Loss of Control (multi) [cross_protocol]
+    tags:
+    - legacy_id:food_beverage_batch_anomaly_demo
+  T0883__internet_accessible_device__multi__cross_protocol__flow:
+    technique: T0883
+    tactic: Initial Access
+    severity: medium
+    description: Reachable OT services from untrusted segment (safe probing traffic).
+    expected_detections:
+    - ICS service exposed
+    - Unexpected client-to-OT communication
+    variants:
+    - id: opcua_hello
+      proto: opcua
+    - id: modbus_probe
+      proto: modbus
+    - id: enip_identity
+      proto: enip
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0883
+      count: 8
+      interval: 0.15s
+      style: hello
+    - type: pcap
+      proto: modbus
+      technique: T0883
+      count: 8
+      interval: 0.20s
+    - type: pcap
+      proto: enip
+      technique: T0883
+      count: 5
+      interval: 0.25s
+      style: register_session
+    title: T0883 - Internet Accessible Device (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0883_internet_accessible_device
+  T0840__network_connection_enumeration__multi__cross_protocol__flow:
+    technique: T0840
+    tactic: Discovery
+    severity: low
+    description: Protocol-visible probing to learn endpoints/roles (masters/outstations/PLCs).
+    expected_detections:
+    - New talker to OT ports
+    - Unexpected OT polling patterns
+    variants:
+    - id: modbus_enum
+      proto: modbus
+    - id: dnp3_probe
+      proto: dnp3
+    - id: s7_reads
+      proto: s7comm
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0840
+      count: 14
+      interval: 0.07s
+      style: read_holding
+    - type: pcap
+      proto: dnp3
+      technique: T0840
+      count: 10
+      interval: 0.10s
+      style: read
+    - type: pcap
+      proto: s7comm
+      technique: T0840
+      count: 8
+      interval: 0.15s
+      style: read_var
+    title: T0840 - Network Connection Enumeration (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0840_network_connection_enumeration
+  T0861__point_tag_identification__multi__cross_protocol__flow:
+    technique: T0861
+    tactic: Collection
+    severity: low
+    description: Enumerate points/tags via OPC UA Browse/Read and PLC register sweeps.
+    expected_detections:
+    - Browse burst
+    - Tag enumeration
+    - Register sweep
+    variants:
+    - id: opcua
+      proto: opcua
+    - id: s7comm
+      proto: s7comm
+    - id: modbus
+      proto: modbus
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0861
+      count: 16
+      interval: 0.06s
+      style: hello
+    - type: pcap
+      proto: s7comm
+      technique: T0861
+      count: 10
+      interval: 0.12s
+      style: read_var
+    - type: pcap
+      proto: modbus
+      technique: T0861
+      count: 12
+      interval: 0.10s
+      style: read_holding
+    title: T0861 - Point & Tag Identification (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0861_point_and_tag_identification
+  T0848__rogue_master__multi__cross_protocol__flow:
+    technique: T0848
+    tactic: Lateral Movement
+    severity: high
+    description: Unexpected master issues otherwise valid OT protocol operations.
+    expected_detections:
+    - New master detected
+    - Unexpected ICS client
+    variants:
+    - id: modbus
+      proto: modbus
+    - id: dnp3
+      proto: dnp3
+    - id: iec104
+      proto: iec104
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0848
+      count: 14
+      interval: 0.08s
+    - type: pcap
+      proto: dnp3
+      technique: T0848
+      count: 10
+      interval: 0.12s
+    - type: pcap
+      proto: iec104
+      technique: T0848
+      count: 10
+      interval: 0.12s
+    title: T0848 - Rogue Master (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0848_rogue_master
+  T0855__unauthorized_command_message__multi__cross_protocol__flow_v2:
+    technique: T0855
+    tactic: Impair Process Control
+    severity: critical
+    description: Unauthorized control commands from an unexpected host (flagship demo).
+    expected_detections:
+    - Unauthorized Modbus Write
+    - New ICS master detected
+    - Control command from unexpected segment
+    variants:
+    - id: modbus_write
+      proto: modbus
+    - id: dnp3_operate
+      proto: dnp3
+    - id: iec104_control
+      proto: iec104
+    - id: s7_writevar
+      proto: s7comm
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0855
+      count: 20
+      interval: 0.06s
+      style: write_multiple_registers
+    - type: pcap
+      proto: dnp3
+      technique: T0855
+      count: 12
+      interval: 0.10s
+      style: direct_operate
+    - type: pcap
+      proto: iec104
+      technique: T0855
+      count: 12
+      interval: 0.10s
+      style: single_command
+    - type: pcap
+      proto: s7comm
+      technique: T0855
+      count: 10
+      interval: 0.12s
+      style: write_var
+    title: T0855 - Unauthorized Command Message (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0855_unauthorized_command_message
+  T0831__manipulation_of_control__multi__cross_protocol__flow:
+    technique: T0831
+    tactic: Impair Process Control
+    severity: critical
+    description: Alternating read/control patterns modeling setpoint changes.
+    expected_detections:
+    - Repeated control changes
+    - Setpoint change anomalies
+    variants:
+    - id: iec104
+      proto: iec104
+    - id: modbus
+      proto: modbus
+    - id: dnp3
+      proto: dnp3
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0831
+      count: 25
+      interval: 0.06s
+    - type: pcap
+      proto: modbus
+      technique: T0831
+      count: 20
+      interval: 0.08s
+    - type: pcap
+      proto: dnp3
+      technique: T0831
+      count: 16
+      interval: 0.08s
+    title: T0831 - Manipulation of Control (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0831_manipulation_of_control
+  T0814__denial_of_service__multi__cross_protocol__flow:
+    technique: T0814
+    tactic: Impact
+    severity: high
+    description: Rate-based stress to OT services (safe burst patterns).
+    expected_detections:
+    - OT rate anomaly
+    - Potential OT DoS
+    variants:
+    - id: modbus
+      proto: modbus
+    - id: dnp3
+      proto: dnp3
+    - id: opcua
+      proto: opcua
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0814
+      count: 60
+      interval: 0.015s
+      style: dos_read
+    - type: pcap
+      proto: dnp3
+      technique: T0814
+      count: 40
+      interval: 0.02s
+      style: read
+    - type: pcap
+      proto: opcua
+      technique: T0814
+      count: 40
+      interval: 0.02s
+      style: hello
+    title: T0814 - Denial of Service (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0814_denial_of_service
+  T0815__denial_of_view__multi__cross_protocol__flow:
+    technique: T0815
+    tactic: Inhibit Response Function
+    severity: high
+    description: Telemetry gaps/pause patterns to emulate visibility loss.
+    expected_detections:
+    - Telemetry gap
+    - Loss of view indicators
+    variants:
+    - id: iec104
+      proto: iec104
+    - id: dnp3
+      proto: dnp3
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0815
+      count: 10
+      interval: 0.08s
+    - type: pcap
+      proto: iec104
+      technique: T0815
+      count: 10
+      interval: 0.50s
+    - type: pcap
+      proto: dnp3
+      technique: T0815
+      count: 10
+      interval: 0.08s
+    - type: pcap
+      proto: dnp3
+      technique: T0815
+      count: 10
+      interval: 0.50s
+    title: T0815 - Denial of View (multi) [cross_protocol]
+    tags:
+    - legacy_id:T0815_denial_of_view
+  T0855__unauthorized_command_message__modbus__write_multiple_registers__single:
+    description: Unauthorized Command Message (T0855) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0855
+      count: 12
+      interval: 0s
+      style: write_multiple_registers
+    title: T0855 - Unauthorized Command Message (modbus) [write_multiple_registers]
+    tags:
+    - legacy_id:t0855_modbus_variant
+  T0855__unauthorized_command_message__dnp3__direct_operate__single:
+    description: Unauthorized Command Message (T0855) via dnp3 traffic variant
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0855
+      count: 10
+      interval: 0s
+      style: direct_operate
+    title: T0855 - Unauthorized Command Message (dnp3) [direct_operate]
+    tags:
+    - legacy_id:t0855_dnp3_variant
+  T0855__unauthorized_command_message__iec104__single_command__single:
+    description: Unauthorized Command Message (T0855) via iec104 traffic variant
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0855
+      count: 10
+      interval: 0s
+      style: single_command
+    title: T0855 - Unauthorized Command Message (iec104) [single_command]
+    tags:
+    - legacy_id:t0855_iec104_variant
+  T0855__unauthorized_command_message__s7comm__write_var__single:
+    description: Unauthorized Command Message (T0855) via s7comm traffic variant
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0855
+      count: 8
+      interval: 0s
+      style: write_var
+    title: T0855 - Unauthorized Command Message (s7comm) [write_var]
+    tags:
+    - legacy_id:t0855_s7comm_variant
+  T0855__unauthorized_command_message__enip__register_session__single:
+    description: Unauthorized Command Message (T0855) via enip traffic variant
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0855
+      count: 8
+      interval: 0s
+      style: register_session
+    title: T0855 - Unauthorized Command Message (enip) [register_session]
+    tags:
+    - legacy_id:t0855_enip_variant
+  T0855__unauthorized_command_message__opcua__opn__single:
+    description: Unauthorized Command Message (T0855) via opcua traffic variant
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0855
+      count: 6
+      interval: 0s
+      style: opn
+    title: T0855 - Unauthorized Command Message (opcua) [opn]
+    tags:
+    - legacy_id:t0855_opcua_variant
+  T0855__unauthorized_command_message__multi__cross_protocol__flow_v3:
+    description: Unauthorized Command Message (T0855) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0855
+      count: 12
+      interval: 0s
+      style: write_multiple_registers
+    - type: pcap
+      proto: dnp3
+      technique: T0855
+      count: 10
+      interval: 0s
+      style: direct_operate
+    - type: pcap
+      proto: iec104
+      technique: T0855
+      count: 10
+      interval: 0s
+      style: single_command
+    - type: pcap
+      proto: s7comm
+      technique: T0855
+      count: 8
+      interval: 0s
+      style: write_var
+    - type: pcap
+      proto: enip
+      technique: T0855
+      count: 8
+      interval: 0s
+      style: register_session
+    - type: pcap
+      proto: opcua
+      technique: T0855
+      count: 6
+      interval: 0s
+      style: opn
+    title: T0855 - Unauthorized Command Message (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0855_multi_variant
+  T0848__rogue_master__dnp3__event__single:
+    description: Rogue Master (T0848) via dnp3 traffic variant
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0848
+      count: 10
+      interval: 0s
+    title: T0848 - Rogue Master (dnp3) [event]
+    tags:
+    - legacy_id:t0848_dnp3_variant
+  T0848__rogue_master__iec104__event__single:
+    description: Rogue Master (T0848) via iec104 traffic variant
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0848
+      count: 10
+      interval: 0s
+    title: T0848 - Rogue Master (iec104) [event]
+    tags:
+    - legacy_id:t0848_iec104_variant
+  T0848__rogue_master__modbus__event__single:
+    description: Rogue Master (T0848) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0848
+      count: 10
+      interval: 0s
+    title: T0848 - Rogue Master (modbus) [event]
+    tags:
+    - legacy_id:t0848_modbus_variant
+  T0848__rogue_master__multi__cross_protocol__flow_v2:
+    description: Rogue Master (T0848) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0848
+      count: 10
+      interval: 0s
+    - type: pcap
+      proto: iec104
+      technique: T0848
+      count: 10
+      interval: 0s
+    - type: pcap
+      proto: modbus
+      technique: T0848
+      count: 10
+      interval: 0s
+    title: T0848 - Rogue Master (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0848_multi_variant
+  T0842__network_sniffing__profinet_dcp__event__single:
+    description: Network Sniffing (T0842) via profinet_dcp traffic variant
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0842
+      count: 12
+      interval: 0s
+    title: T0842 - Network Sniffing (profinet_dcp) [event]
+    tags:
+    - legacy_id:t0842_profinet_dcp_variant
+  T0842__network_sniffing__modbus__read_holding__single:
+    description: Network Sniffing (T0842) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0842
+      count: 8
+      interval: 0s
+      style: read_holding
+    title: T0842 - Network Sniffing (modbus) [read_holding]
+    tags:
+    - legacy_id:t0842_modbus_variant
+  T0842__network_sniffing__multi__cross_protocol__flow:
+    description: Network Sniffing (T0842) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0842
+      count: 12
+      interval: 0s
+    - type: pcap
+      proto: modbus
+      technique: T0842
+      count: 8
+      interval: 0s
+      style: read_holding
+    title: T0842 - Network Sniffing (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0842_multi_variant
+  T0840__network_connection_enumeration__enip__list_identity__single:
+    description: Network Connection Enumeration (T0840) via enip traffic variant
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0840
+      count: 12
+      interval: 0s
+      style: list_identity
+    title: T0840 - Network Connection Enumeration (enip) [list_identity]
+    tags:
+    - legacy_id:t0840_enip_variant
+  T0840__network_connection_enumeration__opcua__hello__single:
+    description: Network Connection Enumeration (T0840) via opcua traffic variant
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0840
+      count: 10
+      interval: 0s
+      style: hello
+    title: T0840 - Network Connection Enumeration (opcua) [hello]
+    tags:
+    - legacy_id:t0840_opcua_variant
+  T0840__network_connection_enumeration__modbus__read_holding__single:
+    description: Network Connection Enumeration (T0840) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0840
+      count: 8
+      interval: 0s
+      style: read_holding
+    title: T0840 - Network Connection Enumeration (modbus) [read_holding]
+    tags:
+    - legacy_id:t0840_modbus_variant
+  T0840__network_connection_enumeration__multi__cross_protocol__flow_v2:
+    description: Network Connection Enumeration (T0840) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0840
+      count: 12
+      interval: 0s
+      style: list_identity
+    - type: pcap
+      proto: opcua
+      technique: T0840
+      count: 10
+      interval: 0s
+      style: hello
+    - type: pcap
+      proto: modbus
+      technique: T0840
+      count: 8
+      interval: 0s
+      style: read_holding
+    title: T0840 - Network Connection Enumeration (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0840_multi_variant
+  T0814__denial_of_service__modbus__dos_read__single:
+    description: Denial of Service (T0814) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0814
+      count: 50
+      interval: 0s
+      style: dos_read
+    title: T0814 - Denial of Service (modbus) [dos_read]
+    tags:
+    - legacy_id:t0814_modbus_variant
+  T0814__denial_of_service__dnp3__read__single:
+    description: Denial of Service (T0814) via dnp3 traffic variant
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0814
+      count: 50
+      interval: 0s
+      style: read
+    title: T0814 - Denial of Service (dnp3) [read]
+    tags:
+    - legacy_id:t0814_dnp3_variant
+  T0814__denial_of_service__iec104__event__single:
+    description: Denial of Service (T0814) via iec104 traffic variant
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0814
+      count: 50
+      interval: 0s
+    title: T0814 - Denial of Service (iec104) [event]
+    tags:
+    - legacy_id:t0814_iec104_variant
+  T0814__denial_of_service__multi__cross_protocol__flow_v2:
+    description: Denial of Service (T0814) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0814
+      count: 50
+      interval: 0s
+      style: dos_read
+    - type: pcap
+      proto: dnp3
+      technique: T0814
+      count: 50
+      interval: 0s
+      style: read
+    - type: pcap
+      proto: iec104
+      technique: T0814
+      count: 50
+      interval: 0s
+    title: T0814 - Denial of Service (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0814_multi_variant
+  T0815__denial_of_view__opcua__hello__single:
+    description: Denial of View (T0815) via opcua traffic variant
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0815
+      count: 12
+      interval: 0s
+      style: hello
+    title: T0815 - Denial of View (opcua) [hello]
+    tags:
+    - legacy_id:t0815_opcua_variant
+  T0815__denial_of_view__iec104__event__single:
+    description: Denial of View (T0815) via iec104 traffic variant
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0815
+      count: 12
+      interval: 0s
+    title: T0815 - Denial of View (iec104) [event]
+    tags:
+    - legacy_id:t0815_iec104_variant
+  T0815__denial_of_view__multi__cross_protocol__flow_v2:
+    description: Denial of View (T0815) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0815
+      count: 12
+      interval: 0s
+      style: hello
+    - type: pcap
+      proto: iec104
+      technique: T0815
+      count: 12
+      interval: 0s
+    title: T0815 - Denial of View (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0815_multi_variant
+  T0831__manipulation_of_control__modbus__event__single:
+    description: Manipulation of Control (T0831) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0831
+      count: 15
+      interval: 0s
+    title: T0831 - Manipulation of Control (modbus) [event]
+    tags:
+    - legacy_id:t0831_modbus_variant
+  T0831__manipulation_of_control__iec104__event__single:
+    description: Manipulation of Control (T0831) via iec104 traffic variant
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0831
+      count: 15
+      interval: 0s
+    title: T0831 - Manipulation of Control (iec104) [event]
+    tags:
+    - legacy_id:t0831_iec104_variant
+  T0831__manipulation_of_control__dnp3__event__single:
+    description: Manipulation of Control (T0831) via dnp3 traffic variant
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0831
+      count: 15
+      interval: 0s
+    title: T0831 - Manipulation of Control (dnp3) [event]
+    tags:
+    - legacy_id:t0831_dnp3_variant
+  T0831__manipulation_of_control__multi__cross_protocol__flow_v2:
+    description: Manipulation of Control (T0831) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0831
+      count: 15
+      interval: 0s
+    - type: pcap
+      proto: iec104
+      technique: T0831
+      count: 15
+      interval: 0s
+    - type: pcap
+      proto: dnp3
+      technique: T0831
+      count: 15
+      interval: 0s
+    title: T0831 - Manipulation of Control (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0831_multi_variant
+  T0832__manipulation_of_view__opcua__opn__single:
+    description: Manipulation of View (T0832) via opcua traffic variant
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0832
+      count: 12
+      interval: 0s
+      style: opn
+    title: T0832 - Manipulation of View (opcua) [opn]
+    tags:
+    - legacy_id:t0832_opcua_variant
+  T0832__manipulation_of_view__modbus__event__single:
+    description: Manipulation of View (T0832) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0832
+      count: 10
+      interval: 0s
+    title: T0832 - Manipulation of View (modbus) [event]
+    tags:
+    - legacy_id:t0832_modbus_variant
+  T0832__manipulation_of_view__multi__cross_protocol__flow:
+    description: Manipulation of View (T0832) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0832
+      count: 12
+      interval: 0s
+      style: opn
+    - type: pcap
+      proto: modbus
+      technique: T0832
+      count: 10
+      interval: 0s
+    title: T0832 - Manipulation of View (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0832_multi_variant
+  T0836__modify_parameter__modbus__event__single:
+    description: Modify Parameter (T0836) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0836
+      count: 12
+      interval: 0s
+    title: T0836 - Modify Parameter (modbus) [event]
+    tags:
+    - legacy_id:t0836_modbus_variant
+  T0836__modify_parameter__s7comm__event__single:
+    description: Modify Parameter (T0836) via s7comm traffic variant
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0836
+      count: 10
+      interval: 0s
+    title: T0836 - Modify Parameter (s7comm) [event]
+    tags:
+    - legacy_id:t0836_s7comm_variant
+  T0836__modify_parameter__opcua__hello__single:
+    description: Modify Parameter (T0836) via opcua traffic variant
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0836
+      count: 10
+      interval: 0s
+      style: hello
+    title: T0836 - Modify Parameter (opcua) [hello]
+    tags:
+    - legacy_id:t0836_opcua_variant
+  T0836__modify_parameter__multi__cross_protocol__flow:
+    description: Modify Parameter (T0836) multi-protocol variant pack
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0836
+      count: 12
+      interval: 0s
+    - type: pcap
+      proto: s7comm
+      technique: T0836
+      count: 10
+      interval: 0s
+    - type: pcap
+      proto: opcua
+      technique: T0836
+      count: 10
+      interval: 0s
+      style: hello
+    title: T0836 - Modify Parameter (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0836_multi_variant
+  T0869__standard_application_layer_protocol__opcua__hello__single:
+    description: Standard Application Layer Protocol (T0869) via opcua traffic variant
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0869
+      count: 12
+      interval: 0s
+      style: hello
+    title: T0869 - Standard Application Layer Protocol (opcua) [hello]
+    tags:
+    - legacy_id:t0869_opcua_variant
+  T0869__standard_application_layer_protocol__modbus__event__single:
+    description: Standard Application Layer Protocol (T0869) via modbus traffic variant
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0869
+      count: 12
+      interval: 0s
+    title: T0869 - Standard Application Layer Protocol (modbus) [event]
+    tags:
+    - legacy_id:t0869_modbus_variant
+  T0869__standard_application_layer_protocol__dnp3__event__single:
+    description: Standard Application Layer Protocol (T0869) via dnp3 traffic variant
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0869
+      count: 12
+      interval: 0s
+    title: T0869 - Standard Application Layer Protocol (dnp3) [event]
+    tags:
+    - legacy_id:t0869_dnp3_variant
+  T0869__standard_application_layer_protocol__multi__cross_protocol__flow:
+    description: Standard Application Layer Protocol (T0869) multi-protocol variant
+      pack
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0869
+      count: 12
+      interval: 0s
+      style: hello
+    - type: pcap
+      proto: modbus
+      technique: T0869
+      count: 12
+      interval: 0s
+    - type: pcap
+      proto: dnp3
+      technique: T0869
+      count: 12
+      interval: 0s
+    title: T0869 - Standard Application Layer Protocol (multi) [cross_protocol]
+    tags:
+    - legacy_id:t0869_multi_variant
+  T0831__manipulation_of_control__multi__cross_protocol__flow_v3:
+    description: Manufacturing quality drift with mixed OT traffic (T0836/T0831)
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0836
+      count: 10
+      interval: 0s
+    - type: pcap
+      proto: modbus
+      technique: T0831
+      count: 12
+      interval: 0s
+    - type: pcap
+      proto: opcua
+      technique: T0832
+      count: 10
+      interval: 0s
+      style: opn
+    title: T0831 - Manipulation of Control (multi) [cross_protocol]
+    tags:
+    - legacy_id:manufacturing_quality_drift_multi
+  T0855__unauthorized_command_message__multi__cross_protocol__flow_v4:
+    description: Food & Beverage batch override and telemetry masking (T0855/T0832)
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0855
+      count: 12
+      interval: 0s
+      style: write_multiple_registers
+    - type: pcap
+      proto: opcua
+      technique: T0832
+      count: 10
+      interval: 0s
+      style: opn
+    - type: pcap
+      proto: enip
+      technique: T0840
+      count: 8
+      interval: 0s
+      style: list_identity
+    title: T0855 - Unauthorized Command Message (multi) [cross_protocol]
+    tags:
+    - legacy_id:food_beverage_batch_override_multi
+  T0840__network_connection_enumeration__modbus__read_holding__precursor:
+    title: T0840 precursor via MODBUS
+    description: Network-observable precursor behavior for T0840 (Network Connection
+      Enumeration) using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0840
+      style: read_holding
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0840__network_connection_enumeration__dnp3__read__precursor:
+    title: T0840 precursor via DNP3
+    description: Network-observable precursor behavior for T0840 (Network Connection
+      Enumeration) using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0840
+      style: read
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0840__network_connection_enumeration__iec104__meas__precursor:
+    title: T0840 precursor via IEC104
+    description: Network-observable precursor behavior for T0840 (Network Connection
+      Enumeration) using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0840
+      style: meas
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0840__network_connection_enumeration__s7comm__read_var__precursor:
+    title: T0840 precursor via S7COMM
+    description: Network-observable precursor behavior for T0840 (Network Connection
+      Enumeration) using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0840
+      style: read_var
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0840__network_connection_enumeration__opcua__hello__precursor:
+    title: T0840 precursor via OPCUA
+    description: Network-observable precursor behavior for T0840 (Network Connection
+      Enumeration) using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0840
+      style: hello
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0840__network_connection_enumeration__enip__list_identity__precursor:
+    title: T0840 precursor via ENIP
+    description: Network-observable precursor behavior for T0840 (Network Connection
+      Enumeration) using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0840
+      style: list_identity
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0840__network_connection_enumeration__multi__cross_protocol__precursor:
+    title: T0840 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0840 (Network Connection Enumeration).
+    profile: discovery
+    tags:
+    - legacy_id:enum_t0840_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0840
+      style: read_holding
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0840
+      style: read
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0840
+      style: meas
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0840
+      style: read_var
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0840
+      style: hello
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0840
+      style: list_identity
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__modbus__read_holding__precursor:
+    title: T0842 precursor via MODBUS
+    description: Network-observable precursor behavior for T0842 (Network Sniffing)
+      using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0842
+      style: read_holding
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__dnp3__read__precursor:
+    title: T0842 precursor via DNP3
+    description: Network-observable precursor behavior for T0842 (Network Sniffing)
+      using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0842
+      style: read
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__iec104__meas__precursor:
+    title: T0842 precursor via IEC104
+    description: Network-observable precursor behavior for T0842 (Network Sniffing)
+      using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0842
+      style: meas
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__s7comm__read_var__precursor:
+    title: T0842 precursor via S7COMM
+    description: Network-observable precursor behavior for T0842 (Network Sniffing)
+      using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0842
+      style: read_var
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__opcua__hello__precursor:
+    title: T0842 precursor via OPCUA
+    description: Network-observable precursor behavior for T0842 (Network Sniffing)
+      using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0842
+      style: hello
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__enip__list_identity__precursor:
+    title: T0842 precursor via ENIP
+    description: Network-observable precursor behavior for T0842 (Network Sniffing)
+      using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0842
+      style: list_identity
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0842__network_sniffing__multi__cross_protocol__precursor:
+    title: T0842 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0842 (Network Sniffing).
+    profile: discovery
+    tags:
+    - legacy_id:sniff_t0842_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0842
+      style: read_holding
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0842
+      style: read
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0842
+      style: meas
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0842
+      style: read_var
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0842
+      style: hello
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0842
+      style: list_identity
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__modbus__read_holding__precursor:
+    title: T0846 precursor via MODBUS
+    description: Network-observable precursor behavior for T0846 (Remote System Discovery)
+      using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0846
+      style: read_holding
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__dnp3__read__precursor:
+    title: T0846 precursor via DNP3
+    description: Network-observable precursor behavior for T0846 (Remote System Discovery)
+      using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0846
+      style: read
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__iec104__meas__precursor:
+    title: T0846 precursor via IEC104
+    description: Network-observable precursor behavior for T0846 (Remote System Discovery)
+      using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0846
+      style: meas
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__s7comm__read_var__precursor:
+    title: T0846 precursor via S7COMM
+    description: Network-observable precursor behavior for T0846 (Remote System Discovery)
+      using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0846
+      style: read_var
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__opcua__hello__precursor:
+    title: T0846 precursor via OPCUA
+    description: Network-observable precursor behavior for T0846 (Remote System Discovery)
+      using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0846
+      style: hello
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__enip__list_identity__precursor:
+    title: T0846 precursor via ENIP
+    description: Network-observable precursor behavior for T0846 (Remote System Discovery)
+      using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0846
+      style: list_identity
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0846__remote_system_discovery__multi__cross_protocol__precursor:
+    title: T0846 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0846 (Remote System Discovery).
+    profile: discovery
+    tags:
+    - legacy_id:rsd_t0846_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0846
+      style: read_holding
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0846
+      style: read
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0846
+      style: meas
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0846
+      style: read_var
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0846
+      style: hello
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0846
+      style: list_identity
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__modbus__read_holding__precursor:
+    title: T0888 precursor via MODBUS
+    description: Network-observable precursor behavior for T0888 (Remote System Information
+      Discovery) using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0888
+      style: read_holding
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__dnp3__read__precursor:
+    title: T0888 precursor via DNP3
+    description: Network-observable precursor behavior for T0888 (Remote System Information
+      Discovery) using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0888
+      style: read
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__iec104__meas__precursor:
+    title: T0888 precursor via IEC104
+    description: Network-observable precursor behavior for T0888 (Remote System Information
+      Discovery) using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0888
+      style: meas
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__s7comm__read_var__precursor:
+    title: T0888 precursor via S7COMM
+    description: Network-observable precursor behavior for T0888 (Remote System Information
+      Discovery) using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0888
+      style: read_var
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__opcua__hello__precursor:
+    title: T0888 precursor via OPCUA
+    description: Network-observable precursor behavior for T0888 (Remote System Information
+      Discovery) using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0888
+      style: hello
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__enip__list_identity__precursor:
+    title: T0888 precursor via ENIP
+    description: Network-observable precursor behavior for T0888 (Remote System Information
+      Discovery) using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0888
+      style: list_identity
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0888__remote_system_information_discovery__multi__cross_protocol__precursor:
+    title: T0888 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0888 (Remote System Information Discovery).
+    profile: discovery
+    tags:
+    - legacy_id:rsid_t0888_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0888
+      style: read_holding
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0888
+      style: read
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0888
+      style: meas
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0888
+      style: read_var
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0888
+      style: hello
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0888
+      style: list_identity
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__modbus__read_holding__precursor:
+    title: T0869 precursor via MODBUS
+    description: Network-observable precursor behavior for T0869 (Standard Application
+      Layer Protocol) using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0869
+      style: read_holding
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__dnp3__read__precursor:
+    title: T0869 precursor via DNP3
+    description: Network-observable precursor behavior for T0869 (Standard Application
+      Layer Protocol) using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0869
+      style: read
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__iec104__meas__precursor:
+    title: T0869 precursor via IEC104
+    description: Network-observable precursor behavior for T0869 (Standard Application
+      Layer Protocol) using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0869
+      style: meas
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__s7comm__read_var__precursor:
+    title: T0869 precursor via S7COMM
+    description: Network-observable precursor behavior for T0869 (Standard Application
+      Layer Protocol) using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0869
+      style: read_var
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__opcua__hello__precursor:
+    title: T0869 precursor via OPCUA
+    description: Network-observable precursor behavior for T0869 (Standard Application
+      Layer Protocol) using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0869
+      style: hello
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__enip__list_identity__precursor:
+    title: T0869 precursor via ENIP
+    description: Network-observable precursor behavior for T0869 (Standard Application
+      Layer Protocol) using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0869
+      style: list_identity
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0869__standard_application_layer_protocol__multi__cross_protocol__precursor:
+    title: T0869 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0869 (Standard Application Layer Protocol).
+    profile: command_and_control
+    tags:
+    - legacy_id:stdproto_t0869_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0869
+      style: read_holding
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0869
+      style: read
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0869
+      style: meas
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0869
+      style: read_var
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0869
+      style: hello
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0869
+      style: list_identity
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__modbus__read_holding__precursor:
+    title: T0814 precursor via MODBUS
+    description: Network-observable precursor behavior for T0814 (Denial of Service)
+      using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0814
+      style: read_holding
+      count: 12
+      interval: 0.02s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__dnp3__read__precursor:
+    title: T0814 precursor via DNP3
+    description: Network-observable precursor behavior for T0814 (Denial of Service)
+      using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0814
+      style: read
+      count: 12
+      interval: 0.02s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__iec104__meas__precursor:
+    title: T0814 precursor via IEC104
+    description: Network-observable precursor behavior for T0814 (Denial of Service)
+      using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0814
+      style: meas
+      count: 12
+      interval: 0.02s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__s7comm__read_var__precursor:
+    title: T0814 precursor via S7COMM
+    description: Network-observable precursor behavior for T0814 (Denial of Service)
+      using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0814
+      style: read_var
+      count: 12
+      interval: 0.02s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__opcua__hello__precursor:
+    title: T0814 precursor via OPCUA
+    description: Network-observable precursor behavior for T0814 (Denial of Service)
+      using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0814
+      style: hello
+      count: 12
+      interval: 0.02s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__enip__list_identity__precursor:
+    title: T0814 precursor via ENIP
+    description: Network-observable precursor behavior for T0814 (Denial of Service)
+      using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0814
+      style: list_identity
+      count: 12
+      interval: 0.02s
+      precursor: true
+      pcap: true
+      live: true
+  T0814__denial_of_service__multi__cross_protocol__precursor:
+    title: T0814 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0814 (Denial of Service).
+    profile: impact
+    tags:
+    - legacy_id:dos_t0814_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0814
+      style: read_holding
+      count: 8
+      interval: 0.03s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0814
+      style: read
+      count: 8
+      interval: 0.03s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0814
+      style: meas
+      count: 8
+      interval: 0.03s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0814
+      style: read_var
+      count: 8
+      interval: 0.03s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0814
+      style: hello
+      count: 8
+      interval: 0.03s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0814
+      style: list_identity
+      count: 8
+      interval: 0.03s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__modbus__read_holding__precursor:
+    title: T0830 precursor via MODBUS
+    description: Network-observable precursor behavior for T0830 (Adversary-in-the-Middle)
+      using modbus style 'read_holding'. Safe for IDS/NSM validation.
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_modbus
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0830
+      style: read_holding
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__dnp3__read__precursor:
+    title: T0830 precursor via DNP3
+    description: Network-observable precursor behavior for T0830 (Adversary-in-the-Middle)
+      using dnp3 style 'read'. Safe for IDS/NSM validation.
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_dnp3
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0830
+      style: read
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__iec104__meas__precursor:
+    title: T0830 precursor via IEC104
+    description: Network-observable precursor behavior for T0830 (Adversary-in-the-Middle)
+      using iec104 style 'meas'. Safe for IDS/NSM validation.
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_iec104
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0830
+      style: meas
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__s7comm__read_var__precursor:
+    title: T0830 precursor via S7COMM
+    description: Network-observable precursor behavior for T0830 (Adversary-in-the-Middle)
+      using s7comm style 'read_var'. Safe for IDS/NSM validation.
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_s7comm
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0830
+      style: read_var
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__opcua__hello__precursor:
+    title: T0830 precursor via OPCUA
+    description: Network-observable precursor behavior for T0830 (Adversary-in-the-Middle)
+      using opcua style 'hello'. Safe for IDS/NSM validation.
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_opcua
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0830
+      style: hello
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__enip__list_identity__precursor:
+    title: T0830 precursor via ENIP
+    description: Network-observable precursor behavior for T0830 (Adversary-in-the-Middle)
+      using enip style 'list_identity'. Safe for IDS/NSM validation.
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_enip
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0830
+      style: list_identity
+      count: 6
+      interval: 0.10s
+      precursor: true
+      pcap: true
+      live: true
+  T0830__adversary_in_the_middle__multi__cross_protocol__precursor:
+    title: T0830 precursor (multi-protocol)
+    description: Runs multiple network precursor variants across common OT protocols
+      for T0830 (Adversary-in-the-Middle).
+    profile: evasion
+    tags:
+    - legacy_id:aitm_t0830_multi
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0830
+      style: read_holding
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0830
+      style: read
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0830
+      style: meas
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0830
+      style: read_var
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0830
+      style: hello
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0830
+      style: list_identity
+      count: 4
+      interval: 0.12s
+      precursor: true
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__modbus__seq_read_holding_write_single_register__flow:
+    title: T0855 Unauthorized Command Message flow via MODBUS
+    description: Stateful multi-step network flow approximating T0855 (Unauthorized
+      Command Message) using modbus. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_modbus_flow
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0855
+      style: read_holding
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0855
+      style: write_single_register
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0855
+      style: read_holding
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__dnp3__seq_select_operate__flow:
+    title: T0855 Unauthorized Command Message flow via DNP3
+    description: Stateful multi-step network flow approximating T0855 (Unauthorized
+      Command Message) using dnp3. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_dnp3_flow
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0855
+      style: select
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0855
+      style: operate
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0855
+      style: read
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__iec104__seq_meas_single_command__flow:
+    title: T0855 Unauthorized Command Message flow via IEC104
+    description: Stateful multi-step network flow approximating T0855 (Unauthorized
+      Command Message) using iec104. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_iec104_flow
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0855
+      style: meas
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0855
+      style: single_command
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0855
+      style: meas
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__s7comm__seq_setup_read_var__flow:
+    title: T0855 Unauthorized Command Message flow via S7COMM
+    description: Stateful multi-step network flow approximating T0855 (Unauthorized
+      Command Message) using s7comm. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_s7comm_flow
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: setup
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: read_var
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: write_var
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: read_var
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__enip__seq_register_session_list_identity__flow:
+    title: T0855 Unauthorized Command Message flow via ENIP
+    description: Stateful multi-step network flow approximating T0855 (Unauthorized
+      Command Message) using enip. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_enip_flow
+    steps:
+    - type: packet
+      proto: enip
+      technique: T0855
+      style: register_session
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0855
+      style: list_identity
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0855
+      style: register_session
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__opcua__seq_hello_opn__flow:
+    title: T0855 Unauthorized Command Message flow via OPCUA
+    description: Stateful multi-step network flow approximating T0855 (Unauthorized
+      Command Message) using opcua. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_opcua_flow
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0855
+      style: hello
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0855
+      style: opn
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0855
+      style: msg
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0855__unauthorized_command_message__multi__cross_protocol__flow_v5:
+    title: T0855 Unauthorized Command Message flow (multi-protocol)
+    description: Stateful multi-step flows across protocols for T0855 (Unauthorized
+      Command Message).
+    profile: impact
+    tags:
+    - legacy_id:unauth_cmd_t0855_multi_flow
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0855
+      style: read_holding
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0855
+      style: write_single_register
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0855
+      style: read_holding
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0855
+      style: select
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0855
+      style: operate
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0855
+      style: read
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0855
+      style: meas
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0855
+      style: single_command
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0855
+      style: meas
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: setup
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: read_var
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: write_var
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0855
+      style: read_var
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0855
+      style: register_session
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0855
+      style: list_identity
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: enip
+      technique: T0855
+      style: register_session
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0855
+      style: hello
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0855
+      style: opn
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0855
+      style: msg
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+  T0831__manipulation_of_control__modbus__seq_write_single_coil_write_single_register__flow:
+    title: T0831 Manipulation of Control flow via MODBUS
+    description: Stateful multi-step network flow approximating T0831 (Manipulation
+      of Control) using modbus. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:manip_control_t0831_modbus_flow
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0831
+      style: write_single_coil
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0831
+      style: write_single_register
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0831
+      style: read_holding
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0831__manipulation_of_control__dnp3__seq_select_operate__flow:
+    title: T0831 Manipulation of Control flow via DNP3
+    description: Stateful multi-step network flow approximating T0831 (Manipulation
+      of Control) using dnp3. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:manip_control_t0831_dnp3_flow
+    steps:
+    - type: packet
+      proto: dnp3
+      technique: T0831
+      style: select
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0831
+      style: operate
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0831__manipulation_of_control__iec104__seq_single_command_double_command__flow:
+    title: T0831 Manipulation of Control flow via IEC104
+    description: Stateful multi-step network flow approximating T0831 (Manipulation
+      of Control) using iec104. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:manip_control_t0831_iec104_flow
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0831
+      style: single_command
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0831
+      style: double_command
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0831__manipulation_of_control__s7comm__seq_setup_write_var__flow:
+    title: T0831 Manipulation of Control flow via S7COMM
+    description: Stateful multi-step network flow approximating T0831 (Manipulation
+      of Control) using s7comm. Designed to trigger sequence-based detections.
+    profile: impact
+    tags:
+    - legacy_id:manip_control_t0831_s7comm_flow
+    steps:
+    - type: packet
+      proto: s7comm
+      technique: T0831
+      style: setup
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0831
+      style: write_var
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0831__manipulation_of_control__multi__cross_protocol__flow_v4:
+    title: T0831 Manipulation of Control flow (multi-protocol)
+    description: Stateful multi-step flows across protocols for T0831 (Manipulation
+      of Control).
+    profile: impact
+    tags:
+    - legacy_id:manip_control_t0831_multi_flow
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0831
+      style: write_single_coil
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0831
+      style: write_single_register
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0831
+      style: read_holding
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0831
+      style: select
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: dnp3
+      technique: T0831
+      style: operate
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0831
+      style: single_command
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0831
+      style: double_command
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0831
+      style: setup
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: s7comm
+      technique: T0831
+      style: write_var
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+  T0832__manipulation_of_view__modbus__read_holding__flow:
+    title: T0832 Manipulation of View flow via MODBUS
+    description: Stateful multi-step network flow approximating T0832 (Manipulation
+      of View) using modbus. Designed to trigger sequence-based detections.
+    profile: evasion
+    tags:
+    - legacy_id:manip_view_t0832_modbus_flow
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0832
+      style: read_holding
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0832
+      style: read_holding
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0832
+      style: read_holding
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0832__manipulation_of_view__iec104__meas__flow:
+    title: T0832 Manipulation of View flow via IEC104
+    description: Stateful multi-step network flow approximating T0832 (Manipulation
+      of View) using iec104. Designed to trigger sequence-based detections.
+    profile: evasion
+    tags:
+    - legacy_id:manip_view_t0832_iec104_flow
+    steps:
+    - type: packet
+      proto: iec104
+      technique: T0832
+      style: meas
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0832
+      style: meas
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0832
+      style: meas
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0832__manipulation_of_view__opcua__msg__flow:
+    title: T0832 Manipulation of View flow via OPCUA
+    description: Stateful multi-step network flow approximating T0832 (Manipulation
+      of View) using opcua. Designed to trigger sequence-based detections.
+    profile: evasion
+    tags:
+    - legacy_id:manip_view_t0832_opcua_flow
+    steps:
+    - type: packet
+      proto: opcua
+      technique: T0832
+      style: msg
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0832
+      style: msg
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0832
+      style: msg
+      count: 1
+      interval: 0.10s
+      pcap: true
+      live: true
+  T0832__manipulation_of_view__multi__cross_protocol__flow_v2:
+    title: T0832 Manipulation of View flow (multi-protocol)
+    description: Stateful multi-step flows across protocols for T0832 (Manipulation
+      of View).
+    profile: evasion
+    tags:
+    - legacy_id:manip_view_t0832_multi_flow
+    steps:
+    - type: packet
+      proto: modbus
+      technique: T0832
+      style: read_holding
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0832
+      style: read_holding
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: modbus
+      technique: T0832
+      style: read_holding
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0832
+      style: meas
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0832
+      style: meas
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: iec104
+      technique: T0832
+      style: meas
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0832
+      style: msg
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0832
+      style: msg
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+    - type: packet
+      proto: opcua
+      technique: T0832
+      style: msg
+      count: 1
+      interval: 0.12s
+      pcap: true
+      live: true
+aliases:
+  quick_modbus_unauth_write: T0855__unauthorized_command_message__modbus__seq_write_multiple_registers_read_holding__flow
+  dnp3_rogue_master_operate: T0848__rogue_master__dnp3__read__flow
+  s7_stop_then_write: T0831__manipulation_of_control__s7comm__sequence__flow
+  iec104_control_chain: T0855__unauthorized_command_message__iec104__single_command__flow
+  opcua_anonymous_login_and_write: T0831__manipulation_of_control__opcua__seq_hello_opn__flow
+  enip_register_session_sweep: T0888__remote_system_information_discovery__enip__register_session__single
+  profinet_dcp_discovery: T0840__network_connection_enumeration__profinet_dcp__event__single
+  manufacturing_line_disruption_demo: T0855__unauthorized_command_message__multi__cross_protocol__flow
+  food_beverage_batch_anomaly_demo: T0827__loss_of_control__multi__cross_protocol__flow
+  T0883_internet_accessible_device: T0883__internet_accessible_device__multi__cross_protocol__flow
+  T0840_network_connection_enumeration: T0840__network_connection_enumeration__multi__cross_protocol__flow
+  T0861_point_and_tag_identification: T0861__point_tag_identification__multi__cross_protocol__flow
+  T0848_rogue_master: T0848__rogue_master__multi__cross_protocol__flow
+  T0855_unauthorized_command_message: T0855__unauthorized_command_message__multi__cross_protocol__flow_v2
+  T0831_manipulation_of_control: T0831__manipulation_of_control__multi__cross_protocol__flow
+  T0814_denial_of_service: T0814__denial_of_service__multi__cross_protocol__flow
+  T0815_denial_of_view: T0815__denial_of_view__multi__cross_protocol__flow
+  t0855_modbus_variant: T0855__unauthorized_command_message__modbus__write_multiple_registers__single
+  t0855_dnp3_variant: T0855__unauthorized_command_message__dnp3__direct_operate__single
+  t0855_iec104_variant: T0855__unauthorized_command_message__iec104__single_command__single
+  t0855_s7comm_variant: T0855__unauthorized_command_message__s7comm__write_var__single
+  t0855_enip_variant: T0855__unauthorized_command_message__enip__register_session__single
+  t0855_opcua_variant: T0855__unauthorized_command_message__opcua__opn__single
+  t0855_multi_variant: T0855__unauthorized_command_message__multi__cross_protocol__flow_v3
+  t0848_dnp3_variant: T0848__rogue_master__dnp3__event__single
+  t0848_iec104_variant: T0848__rogue_master__iec104__event__single
+  t0848_modbus_variant: T0848__rogue_master__modbus__event__single
+  t0848_multi_variant: T0848__rogue_master__multi__cross_protocol__flow_v2
+  t0842_profinet_dcp_variant: T0842__network_sniffing__profinet_dcp__event__single
+  t0842_modbus_variant: T0842__network_sniffing__modbus__read_holding__single
+  t0842_multi_variant: T0842__network_sniffing__multi__cross_protocol__flow
+  t0840_enip_variant: T0840__network_connection_enumeration__enip__list_identity__single
+  t0840_opcua_variant: T0840__network_connection_enumeration__opcua__hello__single
+  t0840_modbus_variant: T0840__network_connection_enumeration__modbus__read_holding__single
+  t0840_multi_variant: T0840__network_connection_enumeration__multi__cross_protocol__flow_v2
+  t0814_modbus_variant: T0814__denial_of_service__modbus__dos_read__single
+  t0814_dnp3_variant: T0814__denial_of_service__dnp3__read__single
+  t0814_iec104_variant: T0814__denial_of_service__iec104__event__single
+  t0814_multi_variant: T0814__denial_of_service__multi__cross_protocol__flow_v2
+  t0815_opcua_variant: T0815__denial_of_view__opcua__hello__single
+  t0815_iec104_variant: T0815__denial_of_view__iec104__event__single
+  t0815_multi_variant: T0815__denial_of_view__multi__cross_protocol__flow_v2
+  t0831_modbus_variant: T0831__manipulation_of_control__modbus__event__single
+  t0831_iec104_variant: T0831__manipulation_of_control__iec104__event__single
+  t0831_dnp3_variant: T0831__manipulation_of_control__dnp3__event__single
+  t0831_multi_variant: T0831__manipulation_of_control__multi__cross_protocol__flow_v2
+  t0832_opcua_variant: T0832__manipulation_of_view__opcua__opn__single
+  t0832_modbus_variant: T0832__manipulation_of_view__modbus__event__single
+  t0832_multi_variant: T0832__manipulation_of_view__multi__cross_protocol__flow
+  t0836_modbus_variant: T0836__modify_parameter__modbus__event__single
+  t0836_s7comm_variant: T0836__modify_parameter__s7comm__event__single
+  t0836_opcua_variant: T0836__modify_parameter__opcua__hello__single
+  t0836_multi_variant: T0836__modify_parameter__multi__cross_protocol__flow
+  t0869_opcua_variant: T0869__standard_application_layer_protocol__opcua__hello__single
+  t0869_modbus_variant: T0869__standard_application_layer_protocol__modbus__event__single
+  t0869_dnp3_variant: T0869__standard_application_layer_protocol__dnp3__event__single
+  t0869_multi_variant: T0869__standard_application_layer_protocol__multi__cross_protocol__flow
+  manufacturing_quality_drift_multi: T0831__manipulation_of_control__multi__cross_protocol__flow_v3
+  food_beverage_batch_override_multi: T0855__unauthorized_command_message__multi__cross_protocol__flow_v4
+  enum_t0840_modbus: T0840__network_connection_enumeration__modbus__read_holding__precursor
+  enum_t0840_dnp3: T0840__network_connection_enumeration__dnp3__read__precursor
+  enum_t0840_iec104: T0840__network_connection_enumeration__iec104__meas__precursor
+  enum_t0840_s7comm: T0840__network_connection_enumeration__s7comm__read_var__precursor
+  enum_t0840_opcua: T0840__network_connection_enumeration__opcua__hello__precursor
+  enum_t0840_enip: T0840__network_connection_enumeration__enip__list_identity__precursor
+  enum_t0840_multi: T0840__network_connection_enumeration__multi__cross_protocol__precursor
+  sniff_t0842_modbus: T0842__network_sniffing__modbus__read_holding__precursor
+  sniff_t0842_dnp3: T0842__network_sniffing__dnp3__read__precursor
+  sniff_t0842_iec104: T0842__network_sniffing__iec104__meas__precursor
+  sniff_t0842_s7comm: T0842__network_sniffing__s7comm__read_var__precursor
+  sniff_t0842_opcua: T0842__network_sniffing__opcua__hello__precursor
+  sniff_t0842_enip: T0842__network_sniffing__enip__list_identity__precursor
+  sniff_t0842_multi: T0842__network_sniffing__multi__cross_protocol__precursor
+  rsd_t0846_modbus: T0846__remote_system_discovery__modbus__read_holding__precursor
+  rsd_t0846_dnp3: T0846__remote_system_discovery__dnp3__read__precursor
+  rsd_t0846_iec104: T0846__remote_system_discovery__iec104__meas__precursor
+  rsd_t0846_s7comm: T0846__remote_system_discovery__s7comm__read_var__precursor
+  rsd_t0846_opcua: T0846__remote_system_discovery__opcua__hello__precursor
+  rsd_t0846_enip: T0846__remote_system_discovery__enip__list_identity__precursor
+  rsd_t0846_multi: T0846__remote_system_discovery__multi__cross_protocol__precursor
+  rsid_t0888_modbus: T0888__remote_system_information_discovery__modbus__read_holding__precursor
+  rsid_t0888_dnp3: T0888__remote_system_information_discovery__dnp3__read__precursor
+  rsid_t0888_iec104: T0888__remote_system_information_discovery__iec104__meas__precursor
+  rsid_t0888_s7comm: T0888__remote_system_information_discovery__s7comm__read_var__precursor
+  rsid_t0888_opcua: T0888__remote_system_information_discovery__opcua__hello__precursor
+  rsid_t0888_enip: T0888__remote_system_information_discovery__enip__list_identity__precursor
+  rsid_t0888_multi: T0888__remote_system_information_discovery__multi__cross_protocol__precursor
+  stdproto_t0869_modbus: T0869__standard_application_layer_protocol__modbus__read_holding__precursor
+  stdproto_t0869_dnp3: T0869__standard_application_layer_protocol__dnp3__read__precursor
+  stdproto_t0869_iec104: T0869__standard_application_layer_protocol__iec104__meas__precursor
+  stdproto_t0869_s7comm: T0869__standard_application_layer_protocol__s7comm__read_var__precursor
+  stdproto_t0869_opcua: T0869__standard_application_layer_protocol__opcua__hello__precursor
+  stdproto_t0869_enip: T0869__standard_application_layer_protocol__enip__list_identity__precursor
+  stdproto_t0869_multi: T0869__standard_application_layer_protocol__multi__cross_protocol__precursor
+  dos_t0814_modbus: T0814__denial_of_service__modbus__read_holding__precursor
+  dos_t0814_dnp3: T0814__denial_of_service__dnp3__read__precursor
+  dos_t0814_iec104: T0814__denial_of_service__iec104__meas__precursor
+  dos_t0814_s7comm: T0814__denial_of_service__s7comm__read_var__precursor
+  dos_t0814_opcua: T0814__denial_of_service__opcua__hello__precursor
+  dos_t0814_enip: T0814__denial_of_service__enip__list_identity__precursor
+  dos_t0814_multi: T0814__denial_of_service__multi__cross_protocol__precursor
+  aitm_t0830_modbus: T0830__adversary_in_the_middle__modbus__read_holding__precursor
+  aitm_t0830_dnp3: T0830__adversary_in_the_middle__dnp3__read__precursor
+  aitm_t0830_iec104: T0830__adversary_in_the_middle__iec104__meas__precursor
+  aitm_t0830_s7comm: T0830__adversary_in_the_middle__s7comm__read_var__precursor
+  aitm_t0830_opcua: T0830__adversary_in_the_middle__opcua__hello__precursor
+  aitm_t0830_enip: T0830__adversary_in_the_middle__enip__list_identity__precursor
+  aitm_t0830_multi: T0830__adversary_in_the_middle__multi__cross_protocol__precursor
+  unauth_cmd_t0855_modbus_flow: T0855__unauthorized_command_message__modbus__seq_read_holding_write_single_register__flow
+  unauth_cmd_t0855_dnp3_flow: T0855__unauthorized_command_message__dnp3__seq_select_operate__flow
+  unauth_cmd_t0855_iec104_flow: T0855__unauthorized_command_message__iec104__seq_meas_single_command__flow
+  unauth_cmd_t0855_s7comm_flow: T0855__unauthorized_command_message__s7comm__seq_setup_read_var__flow
+  unauth_cmd_t0855_enip_flow: T0855__unauthorized_command_message__enip__seq_register_session_list_identity__flow
+  unauth_cmd_t0855_opcua_flow: T0855__unauthorized_command_message__opcua__seq_hello_opn__flow
+  unauth_cmd_t0855_multi_flow: T0855__unauthorized_command_message__multi__cross_protocol__flow_v5
+  manip_control_t0831_modbus_flow: T0831__manipulation_of_control__modbus__seq_write_single_coil_write_single_register__flow
+  manip_control_t0831_dnp3_flow: T0831__manipulation_of_control__dnp3__seq_select_operate__flow
+  manip_control_t0831_iec104_flow: T0831__manipulation_of_control__iec104__seq_single_command_double_command__flow
+  manip_control_t0831_s7comm_flow: T0831__manipulation_of_control__s7comm__seq_setup_write_var__flow
+  manip_control_t0831_multi_flow: T0831__manipulation_of_control__multi__cross_protocol__flow_v4
+  manip_view_t0832_modbus_flow: T0832__manipulation_of_view__modbus__read_holding__flow
+  manip_view_t0832_iec104_flow: T0832__manipulation_of_view__iec104__meas__flow
+  manip_view_t0832_opcua_flow: T0832__manipulation_of_view__opcua__msg__flow
+  manip_view_t0832_multi_flow: T0832__manipulation_of_view__multi__cross_protocol__flow_v2
