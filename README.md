@@ -1,6 +1,6 @@
 # ICSForge™
 
-**ICSForge™** is an open-source, enterprise-grade **OT/ICS security coverage validation lab** designed to help defenders, SOC teams, and OT security engineers **validate detection, visibility, and readiness** against real-world industrial attack techniques.
+**ICSForge™** is an open-source **OT/ICS security coverage validation lab** designed to help defenders, SOC teams, and OT security engineers **validate detection, visibility, and readiness** against real-world industrial attack techniques.
 
 ICSForge™ focuses on **what can actually be observed on the network** and generates **realistic OT traffic and PCAPs** aligned with **MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact.
 
