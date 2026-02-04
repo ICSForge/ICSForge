@@ -119,4 +119,4 @@ GPLv3
 
 ---
 
-*ICSForge • Enterprise-grade OT/ICS security coverage validation • GPLv3*
+*ICSForge • OT/ICS security coverage validation • GPLv3*
