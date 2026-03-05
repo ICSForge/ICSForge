@@ -20,7 +20,7 @@ from icsforge.detection.mapping import correlate_run
 
 # ATT&CK for ICS matrix data (bundled)
 MATRIX_JSON_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ics_attack_matrix.json")
-MATRIX_SINGLETON_PACK = os.path.join(os.path.dirname(__file__), "..", "scenarios", "matrix.yml")
+MATRIX_SINGLETON_PACK = os.path.join(os.path.dirname(__file__), "..", "scenarios", "scenarios.yml")
 TECH_VARIANTS = os.path.join(os.path.dirname(__file__), "..", "data", "technique_variants.json")
 
 def _load_matrix() -> dict:
@@ -56,7 +56,7 @@ def _guard_ui_mode():
             return redirect(url_for("web.sender"))
     else:
         # Receiver web should be an appliance UI
-        if ep in ("web.sender", "web.soc"):
+        if ep in ("web.sender",):
             return redirect(url_for("web.receiver"))
         if ep == "web.index":
             return redirect(url_for("web.receiver"))
@@ -363,25 +363,31 @@ def tools():
 @web.route("/matrix")
 def matrix():
     mat = _load_matrix()
-    runnable=set(); precursor=set()
+    import json as _json
+    support = {}
+    try:
+        support = _json.loads(Path(os.path.join(_repo_root(), "icsforge", "data", "technique_support.json")).read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    covered = set()
     try:
         for pack_path in _list_packs():
             doc = _load_yaml(pack_path) or {}
             for sc in (doc.get("scenarios") or {}).values():
                 for step in sc.get("steps", []):
                     tid = step.get("technique")
-                    if not tid:
-                        continue
-                    if step.get("precursor") is True:
-                        precursor.add(tid)
-                    else:
-                        runnable.add(tid)
+                    if tid: covered.add(tid)
     except Exception:
         pass
-
-    status = {tid: {"runnable": (tid in runnable), "precursor": (tid in precursor)} for tid in set(list(runnable)+list(precursor))}
-
-    supported = sorted(status.keys())
+    precursor = set(t for t in covered if support.get(t, {}).get("precursor") and not support.get(t, {}).get("runnable"))
+    runnable  = covered - precursor
+    status = {}
+    for tac in mat.get("tactics", []):
+        for tech in tac.get("techniques", []):
+            tid = tech.get("id")
+            if not tid: continue
+            status[tid] = {"runnable": tid in runnable, "precursor": tid in precursor}
+    supported = sorted(t for t in status if status[t]["runnable"] or status[t]["precursor"])
 
     return render_template(
         "matrix.html",
@@ -399,6 +405,10 @@ def matrix():
 
 @web.route("/soc")
 def soc():
+    """SOC Mode removed — redirect to Sender."""
+    from flask import redirect
+    return redirect(url_for("web.sender"))
+def _soc_removed():
     return render_template(
         "soc.html",
         title="ICSForge SOC Mode",
@@ -526,9 +536,140 @@ def api_preview():
         return jsonify({"error": "Scenario not found"})
     steps = sc.get("steps") or []
     techs = sorted(set([s.get("technique") for s in steps if s.get("technique")]))
-    # limit fields
-    slim=[{"type": s.get("type"), "proto": s.get("proto"), "technique": s.get("technique"), "count": s.get("count",1)} for s in steps]
-    return jsonify({"name": name, "steps": slim, "techniques": techs})
+    slim = [{
+        "type": s.get("type"),
+        "proto": s.get("proto"),
+        "technique": s.get("technique"),
+        "style": s.get("style", "auto"),
+        "count": s.get("count", 1),
+        "interval": s.get("interval", "0s"),
+        "message": s.get("message", ""),
+    } for s in steps]
+    return jsonify({
+        "name": name,
+        "title": sc.get("title", name),
+        "description": sc.get("description", ""),
+        "steps": slim,
+        "techniques": techs,
+        "is_chain": name.startswith("CHAIN__"),
+    })
+
+
+@web.route("/api/preview_payload")
+def api_preview_payload():
+    """Return hex dump of actual PDU bytes for a scenario step."""
+    name = request.args.get('name')
+    step_idx = int(request.args.get('step', 0))
+    real = _canonical_scenarios_path()
+    if not os.path.exists(real):
+        return jsonify({'error': 'Scenario pack not found'}), 404
+    doc = _load_yaml(real)
+    scenarios = doc.get("scenarios") or {}
+    aliases = doc.get("aliases") or {}
+    if name not in scenarios and name in aliases:
+        name = aliases[name]
+    sc = scenarios.get(name)
+    if not sc:
+        return jsonify({"error": "Scenario not found"}), 404
+    steps = [s for s in (sc.get("steps") or []) if s.get("proto") and s.get("type") in ("packet", "pcap")]
+    if not steps:
+        return jsonify({"error": "No packet steps in scenario"}), 400
+    step_idx = max(0, min(step_idx, len(steps) - 1))
+    step = steps[step_idx]
+    proto = step.get("proto")
+    style = step.get("style", "auto")
+    tech = step.get("technique", "")
+    marker = f"ICSFORGE:PREVIEW:{name[:20]}:{tech}:"
+    try:
+        from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp
+        builders = {
+            "modbus": modbus.build_payload,
+            "dnp3": dnp3.build_payload,
+            "s7comm": s7comm.build_payload,
+            "iec104": iec104.build_payload,
+            "opcua": opcua.build_payload,
+            "enip": enip.build_payload,
+            "profinet_dcp": profinet_dcp.build_payload,
+        }
+        ports = {"modbus": 502, "dnp3": 20000, "s7comm": 102, "iec104": 2404,
+                 "opcua": 4840, "enip": 44818, "profinet_dcp": 0}
+        if proto not in builders:
+            return jsonify({"error": f"Unknown proto: {proto}"}), 400
+        # profinet_dcp expects bytes marker; TCP builders accept string
+        marker_b = marker.encode() if proto == "profinet_dcp" else marker
+        data = builders[proto](marker_b, style=style)
+        width = 16
+        lines = []
+        for i in range(0, len(data), width):
+            chunk = data[i:i+width]
+            hex_part = " ".join(f"{b:02x}" for b in chunk)
+            ascii_part = "".join(chr(b) if 32 <= b < 127 else "." for b in chunk)
+            lines.append(f"{i:04x}  {hex_part:<{width*3}}  {ascii_part}")
+        return jsonify({
+            "proto": proto,
+            "style": style,
+            "technique": tech,
+            "port": ports.get(proto, 0),
+            "length": len(data),
+            "step_index": step_idx,
+            "step_count": len(steps),
+            "hexdump": "\n".join(lines),
+            "hex_raw": data.hex(),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@web.route("/api/scenarios_grouped")
+def api_scenarios_grouped():
+    """Return scenarios grouped by tactic, with metadata for UI rendering."""
+    real = _canonical_scenarios_path()
+    if not os.path.exists(real):
+        return jsonify({"groups": []}), 404
+    doc = _load_yaml(real)
+    scenarios = doc.get("scenarios") or {}
+    mat = _load_matrix()
+    tid_tactic = {}
+    tid_name = {}
+    for tac in mat.get("tactics", []):
+        for tech in tac.get("techniques", []):
+            tid = tech.get("id", "")
+            tid_tactic[tid] = tac.get("name", "Other")
+            tid_name[tid] = tech.get("name", "")
+    groups = {}
+    for sc_name, sc in scenarios.items():
+        steps = sc.get("steps") or []
+        techs = sorted(set(s.get("technique") for s in steps if s.get("technique")))
+        protos = sorted(set(s.get("proto") for s in steps if s.get("proto")))
+        if sc_name.startswith("CHAIN__"):
+            group = "\u26d3 Attack Chains"
+        elif techs:
+            group = tid_tactic.get(techs[0], "Other")
+        else:
+            group = "Other"
+        groups.setdefault(group, [])
+        groups[group].append({
+            "id": sc_name,
+            "title": sc.get("title", sc_name),
+            "techniques": techs,
+            "tech_names": [tid_name.get(t, t) for t in techs],
+            "protocols": protos,
+            "is_chain": sc_name.startswith("CHAIN__"),
+            "step_count": len(steps),
+        })
+    order = ["\u26d3 Attack Chains", "Initial Access", "Discovery", "Collection",
+             "Lateral Movement", "Execution", "Persistence", "Evasion",
+             "Impair Process Control", "Inhibit Response Function", "Impact", "Other"]
+    sorted_groups = []
+    seen = set()
+    for g in order:
+        if g in groups:
+            sorted_groups.append({"name": g, "scenarios": sorted(groups[g], key=lambda x: x["id"])})
+            seen.add(g)
+    for g, items in groups.items():
+        if g not in seen:
+            sorted_groups.append({"name": g, "scenarios": sorted(items, key=lambda x: x["id"])})
+    return jsonify({"groups": sorted_groups})
 
 
 @web.route("/api/send", methods=["POST"])
@@ -1149,21 +1290,30 @@ def api_health():
     rr = _repo_root()
     packs = _list_packs()
     caps = {}
+    # AF_PACKET (Linux raw L2 socket) — needed for PROFINET DCP live send/recv
     try:
-        import scapy.all  # noqa
-        caps["scapy"] = True
+        import socket as _s
+        if hasattr(_s, "AF_PACKET"):
+            sock = _s.socket(_s.AF_PACKET, _s.SOCK_RAW)  # type: ignore[attr-defined]
+            sock.close()
+            caps["af_packet"] = True
+            caps["profinet_live"] = True
+        else:
+            caps["af_packet"] = False
+            caps["profinet_live"] = False
+            caps["af_packet_note"] = "AF_PACKET not available (Linux only)"
+    except PermissionError:
+        caps["af_packet"] = False
+        caps["profinet_live"] = False
+        caps["af_packet_note"] = "AF_PACKET requires root or CAP_NET_RAW"
     except Exception as e:
-        caps["scapy"] = False
-        caps["scapy_error"] = str(e)
+        caps["af_packet"] = False
+        caps["profinet_live"] = False
+        caps["af_packet_note"] = str(e)
 
-    try:
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-        s.close()
-        caps["raw_socket"] = True
-    except Exception as e:
-        caps["raw_socket"] = False
-        caps["raw_socket_error"] = str(e)
+    # TCP raw socket for IP-layer protocols (no longer required — uses SOCK_STREAM now)
+    caps["tcp_send"] = True
+    caps["pcap_write"] = True  # pure-Python pcap writer always available
 
     receiver = request.args.get("receiver", "").strip()
     receiver_ok = None
@@ -1354,9 +1504,8 @@ def api_matrix_status():
     except Exception:
         support = {}
 
-    # runnable if any scenario pack has scenario with technique id
-    runnable=set()
-    precursor=set()
+    # runnable if scenario exists; precursor if technique_support says so
+    covered=set()
     try:
         for pack in _list_packs():
             doc = _load_yaml(pack) or {}
@@ -1364,12 +1513,13 @@ def api_matrix_status():
                 for step in sc.get("steps", []):
                     tid = step.get("technique")
                     if tid:
-                        if step.get('precursor') is True:
-                            precursor.add(tid)
-                        else:
-                            runnable.add(tid)
+                        covered.add(tid)
     except Exception:
         pass
+    # Use technique_support.json to classify covered techniques
+    runnable = set(t for t in covered if not support.get(t, {}).get('precursor', False) or support.get(t, {}).get('runnable', False))
+    precursor = set(t for t in covered if support.get(t, {}).get('precursor', False) and not support.get(t, {}).get('runnable', False))
+    runnable -= precursor
 
     executed=set()
     detected=set()
@@ -1412,8 +1562,16 @@ def api_matrix_status():
             if not tid: 
                 continue
             cls = support.get(tid, {}).get("class","unknown")
+            # A technique is precursor if support says so AND it's not classified as fully runnable
+            sup_entry = support.get(tid, {})
+            is_precursor = (tid in precursor) or (
+                sup_entry.get("precursor") and not sup_entry.get("runnable")
+                and tid not in runnable
+            )
+            is_runnable = (tid in runnable) and not is_precursor
             status[tid]={
-                "runnable": tid in runnable,
+                "runnable": is_runnable,
+                "precursor": is_precursor,
                 "class": cls,
                 "executed": tid in executed,
                 "detected": tid in detected,

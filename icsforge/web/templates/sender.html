@@ -1,165 +1,429 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container">
-  <div class="page-header">
-    <div>
-      <h1>Sender</h1>
-      <p class="muted">Select a scenario and send live traffic to a safe destination. Preview updates automatically.</p>
-    </div>
-    <div class="actions">
-      <a class="btn" href="{{ url_for('web.matrix') }}">ATT&CK Matrix</a>
-      <a class="btn" href="{{ url_for('web.tools') }}">Tools</a>
-      <a class="btn primary" href="{{ url_for('web.soc') }}">SOC Mode</a>
-    </div>
-  </div>
 
-  <div class="grid">
-    <div class="card">
-      <h2>Scenario</h2>
-
-      <div class="field">
-        <label>Scenario</label>
-        <select id="scenario" class="select"></select>
-        <div id="scenario_status" class="hint"></div>
-      </div>
-
-      <div class="field">
-        <label>Destination IP (receiver)</label>
-        <input id="dst_ip" class="input" placeholder="198.51.100.42" value="198.51.100.42" />
-        <div class="hint">Use loopback or TEST-NET ranges, or your controlled receiver host.</div>
-      </div>
-
-      <div class="field">
-        <label>Source IP (for PCAP crafting)</label>
-        <input id="src_ip" class="input" placeholder="127.0.0.1" value="127.0.0.1" />
-      </div>
-
-      <div class="field">
-        <label>Interface (optional)</label>
-        <input id="iface" class="input" placeholder="eth0 (leave blank = auto)" value="" />
-      </div>
-
-      <div class="field">
-        <label>Timeout (seconds)</label>
-        <input id="timeout" class="input" placeholder="2.0" value="2.0" />
-      </div>
-
-      <div class="row">
-        <label class="check"><input id="pcap" type="checkbox" /> Also build a PCAP (saved in out/)</label>
-      </div>
-      <div class="row">
-        <label class="check"><input id="confirm" type="checkbox" /> I understand this sends **synthetic** traffic to a safe destination.</label>
-      </div>
-
-      <div class="row actions">
-                <button id="btn_clear" class="btn">Clear</button>
-        <button id="btn_send" class="btn primary">Run Live Send</button>
-      </div>
-
-      <pre id="log" class="log"></pre>
-    </div>
-
-    <div class="card">
-      <h2>Scenario Preview</h2>
-      <div id="preview" class="preview"></div>
-    </div>
+<!-- ─── Attack Chain Quick-Launch ──────────────────────────── -->
+<div class="card" style="margin-bottom:16px">
+  <h2>⛓ Attack Chains — One-Click Named Scenarios</h2>
+  <div class="chains-grid" id="chains_grid">
+    <div class="small">Loading…</div>
   </div>
 </div>
 
+<!-- ─── Main grid ──────────────────────────────────────────── -->
+<div class="sender-grid">
+
+  <!-- LEFT: Scenario picker + config + step plan + run log -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+
+    <div class="card">
+      <h2>Scenario</h2>
+      <input class="scenario-search" id="sc_search" placeholder="Filter by name, technique ID, or protocol…" autocomplete="off">
+      <div class="scenario-list" id="sc_list"></div>
+      <div class="desc-box" id="sc_desc">Select a scenario above.</div>
+    </div>
+
+    <div class="card">
+      <h2>Configuration</h2>
+      <div class="row" style="gap:10px">
+        <div class="field">
+          <label>Destination IP</label>
+          <input id="dst_ip" placeholder="198.51.100.42" value="198.51.100.42">
+        </div>
+        <div class="field" style="max-width:100px">
+          <label>Timeout (s)</label>
+          <input id="timeout" value="2.0">
+        </div>
+      </div>
+      <div class="row" style="gap:10px;margin-top:10px">
+        <div class="field">
+          <label>Source IP (PCAP)</label>
+          <input id="src_ip" placeholder="127.0.0.1" value="127.0.0.1">
+        </div>
+        <div class="field">
+          <label>Interface (L2, optional)</label>
+          <input id="iface" placeholder="eth0">
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;gap:16px">
+        <label class="check"><input id="pcap" type="checkbox"> Build PCAP</label>
+      </div>
+      <!-- Safety confirmation toggle -->
+      <div style="margin-top:12px">
+        <button id="confirm_btn" type="button" onclick="toggleConfirm()"
+          style="width:100%;padding:11px 16px;border-radius:10px;font-size:12px;font-weight:700;
+            letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
+            background:var(--panel2);color:var(--muted);text-align:left;display:flex;align-items:center;
+            gap:10px;transition:all .15s;font-family:var(--sans)">
+          <span id="confirm_icon" style="font-size:16px;width:22px;text-align:center;flex-shrink:0">○</span>
+          <span>Confirm: synthetic traffic only — destination is a safe host in your OT environment</span>
+        </button>
+        <input id="confirm" type="checkbox" style="display:none">
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="btn_send" class="btn primary">▶ Run Live</button>
+        <button id="btn_offline" class="btn">⬇ PCAP Only</button>
+        <button id="btn_clear" class="btn">✕ Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Step Plan</h2>
+      <div id="step_plan" class="step-plan"></div>
+      <div class="run-log" id="run_log" style="margin-top:10px"></div>
+    </div>
+
+    <!-- ─── Live Receiver Feed (v0.23) ─────────────────────── -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin-bottom:0">Live Receiver Feed</h2>
+        <span id="live_dot" class="live-dot off" title="Polling receiver…"></span>
+      </div>
+      <div class="feed-kpis">
+        <div class="feed-kpi"><div class="fv" id="fk_pkts">—</div><div class="fl">Packets</div></div>
+        <div class="feed-kpi"><div class="fv" id="fk_runs">—</div><div class="fl">Runs</div></div>
+        <div class="feed-kpi"><div class="fv" id="fk_tech">—</div><div class="fl">Techniques</div></div>
+        <div class="feed-kpi"><div class="fv" id="fk_proto">—</div><div class="fl">Protocols</div></div>
+      </div>
+      <div id="feed_techs" class="pillrow" style="margin-top:6px"></div>
+    </div>
+
+    <!-- ─── Run History (v0.23) ─────────────────────────────── -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin-bottom:0">Recent Runs</h2>
+        <button class="btn" onclick="loadHistory()" style="font-size:10px;padding:4px 8px">Refresh</button>
+      </div>
+      <div class="history-list" id="history_list">
+        <div class="history-item" style="cursor:default;color:var(--muted)">No runs yet.</div>
+      </div>
+    </div>
+
+  </div><!-- end LEFT -->
+
+  <!-- RIGHT: Hex dump + step summary -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+
+    <div class="card">
+      <h2>Live Payload Preview</h2>
+      <p class="muted" style="margin-bottom:10px;font-size:12px">Actual PDU bytes from the real protocol builder — what hits the wire.</p>
+
+      <div class="hexdump-nav" id="hex_nav" style="display:none">
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="hexStep(-1)">← Prev</button>
+        <span id="hex_step_label" class="small mono"></span>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="hexStep(+1)">Next →</button>
+      </div>
+
+      <div class="hexdump-meta" id="hex_meta">
+        <span class="small">Select a scenario to see its wire bytes.</span>
+      </div>
+      <div class="hexdump-wrap" id="hex_dump">
+        <span style="color:#475569">No scenario selected.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Scenario Summary</h2>
+      <div id="step_summary" class="small" style="margin-bottom:10px">—</div>
+      <div id="preview_steps" style="display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+
+  </div><!-- end RIGHT -->
+
+</div><!-- end sender-grid -->
+
 <script>
 (function(){
-  const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
+const API = window.fetchJSON;
 
-  function logln(msg){
-    const el = $("log");
-    el.textContent += (msg + "\n");
-    el.scrollTop = el.scrollHeight;
-  }
+/* ── State ──────────────────────────────────────────────────── */
+let allGroups    = [];
+let selectedName = null;
+let previewData  = null;
+let hexStepIdx   = 0;
+let feedPollTimer = null;
+let prevTotal    = null;
 
-  async function loadScenarios(){
-    const data = await window.fetchJSON("{{ url_for('web.api_scenarios') }}");
-    const sel = $("scenario");
-    sel.innerHTML = "";
-    const list = (data && data.scenarios) ? data.scenarios : [];
-    for(const name of list){
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      sel.appendChild(opt);
+/* ── Protocol colours ───────────────────────────────────────── */
+const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c"};
+function protoBadge(p){const c=PROTO_C[p]||"#475569";return `<span class="proto-badge" style="background:${c};${c==='#f59e0b'?'color:#000':''}">${p}</span>`;}
+function protoDot(p){const c=PROTO_C[p]||"#888";return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}" title="${p}"></span>`;}
+
+/* ── Log ────────────────────────────────────────────────────── */
+function logln(msg, cls=""){
+  const el = $("run_log"), s = document.createElement("span");
+  if(cls) s.className = cls;
+  s.textContent = msg + "\n";
+  el.appendChild(s); el.scrollTop = el.scrollHeight;
+}
+
+/* ── Load groups ────────────────────────────────────────────── */
+async function loadGroups(){
+  const data = await API("/api/scenarios_grouped");
+  allGroups = data.groups || [];
+  renderChainCards();
+  renderScenarioList("");
+}
+
+/* ── Chain cards ────────────────────────────────────────────── */
+const CHAIN_META = {
+  CHAIN__industroyer2__power_grid:   {icon:"⚡",label:"Industroyer2",sub:"Ukraine 2022 · IEC-104 + S7comm"},
+  CHAIN__triton__safety_system:      {icon:"☢",label:"Triton / TRISIS",sub:"Safety system targeting · SIS"},
+  CHAIN__stuxnet__siemens_plc:       {icon:"⚙",label:"Stuxnet-style",sub:"Siemens PLC · Program manipulation"},
+  CHAIN__water_treatment_tampering:  {icon:"💧",label:"Water Treatment",sub:"Oldsmar-style · Setpoint tampering"},
+  CHAIN__industrial_espionage__opcua:{icon:"🕵",label:"OPC UA Espionage",sub:"Silent exfil via OPC UA sessions"},
+  CHAIN__enip_manufacturing_attack:  {icon:"🏭",label:"EtherNet/IP MFG",sub:"Allen-Bradley · CIP manipulation"},
+};
+function renderChainCards(){
+  const grid = $("chains_grid");
+  const chains = (allGroups.find(g=>g.name.includes("Attack Chains"))||{}).scenarios||[];
+  if(!chains.length){grid.innerHTML='<div class="small">No chains found.</div>';return;}
+  grid.innerHTML = chains.map(sc=>{
+    const m = CHAIN_META[sc.id]||{icon:"⛓",label:sc.title,sub:sc.protocols.join(" · ")};
+    const pills = sc.techniques.slice(0,4).map(t=>`<span class="chain-pill">${t}</span>`).join("");
+    return `<div class="chain-card" onclick="selectScenario('${sc.id}')">
+      <div class="chain-name">${m.icon} ${m.label}</div>
+      <div class="chain-sub">${m.sub}</div>
+      <div class="chain-pills">${pills}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ── Scenario list ──────────────────────────────────────────── */
+function renderScenarioList(filter){
+  const f = filter.toLowerCase().trim();
+  let html = "", total = 0;
+  for(const group of allGroups){
+    const items = group.scenarios.filter(sc =>
+      !f || [sc.id, sc.title, ...sc.techniques, ...sc.protocols].some(s=>(s||"").toLowerCase().includes(f))
+    );
+    if(!items.length) continue;
+    html += `<div class="sc-group-head">${group.name}</div>`;
+    for(const sc of items){
+      const active = sc.id === selectedName ? " active" : "";
+      const dots = sc.protocols.map(p=>protoDot(p)).join("");
+      const nameStr = sc.title.length > 50 ? sc.title.slice(0,48)+"…" : sc.title;
+      html += `<div class="sc-item${active}" onclick="selectScenario('${sc.id}')">
+        <span>${nameStr}</span>
+        <span class="sc-protos">${dots}</span>
+      </div>`;
+      total++;
     }
-    $("scenario_status").textContent = list.length ? `Loaded ${list.length} scenarios.` : "No scenarios loaded.";
-    if(list.length){
-      sel.selectedIndex = 0;
-    }
   }
+  if(!total) html = '<div class="sc-item" style="cursor:default;color:var(--muted)">No matches.</div>';
+  $("sc_list").innerHTML = html;
+}
 
-  async function doPreview(){
-    const name = $("scenario").value;
-    if(!name){ $("preview").textContent = "No scenario selected."; return; }
-    const data = await window.fetchJSON("{{ url_for('web.api_preview') }}?name="+encodeURIComponent(name));
-    if(data.error){ $("preview").textContent = data.error; return; }
+$("sc_search").addEventListener("input", e => renderScenarioList(e.target.value));
 
-    const techs = (data.techniques||[]).map(t=>`<span class="badge mono">${t}</span>`).join(" ");
-    const steps = (data.steps||[]).map(s=>{
-      const proto = s.proto || s.schema || "n/a";
-      const kind  = s.kind || s.action || "send";
-      const count = s.count || 1;
-      const note  = s.note || "";
-      return `<div class="step"><div><b>${proto}</b> <span class="muted">${kind}</span></div><div class="muted small">count=${count} ${note}</div></div>`;
-    }).join("");
+/* ── Select scenario ────────────────────────────────────────── */
+async function selectScenario(name){
+  selectedName = name; hexStepIdx = 0;
+  renderScenarioList($("sc_search").value);
+  const data = await API("/api/preview?name="+encodeURIComponent(name));
+  previewData = data;
+  if(data.error){$("sc_desc").textContent = data.error; return;}
+  $("sc_desc").textContent = data.description || data.title || name;
+  const steps = data.steps || [];
+  const totalPkts = steps.reduce((a,s)=>a+(s.count||1),0);
+  const protos = [...new Set(steps.map(s=>s.proto).filter(Boolean))];
+  $("step_summary").innerHTML =
+    `<span>${steps.length} steps · ${totalPkts} total packets</span> ` +
+    protos.map(p=>protoBadge(p)).join(" ");
+  // Render preview step list in right panel
+  $("preview_steps").innerHTML = steps.map(s=>{
+    const badge = s.proto ? protoBadge(s.proto) : "";
+    const tech = s.technique ? `<span class="badge" style="font-size:9px">${s.technique}</span>` : "";
+    const style = s.style && s.style!=="auto" ? `<span class="muted" style="font-size:10px">${s.style}</span>` : "";
+    const cnt = s.count > 1 ? `<span class="muted" style="font-size:10px">×${s.count}</span>` : "";
+    const intv = s.interval && s.interval!=="0s" ? `<span class="muted" style="font-size:10px">${s.interval}</span>` : "";
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:var(--panel2);border:1px solid var(--border)">${badge}${tech}${style}${cnt}${intv}</div>`;
+  }).join("");
+  renderStepPlan(steps, null);
+  await loadHexDump(name, 0);
+}
 
-    $("preview").innerHTML = `
-      <div class="muted">Techniques</div>
-      <div class="pillrow">${techs || "<span class='muted'>—</span>"}</div>
-      <hr/>
-      <div class="muted">Steps</div>
-      <div class="steps">${steps || "<div class='muted'>—</div>"}</div>
-    `;
-  }
+/* ── Step plan ──────────────────────────────────────────────── */
+function renderStepPlan(steps, statuses){
+  if(!steps||!steps.length){$("step_plan").innerHTML="";return;}
+  $("step_plan").innerHTML = steps.map((s,i)=>{
+    const st = statuses ? statuses[i] : "pending";
+    const icon = {ok:"✓",err:"✗",sending:"…",pending:"·"}[st]||"·";
+    const badge = s.proto ? protoBadge(s.proto) : "";
+    const tech  = s.technique ? `<span class="badge" style="font-size:9px">${s.technique}</span>` : "";
+    const style = s.style && s.style!=="auto" ? `<span class="muted">${s.style}</span>` : "";
+    const cnt   = s.count>1 ? `<span class="muted">×${s.count}</span>` : "";
+    return `<div class="step-row st-${st}" id="sr_${i}">
+      <span class="step-icon">${icon}</span>${badge}${tech}${style}${cnt}
+    </div>`;
+  }).join("");
+}
+function setStepSt(i, st){
+  const el = document.getElementById(`sr_${i}`);
+  if(!el) return;
+  el.className = `step-row st-${st}`;
+  const ic = el.querySelector(".step-icon");
+  if(ic) ic.textContent = {ok:"✓",err:"✗",sending:"…",pending:"·"}[st]||"·";
+}
 
-  async function doSend(){
-    if(!$("confirm").checked){
-      logln("[BLOCKED] Please confirm safety checkbox.");
-      return;
-    }
-    const name = $("scenario").value;
-    const dst_ip = ($("dst_ip").value || "").trim();
-    const src_ip = ($("src_ip").value || "127.0.0.1").trim();
-    const iface  = ($("iface").value || "").trim();
-    const timeout = parseFloat($("timeout").value || "2.0");
-    const also_build_pcap = $("pcap").checked;
-
-    if(!name){ logln("[ERROR] No scenario selected."); return; }
-    if(!dst_ip){ logln("[ERROR] Destination IP missing."); return; }
-
-    logln(`[SEND] scenario=${name} dst=${dst_ip} src=${src_ip} iface=${iface||"auto"} pcap=${also_build_pcap}`);
-    const payload = { name, dst_ip, src_ip, iface, timeout, also_build_pcap };
-
-    const data = await window.fetchJSON("{{ url_for('web.api_send') }}", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
-    });
-
-    if(data.error){
-      logln("[ERROR] " + data.error);
-      return;
-    }
-    logln("[OK] " + JSON.stringify(data));
-  }
-
-  function doClear(){
-    $("log").textContent = "";
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    $("btn_clear").addEventListener("click", (e)=>{ e.preventDefault(); doClear(); });
-    $("btn_send").addEventListener("click", (e)=>{ e.preventDefault(); doSend(); });
-    $("scenario").addEventListener("change", ()=>{ doPreview(); });
-
-    await loadScenarios();
-    await doPreview();
+/* ── Hex dump ───────────────────────────────────────────────── */
+function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+async function loadHexDump(name, stepIdx){
+  $("hex_dump").innerHTML = '<span style="color:#475569">Loading…</span>';
+  $("hex_meta").innerHTML = "";
+  $("hex_nav").style.display = "none";
+  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}`);
+  if(data.error){$("hex_dump").innerHTML=`<span style="color:var(--bad)">${escHtml(data.error)}</span>`;return;}
+  const lines = (data.hexdump||"").split("\n").map(line=>{
+    const m = line.match(/^([0-9a-f]{4})  ([ 0-9a-f]{47})  (.+)$/);
+    if(!m) return escHtml(line);
+    return `<span style="color:#7c3aed">${m[1]}</span>  <span style="color:#a5f3fc">${m[2]}</span>  <span style="color:#6ee7b7">${escHtml(m[3])}</span>`;
   });
+  $("hex_dump").innerHTML = lines.join("\n");
+  $("hex_meta").innerHTML = [
+    `${protoBadge(data.proto)}`,
+    `<span class="small">style: <b>${data.style}</b></span>`,
+    `<span class="small">port <b>${data.port||"L2"}</b></span>`,
+    `<span class="small"><b>${data.length}</b> bytes</span>`,
+    `<span class="badge">${data.technique}</span>`,
+  ].join("");
+  if(data.step_count > 1){
+    $("hex_nav").style.display = "flex";
+    $("hex_step_label").textContent = `Step ${data.step_index+1} / ${data.step_count}`;
+    hexStepIdx = data.step_index;
+  }
+}
+async function hexStep(delta){
+  if(!selectedName) return;
+  hexStepIdx = Math.max(0, hexStepIdx + delta);
+  await loadHexDump(selectedName, hexStepIdx);
+}
+window.hexStep = hexStep;
+
+/* ── Run scenario ───────────────────────────────────────────── */
+async function doSend(offline=false){
+  if(!offline && !$("confirm").checked){logln("[BLOCKED] Check the safety confirmation checkbox.","log-err");return;}
+  if(!selectedName){logln("[ERROR] No scenario selected.","log-err");return;}
+  const dst_ip = $("dst_ip").value.trim();
+  if(!dst_ip && !offline){logln("[ERROR] Destination IP required.","log-err");return;}
+  const steps = (previewData&&previewData.steps)||[];
+  const statuses = steps.map(()=>"pending");
+  renderStepPlan(steps, statuses);
+  const endpoint = offline ? "/api/generate_offline" : "/api/send";
+  const payload = offline
+    ? {name:selectedName, dst_ip:dst_ip||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true}
+    : {name:selectedName, dst_ip, src_ip:$("src_ip").value.trim(), iface:$("iface").value.trim(),
+       timeout:parseFloat($("timeout").value)||2.0, also_build_pcap:$("pcap").checked};
+  logln(`[${offline?"OFFLINE":"LIVE"}] ${selectedName} → ${dst_ip||"(offline)"}`, "log-info");
+  // Animate steps
+  let ai = 0;
+  const anim = setInterval(()=>{if(ai<statuses.length){statuses[ai]="sending";renderStepPlan(steps,statuses);ai++;}},200);
+  try {
+    const data = await API(endpoint, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    clearInterval(anim);
+    if(data.error){statuses.fill("err");renderStepPlan(steps,statuses);logln("[ERROR] "+data.error,"log-err");window.toast("Error",data.error,"err");return;}
+    statuses.fill("ok");renderStepPlan(steps,statuses);
+    logln(`[OK] run_id=${data.run_id}  sent=${data.sent||"—"}`,"log-ok");
+    if(data.pcap)   logln(`  pcap   → ${data.pcap}`,"log-info");
+    if(data.events) logln(`  events → ${data.events}`,"log-info");
+    window.toast("Scenario fired", `${selectedName} · ${data.sent||"—"} packets`, "ok");
+    // Refresh history after run
+    setTimeout(loadHistory, 800);
+    // Start feed poll if not already
+    startFeedPoll();
+  } catch(e){
+    clearInterval(anim);statuses.fill("err");renderStepPlan(steps,statuses);
+    logln("[EXCEPTION] "+e,"log-err");
+  }
+}
+
+$("btn_send").addEventListener("click",   e=>{e.preventDefault();doSend(false);});
+$("btn_offline").addEventListener("click", e=>{e.preventDefault();doSend(true);});
+$("btn_clear").addEventListener("click",   e=>{e.preventDefault();$("run_log").innerHTML="";});
+
+/* ── Safety confirm toggle ────────────────────────────────── */
+window.toggleConfirm = function(){
+  const cb  = $("confirm");
+  const btn = $("confirm_btn");
+  const ico = $("confirm_icon");
+  cb.checked = !cb.checked;
+  if(cb.checked){
+    btn.style.borderColor = "var(--good)";
+    btn.style.background  = "rgba(16,185,129,.1)";
+    btn.style.color       = "var(--good)";
+    ico.textContent       = "✓";
+  } else {
+    btn.style.borderColor = "var(--border)";
+    btn.style.background  = "var(--panel2)";
+    btn.style.color       = "var(--muted)";
+    ico.textContent       = "○";
+  }
+};
+
+/* ── Live Receiver Feed (v0.23) ─────────────────────────────── */
+function startFeedPoll(){
+  if(feedPollTimer) return;  // already polling
+  $("live_dot").classList.remove("off");
+  feedPollTimer = setInterval(pollFeed, 2000);
+  pollFeed();
+}
+async function pollFeed(){
+  try {
+    const data = await API("/api/receiver/overview");
+    if(!data || data.error) return;
+    const pkts = data.total ?? 0;
+    $("fk_pkts").textContent  = pkts;
+    $("fk_runs").textContent  = data.top_protocols ? data.top_protocols.length : "—";
+    $("fk_tech").textContent  = data.top_techniques ? data.top_techniques.length : "—";
+    $("fk_proto").textContent = data.top_protocols ? data.top_protocols.length : "—";
+    // Techniques pill row
+    const techs = (data.top_techniques||[]).slice(0,8);
+    $("feed_techs").innerHTML = techs.map(([t,n])=>`<span class="badge brand">${t} <span style="color:var(--muted)">${n}</span></span>`).join("");
+    // Flash if new packets
+    if(prevTotal !== null && pkts > prevTotal){
+      $("fk_pkts").style.color = "var(--good)";
+      setTimeout(()=>{ $("fk_pkts").style.color=""; }, 600);
+    }
+    prevTotal = pkts;
+  } catch(e){/* receiver may be offline, silent fail */}
+}
+
+/* ── Run History (v0.23) ────────────────────────────────────── */
+async function loadHistory(){
+  const data = await API("/api/runs");
+  const runs = (data.runs||[]).slice(0,8);
+  const el = $("history_list");
+  if(!runs.length){el.innerHTML='<div class="history-item" style="cursor:default;color:var(--muted)">No runs yet.</div>';return;}
+  el.innerHTML = runs.map(r=>{
+    const name = r.scenario || r.run_id || "—";
+    const ts   = (r.ts||"").replace("T"," ").slice(0,19);
+    const sc   = name.length > 32 ? name.slice(0,30)+"…" : name;
+    return `<div class="history-item" onclick="inspectRun('${r.run_id}','${sc}')">
+      <span class="hi-name">${sc}</span>
+      <span class="hi-ts">${ts}</span>
+    </div>`;
+  }).join("");
+}
+function inspectRun(run_id, label){
+  window.toast(`run_id: ${run_id.slice(0,12)}`, label, "");
+  // Copy run_id to clipboard if available
+  if(navigator.clipboard) navigator.clipboard.writeText(run_id).catch(()=>{});
+}
+
+window.selectScenario = selectScenario;
+window.loadHistory    = loadHistory;
+
+/* ── Boot ───────────────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", async ()=>{
+  await loadGroups();
+  // Auto-select first non-chain scenario
+  const first = (allGroups.find(g=>!g.name.includes("Chain"))||allGroups[0]);
+  if(first && first.scenarios && first.scenarios[0]) selectScenario(first.scenarios[0].id);
+  // Load history immediately
+  loadHistory();
+  // Start feed poll always (receiver may be running)
+  startFeedPoll();
+});
 })();
 </script>
 {% endblock %}

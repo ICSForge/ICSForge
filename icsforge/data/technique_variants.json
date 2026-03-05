@@ -1,2150 +1,919 @@
 {
-  "version": "18.1",
   "variants": {
-    "T0817": [
+    "T0800": [
       {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "id": "fw_update_mode__s7comm",
+        "label": "Firmware Update Mode — S7comm CPU stop + module flash (T0800)",
+        "proto": "s7comm",
+        "notes": "Activates firmware update mode on a Siemens S7 PLC by stopping the CPU then sending module and full firmware blocks. Network-observable as TPKT stream"
       },
       {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
+        "id": "fw_update_mode__enip",
+        "label": "Firmware Update Mode — EtherNet/IP CIP services (T0800)",
         "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0819": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0822": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0847": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0848": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0860": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0862": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0864": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0865": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0866": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0883": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0886": [
-      {
-        "id": "opcua_session",
-        "label": "OPC UA Session / Login",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "enip_identity",
-        "label": "ENIP ListIdentity",
-        "proto": "enip",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0807": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0821": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0823": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0834": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0853": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0858": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0863": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0871": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0874": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0895": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0839": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0857": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0859": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0873": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0889": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0891": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0890": [
-      {
-        "id": "baseline",
-        "label": "Baseline OT Telemetry (OPC UA)",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
-      }
-    ],
-    "T0820": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0849": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0851": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0856": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0872": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0894": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0840": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0842": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0846": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0887": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0888": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0812": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0843": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0867": [
-      {
-        "id": "s7_ops",
-        "label": "S7comm Ops (Read/Write/Start/Stop)",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_ops",
-        "label": "Modbus Ops (Read/Write)",
-        "proto": "modbus",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Activates firmware update mode on Allen-Bradley PLCs via EtherNet/IP firmware_update and boot_firmware CIP services. Observable as CIP sequences on po"
       }
     ],
     "T0801": [
       {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
+        "id": "monitor_process__modbus_poll",
+        "label": "T0801 – Modbus sustained process state polling (Monitor Process State)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Periodic FC03 holding register reads at realistic polling cadence (500ms–2s intervals). This is legitimate SCADA behaviour but from an unexpected sour"
       },
       {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
+        "id": "monitor_process__iec104_subscribe",
+        "label": "T0801 – IEC-104 STARTDT + interrogation (Monitor Process State)",
+        "proto": "iec104",
+        "notes": "IEC-104 session establishment (STARTDT U-frame) followed by global interrogation (C_IC_NA_1). This initiates spontaneous reporting of all process valu"
+      },
+      {
+        "id": "monitor_process__opcua_subscription",
+        "label": "T0801 – OPC UA subscription polling (Monitor Process State)",
         "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "CreateSubscription + recurring Publish requests. An attacker who has gained access to the OPC UA server creates a subscription to continuously receive"
       }
     ],
     "T0802": [
       {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
+        "id": "automated_collection__modbus_burst",
+        "label": "T0802 – Modbus rapid systematic register dump (Automated Collection)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0811": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0830": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0845": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0852": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0861": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0868": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0877": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0893": [
-      {
-        "id": "modbus_enum",
-        "label": "Modbus Read / Enum",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "opcua_browse",
-        "label": "OPC UA Browse/Read",
-        "proto": "opcua",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "s7_read",
-        "label": "S7comm ReadVar",
-        "proto": "s7comm",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0869": [
-      {
-        "id": "baseline",
-        "label": "Baseline OT Telemetry (OPC UA)",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
-      }
-    ],
-    "T0884": [
-      {
-        "id": "baseline",
-        "label": "Baseline OT Telemetry (OPC UA)",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
-      }
-    ],
-    "T0885": [
-      {
-        "id": "baseline",
-        "label": "Baseline OT Telemetry (OPC UA)",
-        "proto": "opcua",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": "Technique is not network-centric; this variant emits safe baseline OT telemetry tagged with the technique for detection/pipeline testing."
-      }
-    ],
-    "T0800": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "High-cadence FC03 reads sweeping the full address space at maximum speed. Distinguishable from T0801 by rate and systematic address increment. Models"
       }
     ],
     "T0803": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
+        "id": "block_command__dnp3_broadcast",
+        "label": "Block Command Message — DNP3 broadcast operate flood (T0803)",
         "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Floods the channel with DNP3 direct-operate frames addressed to the broadcast address (0xFFFF), saturating outstation command queues and blocking legi"
       },
       {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "block_command__modbus_channel_flood",
+        "label": "Block Command Message — Modbus channel saturation (T0803)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Saturates the Modbus/TCP channel with maximum-length FC03 reads, blocking command traffic from reaching the PLC and starving legitimate master access."
       }
     ],
     "T0804": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "block_reporting__modbus_listen_only",
+        "label": "Block Reporting Message — Modbus Force Listen-Only Mode (T0804)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Sends Modbus FC08 subfunction 04 (Force Listen Only Mode) to put the PLC in a mode where it stops responding to SCADA polling, effectively silencing a"
+      },
+      {
+        "id": "block_reporting__dnp3_disable_unsolicited",
+        "label": "Block Reporting Message — DNP3 Disable Unsolicited + clear events (T0804)",
+        "proto": "dnp3",
+        "notes": "Sends DNP3 FC15 Disable Unsolicited Reporting then clears the event buffer, cutting off all spontaneous event messages from the outstation to the cont"
       }
     ],
     "T0805": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "block_serial_com__modbus_gateway_flood",
+        "label": "Block Serial COM — Modbus gateway serial saturation (T0805 precursor)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0809": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0814": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0816": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0835": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0838": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0878": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0881": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      }
-    ],
-    "T0892": [
-      {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Floods the Modbus/TCP-to-serial gateway with max-rate traffic, saturating the serial COM port bandwidth and preventing legitimate traffic passing to d"
       }
     ],
     "T0806": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "brute_force_io__modbus",
+        "label": "T0806 – Modbus sequential address write sweep (Brute Force I/O)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "High-speed FC16 writes to sequentially incrementing addresses with random values. Models an attacker trying to force physical outputs by overwriting e"
       }
     ],
-    "T0836": [
+    "T0807": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
+        "id": "cmdline_dnp3_file_transfer__dnp3",
+        "label": "Command-Line Interface — DNP3 file push to outstation (T0807 precursor)",
         "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Uses DNP3 file transfer (FC19 Open File) to push payload files to the outstation filesystem. The outstation may auto-execute scripts on receipt — netw"
       }
     ],
-    "T0855": [
+    "T0809": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "data_destruction__modbus_zero_regs",
+        "label": "Data Destruction — Modbus zero-fill holding registers (T0809)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Reads the current register map then overwrites the full holding register space with zeros via FC16 Write Multiple Registers. Destroys configuration, s"
+      },
+      {
+        "id": "data_destruction__s7comm_zero_db",
+        "label": "Data Destruction — S7comm zero-fill all data blocks (T0809)",
+        "proto": "s7comm",
+        "notes": "Enumerates data blocks via SZL read then zeros all DBs in the PLC, destroying process state, recipes, and configuration. Followed by SZL clear to eras"
+      }
+    ],
+    "T0811": [
+      {
+        "id": "data_repositories__opcua_historian",
+        "label": "Data from Information Repositories — OPC UA historian bulk exfil (T0811)",
+        "proto": "opcua",
+        "notes": "Browses the OPC UA address space to locate historian nodes then bulk-reads historical process data via ReadHistory and HistoryRead services. Extracts"
+      },
+      {
+        "id": "data_repositories__s7comm_db_dump",
+        "label": "Data from Information Repositories — S7comm DB bulk dump (T0811)",
+        "proto": "s7comm",
+        "notes": "Enumerates all data blocks via SZL then reads every DB to extract recipes, alarm history, and process configuration stored in PLC memory. Targets engi"
+      }
+    ],
+    "T0812": [
+      {
+        "id": "default_creds__s7comm_blank_auth",
+        "label": "Default Credentials — S7comm blank/default password (T0812)",
+        "proto": "s7comm",
+        "notes": "Attempts S7comm access using documented default/blank credentials. Many S7-300/400/1200 devices ship with no password. Observable as S7comm setup fram"
+      },
+      {
+        "id": "default_creds__opcua_anonymous",
+        "label": "Default Credentials — OPC UA anonymous/default session (T0812)",
+        "proto": "opcua",
+        "notes": "Connects to OPC UA server using the Anonymous security policy or documented default username/password. Many process historians and OPC UA gateways all"
+      },
+      {
+        "id": "default_creds__modbus_device_id",
+        "label": "Default Credentials — Modbus FC43 device ID probe + open write (T0812)",
+        "proto": "modbus",
+        "notes": "Sends Modbus FC43 Read Device Identification then follows with FC16 writes using the default unit ID, probing for open write access characteristic of"
+      },
+      {
+        "id": "default_creds__enip_default_auth",
+        "label": "Default Credentials — EtherNet/IP CIP default authentication (T0812)",
+        "proto": "enip",
+        "notes": "Attempts EtherNet/IP access using CIP default authentication on Allen-Bradley devices. Many ControlLogix and MicroLogix PLCs have no per-connection au"
       }
     ],
     "T0813": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "id": "denial_of_control__s7comm_stop",
+        "label": "T0813 – S7comm CPU STOP (Denial of Control)",
+        "proto": "s7comm",
+        "notes": "S7comm PLC Stop command (ROSCTR=Job, FC=0x29). This is the canonical Stuxnet and CRASHOVERRIDE payload against Siemens S7 PLCs. Puts the CPU in STOP m"
       },
       {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "denial_of_control__modbus_coils_off",
+        "label": "T0813 – Modbus all coils de-energise (Denial of Control)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "FC05 writes setting all coils to OFF (0x0000), followed by FC15 multi-coil write clearing all outputs. Models an attacker forcing every digital output"
+      }
+    ],
+    "T0814": [
+      {
+        "id": "denial_of_service__modbus_flood",
+        "label": "T0814 – Modbus max-register read flood (Denial of Service)",
+        "proto": "modbus",
+        "notes": "High-rate FC03 requests for 125 registers (maximum per spec). At high frequency this exhausts the PLC's TCP connection table and request processing ca"
+      },
+      {
+        "id": "denial_of_service__dnp3_flood",
+        "label": "T0814 – DNP3 read flood (Denial of Service)",
+        "proto": "dnp3",
+        "notes": "High-rate DNP3 ReadClass0 requests from unexpected source. Saturates the outstation's application layer processing."
+      },
+      {
+        "id": "denial_of_service__iec104_flood",
+        "label": "T0814 – IEC-104 connection flood (Denial of Service)",
+        "proto": "iec104",
+        "notes": "Rapid IEC-104 STARTDT activations. Each STARTDT consumes a connection slot on the RTU. When the RTU's maximum connections (typically 3) are exhausted,"
       }
     ],
     "T0815": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
+        "id": "denial_of_view__iec104_stopdt",
+        "label": "T0815 – IEC-104 STOPDT disruption (Denial of View)",
         "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "STOPDT U-frame terminates data transfer on an IEC-104 session. If sent from attacker position between RTU and SCADA, it causes the SCADA to lose all s"
       },
       {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
+        "id": "denial_of_view__dnp3_disable_unsol",
+        "label": "T0815 – DNP3 disable unsolicited reporting (Denial of View)",
         "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "DNP3 DisableUnsolicited (FC21) command sent to an outstation. This turns off all spontaneous event reporting — the SCADA system continues polling but"
       },
       {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "denial_of_view__opcua_delete_sub",
+        "label": "T0815 – OPC UA delete subscriptions (Denial of View)",
+        "proto": "opcua",
+        "notes": "DeleteSubscriptions request removes all active subscriptions for a client. If an attacker can reach the OPC UA server and delete the SCADA client's su"
+      }
+    ],
+    "T0816": [
+      {
+        "id": "device_restart__s7comm",
+        "label": "T0816 – S7comm CPU STOP/START cycle (Device Restart/Shutdown)",
+        "proto": "s7comm",
+        "notes": "S7comm CPU STOP followed by Warm Start. This reboots the PLC, clearing any in-memory data and reloading program from flash. Models CRASHOVERRIDE and I"
+      },
+      {
+        "id": "device_restart__enip_reset",
+        "label": "T0816 – EtherNet/IP CIP Reset (Device Restart/Shutdown)",
+        "proto": "enip",
+        "notes": "CIP Reset service (0x05) on the Identity object of an Allen-Bradley controller. Type 0x00 = power-cycle equivalent. ENIP reset is faster and simpler t"
+      }
+    ],
+    "T0819": [
+      {
+        "id": "exploit_public_app__s7comm_malformed",
+        "label": "Exploit Public-Facing Application — S7comm malformed PDU exploit (T0819)",
+        "proto": "s7comm",
+        "notes": "Sends malformed S7comm parameter blocks to a public-facing Siemens PLC. Exploits insufficient input validation in the S7comm stack. Models CVE-class v"
+      },
+      {
+        "id": "exploit_public_app__opcua_malformed",
+        "label": "Exploit Public-Facing Application — OPC UA malformed Browse exploit (T0819)",
+        "proto": "opcua",
+        "notes": "Sends malformed OPC UA Browse requests with invalid NodeIds and continuation points to exploit OPC UA stack vulnerabilities in internet-accessible gat"
+      },
+      {
+        "id": "exploit_public_app__enip_ucmm_crash",
+        "label": "Exploit Public-Facing Application — EtherNet/IP malformed UCMM exploit (T0819)",
+        "proto": "enip",
+        "notes": "Sends malformed UCMM frames to internet-exposed Allen-Bradley PLCs. Targets buffer handling bugs in CIP stack implementations on port 44818."
+      }
+    ],
+    "T0820": [
+      {
+        "id": "exploitation_evasion__modbus_exception",
+        "label": "T0820 – Modbus exception-inducing probes (Exploitation for Evasion)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "FC08 diagnostic (return query) followed by out-of-range FC03 requests. Exception probes fingerprint the PLC model by its exception response code patte"
+      }
+    ],
+    "T0821": [
+      {
+        "id": "modify_controller_tasking__s7comm",
+        "label": "T0821 – S7comm program download (Modify Controller Tasking)",
+        "proto": "s7comm",
+        "notes": "S7comm Request Download → Download Block → End Download sequence. This is how a new/modified PLC program is loaded. Stuxnet used this exact sequence t"
+      }
+    ],
+    "T0822": [
+      {
+        "id": "external_remote_services__opcua",
+        "label": "T0822 – OPC UA anonymous session establishment (External Remote Services)",
+        "proto": "opcua",
+        "notes": "Full OPC UA session handshake: CreateSession → ActivateSession with anonymous identity token. Many OPC UA servers accept anonymous connections by defa"
       }
     ],
     "T0826": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "id": "loss_availability__multi_protocol_dos",
+        "label": "Loss of Availability — Multi-protocol concurrent DoS (T0826)",
+        "proto": "modbus/dnp3/iec104",
+        "notes": "Simultaneously floods Modbus/TCP, DNP3, and IEC-104 channels at maximum rate, causing loss of availability across all primary OT communication paths."
       },
       {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "id": "loss_availability__s7comm_read_flood",
+        "label": "Loss of Availability — S7comm DB read flood (T0826)",
+        "proto": "s7comm",
+        "notes": "Floods the S7comm port with continuous DB read requests, exhausting PLC communication stack buffers and causing loss of availability to all other mast"
       }
     ],
     "T0827": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
-        "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "id": "loss_of_control__multi",
+        "label": "T0827 – Loss of control chain (Loss of Control)",
+        "proto": "s7comm/modbus/iec104",
+        "notes": "Combined attack: S7comm STOP removes PLC control → Modbus writes to coils force all outputs off → IEC-104 STOPDT blinds SCADA. The system loses contro"
       }
     ],
     "T0828": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "loss_productivity__modbus_setpoint_chaos",
+        "label": "Loss of Productivity and Revenue — Modbus setpoint chaos (T0828)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Reads production setpoints then writes random values to holding registers and masks bits, causing erratic process behaviour, quality failures, and unp"
+      },
+      {
+        "id": "loss_productivity__iec104_setpoint_spam",
+        "label": "Loss of Productivity and Revenue — IEC-104 setpoint/regulating spam (T0828)",
+        "proto": "iec104",
+        "notes": "Sends rapid IEC-104 setpoint and regulating-step commands to RTUs controlling physical processes, causing output oscillation and triggering protective"
       }
     ],
     "T0829": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "loss_of_protection__modbus_safety",
+        "label": "T0829 – Modbus safety register zero-out (Loss of Protection)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "FC16 writes to high-numbered registers (60000+) conventionally used for safety setpoints and Safety Instrumented System (SIS) parameters. Zeroing thes"
+      }
+    ],
+    "T0830": [
+      {
+        "id": "aitm__opcua_relay_session",
+        "label": "Adversary-in-the-Middle — OPC UA session relay (T0830)",
+        "proto": "opcua",
+        "notes": "Establishes an OPC UA session and uses relay_session to proxy and modify traffic between client and server, enabling man-in-the-middle manipulation of"
+      },
+      {
+        "id": "aitm__dnp3_spoof_response",
+        "label": "Adversary-in-the-Middle — DNP3 unsolicited response injection (T0830)",
+        "proto": "dnp3",
+        "notes": "Injects forged DNP3 unsolicited response frames with manipulated measurement values between outstation and master, causing false process readings whil"
       }
     ],
     "T0831": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "manipulation_control__modbus_setpoint",
+        "label": "T0831 – Modbus setpoint drift manipulation (Manipulation of Control)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Read-modify-write cycle: attacker reads current register, writes a slightly altered value (setpoint drift), reads back to confirm. Unlike T0855 (raw w"
+      },
+      {
+        "id": "manipulation_control__dnp3_sbo",
+        "label": "T0831 – DNP3 repeated Select-Before-Operate (Manipulation of Control)",
+        "proto": "dnp3",
+        "notes": "Unlike T0855 (no-check operate), T0831 uses the proper SBO sequence repeatedly to change a control output. The repeated cycling pattern (Select→Operat"
+      },
+      {
+        "id": "manipulation_control__iec104_setpoint",
+        "label": "T0831 – IEC-104 float setpoint ramping (Manipulation of Control)",
+        "proto": "iec104",
+        "notes": "C_SE_NC_1 float setpoint commands incrementally changing a process value (temperature, pressure, flow rate). Each setpoint is slightly different — the"
+      },
+      {
+        "id": "manipulation_control__opcua_write",
+        "label": "T0831 – OPC UA node value write (Manipulation of Control)",
+        "proto": "opcua",
+        "notes": "OPC UA WriteRequest to control-related nodes after session establishment. The attacker modifies setpoint/command nodes to influence the physical proce"
       }
     ],
     "T0832": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "manipulation_of_view__modbus_spoof",
+        "label": "T0832 – Modbus read-write pattern hiding real values (Manipulation of View)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "FC23 read-write-multiple: attacker simultaneously reads current process value and writes an altered value to a reporting register. The SCADA system re"
+      },
+      {
+        "id": "manipulation_of_view__opcua_write_sensor",
+        "label": "T0832 – OPC UA sensor value injection (Manipulation of View)",
+        "proto": "opcua",
+        "notes": "Write to sensor/measurement nodes in OPC UA (temperature sensors, pressure transducers) while leaving control nodes untouched. SCADA displays false he"
+      }
+    ],
+    "T0834": [
+      {
+        "id": "native_api__s7comm_cotp_raw",
+        "label": "Native API — Raw COTP/S7 API call (T0834 precursor)",
+        "proto": "s7comm",
+        "notes": "Issues raw COTP connection establishment and native S7comm job requests without engineering software. Represents adversary tooling that calls the S7 c"
+      }
+    ],
+    "T0835": [
+      {
+        "id": "manipulate_io_image__modbus_input_write",
+        "label": "Manipulate I/O Image — Modbus input register poisoning (T0835)",
+        "proto": "modbus",
+        "notes": "Attempts to write values to Modbus input register address space via FC16, poisoning the PLC's input image to cause false sensor readings in control lo"
+      },
+      {
+        "id": "manipulate_io_image__s7comm_io_override",
+        "label": "Manipulate I/O Image — S7comm direct process image write (T0835)",
+        "proto": "s7comm",
+        "notes": "Uses S7comm write_inputs and write_outputs to overwrite the PLC I/O process image area directly, forcing the CPU to see false input states and send fa"
+      }
+    ],
+    "T0836": [
+      {
+        "id": "modify_parameter__modbus",
+        "label": "T0836 – Modbus parameter register writes (Modify Parameter)",
+        "proto": "modbus",
+        "notes": "Writes to holding registers that correspond to PID setpoints, alarm limits, or process parameters. Uses FC22 mask-write for individual bit manipulatio"
+      },
+      {
+        "id": "modify_parameter__s7comm_db",
+        "label": "T0836 – S7comm Data Block parameter modification (Modify Parameter)",
+        "proto": "s7comm",
+        "notes": "Reads from and writes to specific Siemens Data Blocks (DBs) known to contain process parameters (e.g. DB10 = recipe, DB20 = PID tuning). Attacker uses"
+      },
+      {
+        "id": "modify_parameter__enip_parameter",
+        "label": "T0836 – ENIP/CIP parameter object write (Modify Parameter)",
+        "proto": "enip",
+        "notes": "CIP GetAttributeSingle/SetAttributeSingle on Parameter object class. Allen-Bradley drives and controllers expose PID gains, speed limits, and torque l"
       }
     ],
     "T0837": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "loss_protection__modbus_relay_thresholds",
+        "label": "Loss of Protection — Modbus protection relay threshold raise (T0837)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Writes maximum values to protection relay parameter registers (overcurrent pickup, overvoltage limit, differential trip threshold) via FC16, raising a"
       }
     ],
-    "T0879": [
+    "T0838": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "alarm_settings__modbus_threshold",
+        "label": "Modify Alarm Settings — Modbus alarm register overwrite (T0838)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Writes extreme values to alarm setpoint holding registers via FC16, preventing alarms from triggering even at abnormal process values. Suppresses oper"
+      },
+      {
+        "id": "alarm_settings__opcua_write_limit_node",
+        "label": "Modify Alarm Settings — OPC UA alarm limit node write (T0838)",
+        "proto": "opcua",
+        "notes": "Browses OPC UA address space for alarm condition nodes then writes modified high/low limits and deadbands to suppress or falsify alarm conditions at S"
+      },
+      {
+        "id": "alarm_settings__iec104_param_threshold",
+        "label": "Modify Alarm Settings — IEC-104 parameter threshold modification (T0838)",
+        "proto": "iec104",
+        "notes": "Uses IEC-104 parameter activation (P_ME_* ASDUs) to modify measurement deadbands and transmission thresholds at the RTU, suppressing spontaneous data"
+      }
+    ],
+    "T0839": [
+      {
+        "id": "module_firmware__s7comm_module_flash",
+        "label": "Module Firmware — S7comm CP module firmware flash (T0839)",
+        "proto": "s7comm",
+        "notes": "Stops the PLC CPU then sends module firmware download blocks to a Siemens CP/IM communication module. Enables persistent implant in module firmware th"
+      },
+      {
+        "id": "module_firmware__enip_io_module",
+        "label": "Module Firmware — EtherNet/IP I/O module firmware flash (T0839)",
+        "proto": "enip",
+        "notes": "Uses EtherNet/IP CIP services to trigger a firmware update on a remote I/O adapter module (e.g. 1734 POINT I/O). Module-level implant persists across"
+      }
+    ],
+    "T0840": [
+      {
+        "id": "network_enum__enip_sweep",
+        "label": "T0840 – EtherNet/IP identity sweep (Network Connection Enumeration)",
+        "proto": "enip",
+        "notes": "Attacker sends ENIP ListIdentity and ListServices to discover all connected Allen-Bradley / Rockwell devices. Classic Nmap/Redpoint scanner pattern. M"
+      },
+      {
+        "id": "network_enum__profinet_identify",
+        "label": "T0840 – PROFINET DCP multicast identify (Network Connection Enumeration)",
+        "proto": "profinet_dcp",
+        "notes": "DCP multicast Identify-All request: the canonical PROFINET device discovery packet. Every PROFINET device on the segment responds with its station nam"
+      }
+    ],
+    "T0841": [
+      {
+        "id": "network_scanning__multi",
+        "label": "T0841 – OT protocol port sweep (Network Service Scanning)",
+        "proto": "modbus/dnp3/opcua/enip/s7comm/iec104",
+        "notes": "Connection attempts on all standard OT service ports across protocols. Models automated scanner behaviour (Nmap, Redpoint, Claroty passive emulation)."
+      }
+    ],
+    "T0842": [
+      {
+        "id": "network_sniffing__profinet_passive",
+        "label": "T0842 – PROFINET DCP Hello observation (Network Sniffing)",
+        "proto": "profinet_dcp",
+        "notes": "Attacker sends DCP Hello and DCP Get to passively harvest device names and IP assignments. In real attacks this is passive listening, but the DCP Get"
+      }
+    ],
+    "T0843": [
+      {
+        "id": "program_download__s7comm",
+        "label": "T0843 – S7comm full program download (Program Download)",
+        "proto": "s7comm",
+        "notes": "Extended download: multiple Download Block chunks of realistic size (64-240 bytes each). Models a full OB1 replacement (typically a few KB). Distinct"
+      }
+    ],
+    "T0845": [
+      {
+        "id": "program_upload__s7comm",
+        "label": "T0845 – S7comm program upload (Program Upload)",
+        "proto": "s7comm",
+        "notes": "Request Upload → Upload Block → End Upload sequence to extract the current PLC program from flash. Attackers upload the program to analyse it for vuln"
+      }
+    ],
+    "T0846": [
+      {
+        "id": "remote_sys_discovery__dnp3_probe",
+        "label": "T0846 – DNP3 device probing (Remote System Discovery)",
+        "proto": "dnp3",
+        "notes": "Attacker sends DNP3 DelayMeasure and AssignClass requests to identify which outstation addresses respond. Timing data reveals network topology. Assign"
+      }
+    ],
+    "T0848": [
+      {
+        "id": "rogue_master__modbus",
+        "label": "T0848 – Modbus rogue master (Rogue Master)",
+        "proto": "modbus",
+        "notes": "Attacker device acts as an unexpected Modbus TCP master: it begins issuing read and write commands from an IP not in the engineering workstation white"
+      },
+      {
+        "id": "rogue_master__dnp3",
+        "label": "T0848 – DNP3 rogue master select-before-operate (Rogue Master)",
+        "proto": "dnp3",
+        "notes": "Unexpected master issues DNP3 Select-then-Operate sequence to an outstation that does not recognise its source address. The key observable is control"
+      },
+      {
+        "id": "rogue_master__iec104",
+        "label": "T0848 – IEC-104 rogue master STARTDT + commands (Rogue Master)",
+        "proto": "iec104",
+        "notes": "An unauthorised IEC-104 controlling station establishes a connection (STARTDT) to an RTU and issues control commands. RTU receives commands from an un"
+      }
+    ],
+    "T0849": [
+      {
+        "id": "masquerading__profinet_set_name",
+        "label": "T0849 – PROFINET DCP device rename (Masquerading)",
+        "proto": "profinet_dcp",
+        "notes": "DCP Set NameOfStation to an existing device's name. In PROFINET, devices are addressed by name — if an attacker renames their device to match a legiti"
+      },
+      {
+        "id": "masquerading__iec104_clock_inject",
+        "label": "T0849 – IEC-104 clock synchronisation injection (Masquerading)",
+        "proto": "iec104",
+        "notes": "C_CS_NA_1 clock sync with forged timestamp. Injecting incorrect time into an RTU corrupts event timestamps, making forensic analysis impossible and ca"
+      }
+    ],
+    "T0853": [
+      {
+        "id": "scripting_dnp3_file_push__dnp3",
+        "label": "Scripting — DNP3 file transfer script push (T0853 precursor)",
+        "proto": "dnp3",
+        "notes": "Uses DNP3 file transfer service (FC19 Open File) to push script payloads to the outstation filesystem. Network-observable as DNP3 file service frames"
+      }
+    ],
+    "T0855": [
+      {
+        "id": "unauth_command__modbus",
+        "label": "T0855 – Modbus unauthorized write burst (Unauthorized Command Message)",
+        "proto": "modbus",
+        "notes": "Write commands from an unexpected host with no prior read baseline. FC06 single register writes followed by FC16 multi-register burst. Pattern seen in"
+      },
+      {
+        "id": "unauth_command__dnp3_direct_operate",
+        "label": "T0855 – DNP3 direct operate without select (Unauthorized Command Message)",
+        "proto": "dnp3",
+        "notes": "DNP3 DirectOperate (FC05) bypasses the normal Select-before-Operate interlocking. In Industroyer-style attacks this was used to directly trip circuit"
+      },
+      {
+        "id": "unauth_command__iec104",
+        "label": "T0855 – IEC-104 mass control command sequence (Unauthorized Command Message)",
+        "proto": "iec104",
+        "notes": "Burst of C_SC_NA_1 single commands followed by C_DC_NA_1 double commands and C_SE_NC_1 float setpoints. This is the Industroyer IEC-104 module pattern"
+      },
+      {
+        "id": "unauth_command__s7comm",
+        "label": "T0855 – S7comm write outputs from unexpected host (Unauthorized Command Message)",
+        "proto": "s7comm",
+        "notes": "S7comm WriteVar targeting AREA_OUTPUTS: an unexpected engineering workstation IP issues write commands directly to PLC output area. The traffic patter"
+      }
+    ],
+    "T0856": [
+      {
+        "id": "spoof_reporting__iec104_meas_inject",
+        "label": "Spoof Reporting Message — IEC-104 false measurement injection (T0856)",
+        "proto": "iec104",
+        "notes": "Injects IEC-104 measurement values with falsified process data (M_ME_* ASDUs), causing SCADA to display incorrect readings. Used in Industroyer2 and s"
+      },
+      {
+        "id": "spoof_reporting__opcua_write_sensor",
+        "label": "Spoof Reporting Message — OPC UA sensor value write (T0856)",
+        "proto": "opcua",
+        "notes": "Authenticates to OPC UA server and writes false values to sensor/measurement nodes. SCADA clients reading these nodes via subscriptions receive falsif"
+      },
+      {
+        "id": "spoof_reporting__dnp3_unsolicited",
+        "label": "Spoof Reporting Message — DNP3 unsolicited response injection (T0856)",
+        "proto": "dnp3",
+        "notes": "Injects DNP3 unsolicited response frames (FC82) with falsified analog input values, making the master station display false process readings without t"
+      }
+    ],
+    "T0857": [
+      {
+        "id": "system_firmware__s7comm_full_flash",
+        "label": "System Firmware — S7comm full CPU firmware replacement (T0857)",
+        "proto": "s7comm",
+        "notes": "Performs full CPU firmware replacement via S7comm firmware download, preceded by SZL clear. Allows persistent access via modified firmware that surviv"
+      },
+      {
+        "id": "system_firmware__enip_plc_reimage",
+        "label": "System Firmware — EtherNet/IP PLC full firmware re-image (T0857)",
+        "proto": "enip",
+        "notes": "Uses EtherNet/IP CIP firmware update and boot_firmware services to replace PLC operating system firmware. Observable as large CIP data transfers follo"
+      }
+    ],
+    "T0858": [
+      {
+        "id": "change_opmode__s7comm_mode_cycle",
+        "label": "Change Operating Mode — S7comm PLC mode cycle (T0858)",
+        "proto": "s7comm",
+        "notes": "Cycles PLC operating mode: RUN → PROGRAM → STOP → RUN, disrupting process control. Enables modified logic download between mode transitions."
+      },
+      {
+        "id": "change_opmode__dnp3_restart",
+        "label": "Change Operating Mode — DNP3 warm/cold restart (T0858)",
+        "proto": "dnp3",
+        "notes": "Issues DNP3 warm restart (FC14) and cold restart (FC13) commands to force outstation mode transitions, interrupting normal operation and causing re-in"
+      }
+    ],
+    "T0859": [
+      {
+        "id": "valid_accounts__opcua_cred",
+        "label": "T0859 – OPC UA credential-based session (Valid Accounts)",
+        "proto": "opcua",
+        "notes": "CreateSession + ActivateSession with username/password token. Models use of captured or default credentials (admin/admin, guest/guest). Distinguished"
+      }
+    ],
+    "T0861": [
+      {
+        "id": "point_tag_id__opcua_browse",
+        "label": "T0861 – OPC UA Browse tree traversal (Point & Tag Identification)",
+        "proto": "opcua",
+        "notes": "Attacker enumerates the entire OPC UA address space starting from the Objects folder. BrowseRequest → BrowseNextRequest chains reveal every tag name,"
+      },
+      {
+        "id": "point_tag_id__modbus_register_sweep",
+        "label": "T0861 – Modbus register address sweep (Point & Tag Identification)",
+        "proto": "modbus",
+        "notes": "Systematic FC03 read of all holding register addresses from 0 to 9999. Each exception response reveals valid address boundaries. This is how attackers"
+      }
+    ],
+    "T0864": [
+      {
+        "id": "transient_asset__profinet_new_device",
+        "label": "Transient Cyber Asset — PROFINET device announcement (T0864 precursor)",
+        "proto": "profinet_dcp",
+        "notes": "Simulates a transient cyber asset (attacker laptop, temporary device) connecting to the OT network by broadcasting PROFINET DCP Hello and Identify fra"
+      }
+    ],
+    "T0866": [
+      {
+        "id": "exploit_remote_services__s7comm_malformed",
+        "label": "Exploitation of Remote Services — S7comm malformed parameter exploit (T0866)",
+        "proto": "s7comm",
+        "notes": "Exploits insufficient input validation in S7comm remote service handlers by sending malformed parameter blocks. Models CVE-class vulnerabilities again"
+      },
+      {
+        "id": "exploit_remote_services__enip_ucmm",
+        "label": "Exploitation of Remote Services — EtherNet/IP UCMM exploit (T0866)",
+        "proto": "enip",
+        "notes": "Sends malformed CIP UCMM frames to exploit buffer overflow conditions in EtherNet/IP remote service handlers. Targets PLC message routing components e"
+      }
+    ],
+    "T0867": [
+      {
+        "id": "lateral_tool__s7comm_db_transfer",
+        "label": "Lateral Tool Transfer — S7comm DB as payload staging area (T0867)",
+        "proto": "s7comm",
+        "notes": "Uses S7comm data block write to stage attacker tooling in PLC memory. The PLC DB acts as a staging server — other OT devices read it via S7comm to rec"
+      },
+      {
+        "id": "lateral_tool__enip_cip_transfer",
+        "label": "Lateral Tool Transfer — EtherNet/IP CIP file object transfer (T0867)",
+        "proto": "enip",
+        "notes": "Uses EtherNet/IP CIP File Object services to transfer attacker tools between PLCs on the same network, leveraging trusted PLC-to-PLC communication pat"
+      }
+    ],
+    "T0868": [
+      {
+        "id": "detect_operating_mode__enip",
+        "label": "T0868 – EtherNet/IP CIP GetAttribute operating mode (Detect Operating Mode)",
+        "proto": "enip",
+        "notes": "GetAttributeSingle on the device type attribute of the Identity object reveals whether the controller is in Program, Run, or Test mode. An attacker ne"
+      }
+    ],
+    "T0869": [
+      {
+        "id": "c2_protocol__modbus_register_beacon",
+        "label": "C2 via Standard Application Layer — Modbus register beacon port 502 (T0869)",
+        "proto": "modbus",
+        "notes": "Encodes C2 beacon data in Modbus FC06 Single Register Write messages on port 502. Blends into legitimate Modbus polling traffic while passing firewall"
+      },
+      {
+        "id": "c2_protocol__enip_cip_beacon",
+        "label": "C2 via Standard Application Layer — EtherNet/IP CIP tag write beacon (T0869)",
+        "proto": "enip",
+        "notes": "Encodes C2 beacon traffic in EtherNet/IP Write Tag service messages to port 44818. EtherNet/IP is permitted in most OT DMZ policies, making port 44818"
+      },
+      {
+        "id": "c2_protocol__opcua_write_custom_node",
+        "label": "C2 via Standard Application Layer — OPC UA node write beacon (T0869)",
+        "proto": "opcua",
+        "notes": "Uses OPC UA Write service to custom nodes as a covert C2 channel. Encoded commands in NodeId writes are retrieved by implanted software, blending into"
+      }
+    ],
+    "T0871": [
+      {
+        "id": "execution_through_api__opcua_call",
+        "label": "T0871 – OPC UA Method call (Execution through API)",
+        "proto": "opcua",
+        "notes": "OPC UA CallRequest targeting a server-side Method node. Many OPC UA servers expose methods to execute commands (e.g. Start/Stop production, change rec"
+      }
+    ],
+    "T0872": [
+      {
+        "id": "indicator_removal__dnp3_clear_events",
+        "label": "Indicator Removal — DNP3 event buffer clear (T0872 precursor)",
+        "proto": "dnp3",
+        "notes": "Sends DNP3 FC02 Write to class event objects to clear the outstation event buffer, erasing logs of prior commands and measurements. Removes network-ob"
+      }
+    ],
+    "T0875": [
+      {
+        "id": "change_program_state__s7comm",
+        "label": "T0875 – S7comm PLC state transitions (Change Program State)",
+        "proto": "s7comm",
+        "notes": "PLC control commands cycling through STOP → Cold Start → Warm Start. Used when an attacker needs the PLC in a specific state for program manipulation."
+      }
+    ],
+    "T0876": [
+      {
+        "id": "loss_of_safety__s7comm_outputs",
+        "label": "T0876 – S7comm process output zeroing (Loss of Safety)",
+        "proto": "s7comm",
+        "notes": "S7comm write to AREA_OUTPUTS zeroing all output bytes. In a Siemens environment this de-energises every PLC output: motors, pumps, valves — equivalent"
+      }
+    ],
+    "T0877": [
+      {
+        "id": "io_image__s7comm_full_read",
+        "label": "I/O Image — S7comm full process image read (T0877)",
+        "proto": "s7comm",
+        "notes": "Reads the complete S7 I/O process image: input bytes, output bytes, and data blocks to reconstruct full process state for reconnaissance before manipu"
+      },
+      {
+        "id": "io_image__enip_assembly_read",
+        "label": "I/O Image — EtherNet/IP assembly object full I/O read (T0877)",
+        "proto": "enip",
+        "notes": "Uses EtherNet/IP Assembly Object reads to collect the complete I/O image from Allen-Bradley PLCs — both input and output assemblies — reconstructing f"
+      },
+      {
+        "id": "io_image__modbus_full_scan",
+        "label": "I/O Image — Modbus full coil + register I/O scan (T0877)",
+        "proto": "modbus",
+        "notes": "Reads all Modbus I/O areas (FC01 coils, FC02 discrete inputs, FC03 holding registers, FC04 input registers) to reconstruct the complete PLC I/O image"
+      }
+    ],
+    "T0878": [
+      {
+        "id": "alarm_suppression__iec104_inhibit",
+        "label": "T0878 – IEC-104 parameter activation inhibit (Alarm Suppression)",
+        "proto": "iec104",
+        "notes": "P_AC_NA_1 (Parameter Activation) with COT=Deactivation sent to an RTU disables spontaneous transmission of alarms. The RTU continues to detect alarm c"
       }
     ],
     "T0880": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
-      {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "loss_safety__modbus_sis_disable",
+        "label": "Loss of Safety — Modbus SIS inhibit/bypass write (T0880)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Writes inhibit/bypass patterns to Safety Instrumented System trip registers via Modbus FC16, disabling safety functions. Simulates the Triton/TRISIS t"
+      },
+      {
+        "id": "loss_safety__s7comm_failsafe_zero",
+        "label": "Loss of Safety — S7comm F-CPU failsafe zero-write (T0880)",
+        "proto": "s7comm",
+        "notes": "Writes zeros to S7 F-CPU (failsafe CPU) safety data blocks, zeroing safety program inputs and disabling all safety functions. Targets Siemens S7-300F/"
+      }
+    ],
+    "T0881": [
+      {
+        "id": "service_stop__s7comm",
+        "label": "T0881 – S7comm persistent CPU STOP (Service Stop)",
+        "proto": "s7comm",
+        "notes": "Multiple CPU STOP commands to ensure the PLC enters STOP mode and does not auto-restart. Distinct from T0816 (restart) in that no Start command follow"
+      },
+      {
+        "id": "service_stop__enip_stop",
+        "label": "T0881 – EtherNet/IP CIP Stop (Service Stop)",
+        "proto": "enip",
+        "notes": "CIP Stop service on a drive or motion controller. Causes the device to stop execution and remain in stopped state."
       }
     ],
     "T0882": [
       {
-        "id": "iec104_ctrl",
-        "label": "IEC104 Control / Telemetry mix",
-        "proto": "iec104",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "id": "theft_operational_info__opcua_history",
+        "label": "T0882 – OPC UA HistoryRead data exfil (Theft of Operational Information)",
+        "proto": "opcua",
+        "notes": "OPC UA HistoryReadRequest to extract historical process data. Attackers targeting historian servers (Wonderware, OSIsoft PI) use this to exfiltrate op"
       },
       {
-        "id": "dnp3_operate",
-        "label": "DNP3 Operate / DirectOperate",
-        "proto": "dnp3",
-        "count": 6,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
-      },
+        "id": "theft_operational_info__s7comm_db_extract",
+        "label": "T0882 – S7comm systematic DB read (Theft of Operational Information)",
+        "proto": "s7comm",
+        "notes": "Sequential ReadVar requests targeting multiple Data Blocks (DB1, DB2, ...). In Siemens environments, DBs contain recipes, setpoints, and production da"
+      }
+    ],
+    "T0883": [
       {
-        "id": "modbus_write",
-        "label": "Modbus Write-biased (random FC)",
+        "id": "internet_accessible__multi",
+        "label": "T0883 – Exposed OT service probe (Internet Accessible Device)",
+        "proto": "modbus/opcua/enip/dnp3",
+        "notes": "Attacker probing OT services from an unexpected network segment (DMZ breach, direct internet exposure). Each protocol sends its standard discovery req"
+      }
+    ],
+    "T0884": [
+      {
+        "id": "connection_proxy__opcua_relay_session",
+        "label": "Connection Proxy — OPC UA session relay proxy (T0884)",
+        "proto": "opcua",
+        "notes": "Uses OPC UA relay_session to proxy connections through a compromised OT host, routing attacker traffic via a trusted intermediate node to reach deeper"
+      }
+    ],
+    "T0885": [
+      {
+        "id": "commonly_used_port__modbus_c2_502",
+        "label": "Commonly Used Port — C2 over Modbus port 502 (T0885)",
         "proto": "modbus",
-        "count": 8,
-        "interval": "0s",
-        "mode": "live",
-        "notes": ""
+        "notes": "Encodes C2 beacon data in Modbus FC06 register writes to port 502. Firewall rules permitting Modbus traffic allow attacker C2 to blend in with legitim"
+      },
+      {
+        "id": "commonly_used_port__enip_c2_44818",
+        "label": "Commonly Used Port — C2 over EtherNet/IP port 44818 (T0885)",
+        "proto": "enip",
+        "notes": "Encodes C2 beacon traffic in EtherNet/IP Write Tag messages to port 44818. EtherNet/IP is permitted in most OT DMZ policies, making 44818 a reliable c"
+      }
+    ],
+    "T0886": [
+      {
+        "id": "remote_services__opcua_session_pivot",
+        "label": "Remote Services — OPC UA session-based lateral access (T0886)",
+        "proto": "opcua",
+        "notes": "Models adversary lateral movement via legitimate OPC UA remote services: endpoint discovery → session open → session activate → browse → read. Uses au"
+      },
+      {
+        "id": "remote_services__s7comm_lateral_pivot",
+        "label": "Remote Services — S7comm lateral pivot to secondary PLC (T0886)",
+        "proto": "s7comm",
+        "notes": "Pivots from one compromised PLC to another via the S7 routing table, leveraging PLC-to-PLC communication as a lateral movement path to reach targets d"
+      }
+    ],
+    "T0888": [
+      {
+        "id": "remote_sys_info__enip_identity",
+        "label": "T0888 – EtherNet/IP device fingerprint (Remote System Information Discovery)",
+        "proto": "enip",
+        "notes": "After session registration, attacker reads full Identity object (CIP GetAttributeAll) to extract vendor, product code, revision, and serial number. Re"
+      },
+      {
+        "id": "remote_sys_info__opcua_discovery",
+        "label": "T0888 – OPC UA server discovery and endpoint enumeration",
+        "proto": "opcua",
+        "notes": "FindServers + GetEndpoints requests to the OPC UA discovery server. Reveals server capabilities, security policies, and available endpoints. Equivalen"
+      },
+      {
+        "id": "remote_sys_info__s7comm_szl",
+        "label": "T0888 – S7comm SZL/SSL read (System Status List)",
+        "proto": "s7comm",
+        "notes": "S7comm ROSCTR_USERDATA SZL read: attacker queries System Status Lists (0x0011 hardware config, 0x001C CPU components) to enumerate Siemens PLC hardwar"
+      }
+    ],
+    "T0889": [
+      {
+        "id": "modify_program__s7comm_upload_dl",
+        "label": "Modify Program — S7comm upload → modify OB1 → re-download (T0889)",
+        "proto": "s7comm",
+        "notes": "Uploads the PLC user program (OB1), simulates offline modification, then downloads the modified block. Reproduces the Stuxnet-style technique of alter"
+      }
+    ],
+    "T0890": [
+      {
+        "id": "priv_esc__opcua_privilege_escalate",
+        "label": "Exploitation for Privilege Escalation — OPC UA role escalation (T0890 precursor)",
+        "proto": "opcua",
+        "notes": "Exploits OPC UA access control misconfigurations to escalate from guest/operator role to administrator, gaining access to write-protected nodes. Obser"
+      }
+    ],
+    "T0891": [
+      {
+        "id": "hardcoded_creds__s7comm_factory_pin",
+        "label": "Hardcoded Credentials — S7comm factory/hardcoded PIN (T0891)",
+        "proto": "s7comm",
+        "notes": "Authenticates using known hardcoded factory credentials in S7comm firmware (service mode PIN, or OEM-set fixed passwords). Models credential extractio"
+      },
+      {
+        "id": "hardcoded_creds__opcua_embedded_password",
+        "label": "Hardcoded Credentials — OPC UA embedded hardcoded password (T0891)",
+        "proto": "opcua",
+        "notes": "Uses hardcoded credentials extracted from device firmware or engineering software to authenticate to OPC UA servers. Common in OEM-configured gateways"
+      }
+    ],
+    "T0892": [
+      {
+        "id": "change_credential__modbus_register_write",
+        "label": "Change Credential — Modbus credential register overwrite (T0892)",
+        "proto": "modbus",
+        "notes": "Overwrites credential/PIN holding registers via Modbus FC16 to change or disable device authentication. Targets PLCs that store access PINs in Modbus"
+      },
+      {
+        "id": "change_credential__opcua_password_change",
+        "label": "Change Credential — OPC UA ChangePassword (T0892)",
+        "proto": "opcua",
+        "notes": "Uses OPC UA ChangePassword service to modify user credentials after authentication, locking out legitimate operators from historian and SCADA OPC UA a"
+      }
+    ],
+    "T0895": [
+      {
+        "id": "autorun_image__s7comm_sdb0_download",
+        "label": "Autorun Image — S7comm SDB0 startup configuration download (T0895)",
+        "proto": "s7comm",
+        "notes": "Downloads a modified System Data Block 0 (SDB0) which controls S7 CPU startup configuration. Modified SDB0 forces the PLC to execute attacker-controll"
       }
     ]
   }

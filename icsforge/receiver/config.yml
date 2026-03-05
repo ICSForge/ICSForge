@@ -1,11 +1,23 @@
+# ICSForge Receiver configuration
+
+# TCP listeners — one per ICS protocol
 listen:
-  modbus: 502
-  s7comm: 102
-  dnp3: 20000
-  iec104: 2404
-  opcua: 4840
-  enip: 44818
+  modbus:  502
+  s7comm:  102
+  dnp3:    20000
+  iec104:  2404
+  opcua:   4840
+  enip:    44818
+
+# Layer-2 listeners (Linux AF_PACKET, requires root/CAP_NET_RAW)
+# Set the interface name for the NIC connected to the OT network segment.
+# Leave blank or comment out to disable (PROFINET traffic will not be captured).
+# Can also be overridden at runtime: icsforge-receiver --l2-iface eth0
+l2_listen:
+  profinet_dcp: ""    # e.g. "eth0" or "ens3"
+
 log:
   receipts: ./receiver_out/receipts.jsonl
+
 safety:
   max_payload: 8192

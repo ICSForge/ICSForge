@@ -123,6 +123,11 @@
           "id": "T0895",
           "name": "Autorun Image",
           "is_subtechnique": false
+        },
+        {
+          "id": "T0875",
+          "name": "Change Program State",
+          "description": "Adversaries may manipulate the program state on a PLC by issuing commands to change operating mode."
         }
       ]
     },
@@ -251,6 +256,11 @@
           "id": "T0888",
           "name": "Remote System Information Discovery",
           "is_subtechnique": false
+        },
+        {
+          "id": "T0841",
+          "name": "Network Service Scanning",
+          "description": "Adversaries may scan for OT protocol services to discover devices and understand the environment."
         }
       ]
     },
@@ -299,7 +309,7 @@
     {
       "shortname": "collection",
       "name": "Collection",
-      "description": "The adversary is trying to gather data of interest and domain knowledge on your ICS environment to inform their goal.\n\nCollection consists of techniques adversaries use to gather domain knowledge and obtain contextual feedback in an ICS environment. This tactic is often performed as part of [Discovery](https://attack.mitre.org/tactics/TA0102), to compile data on control systems and targets of interest that may be used to follow through on the adversary\u2019s objective. Examples of these techniques include observing operation states, capturing screenshots, identifying unique device roles, and gathering system and diagram schematics. Collection of this data can play a key role in planning, executing, and even revising an ICS-targeted attack. Methods of collection depend on the categories of data being targeted, which can include protocol specific, device specific, and process specific configurations and functionality. Information collected may pertain to a combination of system, supervisory, device, and network related data, which conceptually fall under high, medium, and low levels of plan operations. For example, information repositories on plant data at a high level or device specific programs at a low level. Sensitive floor plans, vendor device manuals, and other references may also be at risk and exposed on the internet or otherwise publicly accessible.",
+      "description": "The adversary is trying to gather data of interest and domain knowledge on your ICS environment to inform their goal.\n\nCollection consists of techniques adversaries use to gather domain knowledge and obtain contextual feedback in an ICS environment. This tactic is often performed as part of [Discovery](https://attack.mitre.org/tactics/TA0102), to compile data on control systems and targets of interest that may be used to follow through on the adversary’s objective. Examples of these techniques include observing operation states, capturing screenshots, identifying unique device roles, and gathering system and diagram schematics. Collection of this data can play a key role in planning, executing, and even revising an ICS-targeted attack. Methods of collection depend on the categories of data being targeted, which can include protocol specific, device specific, and process specific configurations and functionality. Information collected may pertain to a combination of system, supervisory, device, and network related data, which conceptually fall under high, medium, and low levels of plan operations. For example, information repositories on plant data at a high level or device specific programs at a low level. Sensitive floor plans, vendor device manuals, and other references may also be at risk and exposed on the internet or otherwise publicly accessible.",
       "techniques": [
         {
           "id": "T0801",
@@ -361,7 +371,7 @@
     {
       "shortname": "command-and-control",
       "name": "Command and Control",
-      "description": "The adversary is trying to communicate with and control compromised systems, controllers, and platforms with access to your ICS environment.\n\nCommand and Control consists of techniques that adversaries use to communicate with and send commands to compromised systems, devices, controllers, and platforms with specialized applications used in ICS environments. Examples of these specialized communication devices include human machine interfaces (HMIs), data historians, SCADA servers, and engineering workstations (EWS). Adversaries often seek to use commonly available resources and mimic expected network traffic to avoid detection and suspicion. For instance, commonly used ports and protocols in ICS environments, and even expected IT resources, depending on the target network. Command and Control may be established to varying degrees of stealth, often depending on the victim\u2019s network structure and defenses.",
+      "description": "The adversary is trying to communicate with and control compromised systems, controllers, and platforms with access to your ICS environment.\n\nCommand and Control consists of techniques that adversaries use to communicate with and send commands to compromised systems, devices, controllers, and platforms with specialized applications used in ICS environments. Examples of these specialized communication devices include human machine interfaces (HMIs), data historians, SCADA servers, and engineering workstations (EWS). Adversaries often seek to use commonly available resources and mimic expected network traffic to avoid detection and suspicion. For instance, commonly used ports and protocols in ICS environments, and even expected IT resources, depending on the target network. Command and Control may be established to varying degrees of stealth, often depending on the victim’s network structure and defenses.",
       "techniques": [
         {
           "id": "T0869",
@@ -492,7 +502,7 @@
     {
       "shortname": "impact",
       "name": "Impact",
-      "description": "The adversary is trying to manipulate, interrupt, or destroy your ICS systems, data, and their surrounding environment.\n\nImpact consists of techniques that adversaries use to disrupt, compromise, destroy, and manipulate the integrity and availability of control system operations, processes, devices, and data. These techniques encompass the influence and effects resulting from adversarial efforts to attack the ICS environment or that tangentially impact it. Impact techniques can result in more instantaneous disruption to control processes and the operator, or may result in more long term damage or loss to the ICS environment and related operations. The adversary may leverage [Impair Process Control](https://attack.mitre.org/tactics/TA0106) techniques, which often manifest in more self-revealing impacts on operations, or [Impair Process Control](https://attack.mitre.org/tactics/TA0106) techniques to hinder safeguards and alarms in order to follow through with and provide cover for Impact. In some scenarios, control system processes can appear to function as expected, but may have been altered to benefit the adversary\u2019s goal over the course of a longer duration. These techniques might be used by adversaries to follow through on their end goal or to provide cover for a confidentiality breach.\n\n[Loss of Productivity and Revenue](https://attack.mitre.org/techniques/T0828), [Theft of Operational Information](https://attack.mitre.org/techniques/T0882), and [Damage to Property](https://attack.mitre.org/techniques/T0879) are meant to encompass some of the more granular goals of adversaries in targeted and untargeted attacks. These techniques in and of themselves are not necessarily detectable, but the associated adversary behavior can potentially be mitigated and/or detected.",
+      "description": "The adversary is trying to manipulate, interrupt, or destroy your ICS systems, data, and their surrounding environment.\n\nImpact consists of techniques that adversaries use to disrupt, compromise, destroy, and manipulate the integrity and availability of control system operations, processes, devices, and data. These techniques encompass the influence and effects resulting from adversarial efforts to attack the ICS environment or that tangentially impact it. Impact techniques can result in more instantaneous disruption to control processes and the operator, or may result in more long term damage or loss to the ICS environment and related operations. The adversary may leverage [Impair Process Control](https://attack.mitre.org/tactics/TA0106) techniques, which often manifest in more self-revealing impacts on operations, or [Impair Process Control](https://attack.mitre.org/tactics/TA0106) techniques to hinder safeguards and alarms in order to follow through with and provide cover for Impact. In some scenarios, control system processes can appear to function as expected, but may have been altered to benefit the adversary’s goal over the course of a longer duration. These techniques might be used by adversaries to follow through on their end goal or to provide cover for a confidentiality breach.\n\n[Loss of Productivity and Revenue](https://attack.mitre.org/techniques/T0828), [Theft of Operational Information](https://attack.mitre.org/techniques/T0882), and [Damage to Property](https://attack.mitre.org/techniques/T0879) are meant to encompass some of the more granular goals of adversaries in targeted and untargeted attacks. These techniques in and of themselves are not necessarily detectable, but the associated adversary behavior can potentially be mitigated and/or detected.",
       "techniques": [
         {
           "id": "T0813",
@@ -553,6 +563,11 @@
           "id": "T0882",
           "name": "Theft of Operational Information",
           "is_subtechnique": false
+        },
+        {
+          "id": "T0876",
+          "name": "Loss of Safety",
+          "description": "Adversaries may cause a loss of safety by compromising safety system processes or output integrity."
         }
       ]
     }

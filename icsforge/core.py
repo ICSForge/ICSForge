@@ -1,7 +1,13 @@
+"""
+ICSForge core — pure Python, zero scapy dependency.
 
+write_pcap()   : struct-based pcap writer, LINKTYPE_ETHERNET (1)
+replay_pcap()  : sends TCP payloads from PCAP via raw sockets (scapy optional)
+build_marker() : on-wire correlation marker bytes
+"""
 from __future__ import annotations
 
-import json, os, time, socket, ipaddress, random
+import json, os, time, socket, ipaddress, random, struct
 from datetime import datetime, timezone
 
 TEST_NETS = [
@@ -12,6 +18,17 @@ TEST_NETS = [
 ]
 
 MARKER = b"ICSFORGE_SYNTH"
+
+# ── PCAP file format constants ────────────────────────────────────────
+# Global header: magic(4) major(2) minor(2) thiszone(4) sigfigs(4) snaplen(4) network(4)
+# magic 0xa1b2c3d4 → native-endian pcap; network 1 = LINKTYPE_ETHERNET
+_PCAP_GLOBAL_HDR = struct.pack("<IHHiIII",
+    0xa1b2c3d4,  # magic
+    2, 4,        # major.minor
+    0, 0,        # thiszone, sigfigs
+    65535,       # snaplen
+    1,           # LINKTYPE_ETHERNET
+)
 
 def is_allowed_dest(ip_str: str) -> bool:
     try:
@@ -40,7 +57,7 @@ def parse_interval(s: str) -> float:
 def rand_ip(rnd: random.Random) -> str:
     return ".".join(str(rnd.randint(1, 254)) for _ in range(4))
 
-# ---------------- Outputs (JSON) ----------------
+# ── Output dispatchers ────────────────────────────────────────────────
 def output_sender(spec: str):
     if spec == "stdout":
         return ("stdout", None)
@@ -54,7 +71,7 @@ def output_sender(spec: str):
     if spec.startswith("kafka:"):
         _, host, port, topic = spec.split(":", 3)
         return ("kafka", (f"{host}:{port}", topic))
-    raise ValueError("Invalid output spec. Use stdout | file:path | http(s)://... | syslog:ip:port | kafka:ip:port:topic")
+    raise ValueError("Invalid output spec.")
 
 def _send_stdout(event: dict):
     print(json.dumps(event, separators=(",", ":"), ensure_ascii=False))
@@ -101,63 +118,120 @@ def _send_kafka(bootstrap: str, topic: str, event: dict):
     prod.flush(2)
 
 def dispatch_send(kind, target, event, fh_cache):
-    if kind == "stdout":
-        _send_stdout(event)
-    elif kind == "file":
-        _send_file(target, event, fh_cache)
-    elif kind == "http":
-        _send_http(target, event)
-    elif kind == "syslog":
-        host, port = target
-        _send_syslog(host, port, event)
-    elif kind == "kafka":
-        bootstrap, topic = target
-        _send_kafka(bootstrap, topic, event)
-    else:
-        raise ValueError(f"Unknown output kind '{kind}'")
+    if kind == "stdout":        _send_stdout(event)
+    elif kind == "file":        _send_file(target, event, fh_cache)
+    elif kind == "http":        _send_http(target, event)
+    elif kind == "syslog":      _send_syslog(*target, event)
+    elif kind == "kafka":       _send_kafka(*target, event)
+    else:                       raise ValueError(f"Unknown output kind '{kind}'")
 
-# ---------------- Event model ----------------
+# ── Event model ───────────────────────────────────────────────────────
 def event_base(technique: str | None, source: str, **fields) -> dict:
     ev = {
-        "@timestamp": now_iso(),
-        "icsforge.synthetic": True,
-        "icsforge.marker": MARKER.decode("ascii"),
+        "@timestamp":          now_iso(),
+        "icsforge.synthetic":  True,
+        "icsforge.marker":     MARKER.decode("ascii"),
         "mitre.ics.technique": technique,
-        "event.source": source,
+        "event.source":        source,
     }
     ev.update(fields)
     return ev
 
-# ---------------- PCAP helpers ----------------
-def write_pcap(packets, out_path: str) -> int:
-    from scapy.all import wrpcap
+# ── Pure-Python pcap writer (LINKTYPE_ETHERNET) ───────────────────────
+def write_pcap(packets: list, out_path: str) -> int:
+    """
+    Write a list of raw-bytes packets to a pcap file.
+
+    All packets are written as Ethernet frames (LINKTYPE_ETHERNET = 1).
+    tcp_packet() and ether_frame() in protocols/common.py both return
+    complete Ethernet frames, so no wrapping is needed here.
+    """
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    wrpcap(out_path, packets)
+    base_ts = time.time()
+    with open(out_path, "wb") as f:
+        f.write(_PCAP_GLOBAL_HDR)
+        for i, pkt in enumerate(packets):
+            raw     = bytes(pkt) if not isinstance(pkt, bytes) else pkt
+            ts_sec  = int(base_ts) + i // 1000
+            ts_usec = (i % 1000) * 1000
+            f.write(struct.pack("<IIII", ts_sec, ts_usec, len(raw), len(raw)))
+            f.write(raw)
     return len(packets)
 
+
 def replay_pcap(pcap_path: str, dst_ip: str, interval: float = 0.05) -> int:
-    # Safety: replay only to loopback/TEST-NET.
+    """
+    Re-send TCP payloads from a pcap to dst_ip.
+
+    Reads Ethernet frames, extracts IP+TCP payload, and sends it via a
+    TCP connection.  Falls back to scapy if available for non-TCP frames.
+    """
     if not is_allowed_dest(dst_ip):
         raise ValueError("Replay blocked: destination IP not allowed (loopback/TEST-NET only).")
-    from scapy.all import rdpcap, send
-    pkts = rdpcap(pcap_path)
+
     sent = 0
-    for p in pkts:
-        if p.haslayer("IP"):
-            p["IP"].dst = dst_ip
-            send(p, verbose=False)
-            sent += 1
+    with open(pcap_path, "rb") as f:
+        # Parse global header
+        gh = f.read(24)
+        if len(gh) < 24:
+            return 0
+        magic = struct.unpack_from("<I", gh)[0]
+        endian = "<" if magic == 0xa1b2c3d4 else ">"
+
+        while True:
+            ph = f.read(16)
+            if len(ph) < 16:
+                break
+            _, _, incl_len, _ = struct.unpack(f"{endian}IIII", ph)
+            raw = f.read(incl_len)
+            if len(raw) < incl_len:
+                break
+
+            # Parse Ethernet + IPv4 + TCP
+            if len(raw) < 34:
+                continue
+            ethertype = struct.unpack(">H", raw[12:14])[0]
+            if ethertype != 0x0800:
+                continue  # skip non-IPv4 (e.g. PROFINET)
+            proto = raw[23]
+            if proto != 6:
+                continue  # skip non-TCP
+            ihl = (raw[14] & 0x0F) * 4
+            tcp_offset = 14 + ihl
+            if len(raw) < tcp_offset + 20:
+                continue
+            dport = struct.unpack(">H", raw[tcp_offset + 2: tcp_offset + 4])[0]
+            tcp_hdr_len = ((raw[tcp_offset + 12] >> 4) & 0xF) * 4
+            payload = raw[tcp_offset + tcp_hdr_len:]
+            if not payload:
+                continue
+
+            try:
+                s = socket.create_connection((dst_ip, dport), timeout=2.0)
+                try:
+                    s.sendall(payload)
+                finally:
+                    try: s.shutdown(socket.SHUT_RDWR)
+                    except Exception: pass
+                    s.close()
+                sent += 1
+            except Exception:
+                pass
+
             if interval:
                 time.sleep(interval)
+
     return sent
 
-# ---- Phase 3.5: on-wire correlation marker ----
-def build_marker(run_id: str|None, technique: str|None=None, step: str|None=None) -> bytes:
+# ── On-wire correlation marker ────────────────────────────────────────
+def build_marker(run_id: str | None, technique: str | None = None, step: str | None = None) -> bytes:
     """Marker: ICSFORGE_SYNTH|<run_id>|<technique>|<step>"""
-    rid = (run_id or "offline")
-    parts=[b"ICSFORGE_SYNTH", rid.encode("utf-8"),
-           (technique or "").encode("utf-8"),
-           (step or "").encode("utf-8")]
+    parts = [
+        b"ICSFORGE_SYNTH",
+        (run_id or "offline").encode("utf-8"),
+        (technique or "").encode("utf-8"),
+        (step or "").encode("utf-8"),
+    ]
     return b"|".join(parts)
 
 def marker_prefix() -> bytes:

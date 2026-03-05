@@ -83,7 +83,7 @@ def run_scenario(
                 if proto == "profinet_dcp":
                     for _ in range(count):
                         marker = build_marker(run_id, tech, step_id)
-                        payload = profinet_dcp.build_payload(marker)
+                        payload = profinet_dcp.build_payload(marker, style=style)
                         # Default multicast dst for DCP Identify
                         pkt = ether_frame(
                             src_mac="02:00:00:11:22:33",

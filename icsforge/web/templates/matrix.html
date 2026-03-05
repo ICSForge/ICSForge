@@ -1,111 +1,67 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-.tech.runnable{ border:1px solid rgba(0,0,0,0.10); }
-.tech.hostonly{ opacity:0.75; }
-.tech.executed{ outline:3px solid rgba(0,120,255,0.35); }
-.tech.detected{ box-shadow: 0 0 0 3px rgba(0,200,120,0.35) inset; }
-.tech.gap{ box-shadow: 0 0 0 3px rgba(255,140,0,0.35) inset; }
-.tech.precursor{ border:1px solid rgba(183,121,31,0.35); background: rgba(255,250,240,1); }
-.badge.warn{ background: rgba(255,190,120,0.25); border:1px solid rgba(183,121,31,0.35); }
-</style>
 
-<div class="card">
-  <div class="row" style="justify-content:space-between;align-items:flex-start">
+<!-- ─── Controls bar ──────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:12px;padding:14px 18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
     <div>
-      <div style="font-size:22px;font-weight:900">ATT&CK v{{ matrix.x_mitre_version }} for ICS — Interactive Matrix</div>
-      <div class="small">Click a technique that is marked <span class="badge good">SUPPORTED</span> to generate realistic network traffic to your ICSForge Receiver.</div>
-      <div class="small" style="margin-top:6px">Non-supported techniques are shown for completeness and roadmap visibility.</div>
-    </div>
-    <div class="row">
-      <div class="field" style="min-width:320px">
-        <label>Receiver destination IP</label>
-        <input id="dst_ip" placeholder="e.g., 10.10.10.50" />
-        <div class="small">Saved locally in your browser.</div>
+      <div style="font-family:var(--display);font-weight:900;font-size:18px;letter-spacing:-.01em">
+        ATT&amp;CK for ICS v{{ matrix.x_mitre_version }} — Interactive Matrix
       </div>
-      <button class="btn primary" onclick="saveDst()">Save</button>
+      <div class="small" style="margin-top:3px">
+        <span class="badge good" style="font-size:9px">RUNNABLE</span> = live network traffic &nbsp;
+        <span class="badge warn" style="font-size:9px">PRECURSOR</span> = observable approximation &nbsp;
+        <span class="badge" style="font-size:9px">—</span> = host-only / not implemented
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      {% if ui_mode == 'sender' %}
+      <div class="field" style="min-width:200px;margin:0">
+        <input id="dst_ip" placeholder="Receiver IP (e.g. 10.0.0.50)" style="font-size:12px;padding:7px 10px">
+      </div>
+      <button class="btn" onclick="saveDst()" style="font-size:11px;padding:6px 10px">Save IP</button>
+      {% endif %}
+      <button class="btn" onclick="setFilter('all')"      id="f_all"      style="font-size:10px;padding:5px 9px">All</button>
+      <button class="btn" onclick="setFilter('runnable')" id="f_runnable" style="font-size:10px;padding:5px 9px">Runnable</button>
+      <button class="btn" onclick="setFilter('precursor')"id="f_precursor"style="font-size:10px;padding:5px 9px">Precursor</button>
+      <button class="btn" onclick="setFilter('gap')"      id="f_gap"      style="font-size:10px;padding:5px 9px">Gap</button>
+    </div>
+  </div>
+  <!-- Overlay controls -->
+  <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+    <span class="small">Overlay:</span>
+    <select id="run_sel" style="font-size:11px;padding:5px 8px;min-width:240px;max-width:360px">
+      <option value="">(no overlay — select a run)</option>
+    </select>
+    <button class="btn" onclick="loadRuns()" style="font-size:10px;padding:5px 9px">Load Runs</button>
+    <button class="btn primary" onclick="applyOverlay()" style="font-size:10px;padding:5px 9px">Apply</button>
+    <button class="btn" onclick="clearOverlay()" style="font-size:10px;padding:5px 9px">Clear</button>
+    <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
+      <span class="badge good" style="font-size:9px">■ Executed</span>
+      <span class="badge cyan" style="font-size:9px">■ Detected</span>
+      <span class="badge bad" style="font-size:9px">■ Gap</span>
     </div>
   </div>
 </div>
-<div class="hr"></div>
-<div class="row" style="justify-content:space-between;align-items:flex-end">
-  <div class="field" style="min-width:360px">
-    <label>Overlay: Executed vs Detected (optional)</label>
-    <select id="run_sel"></select>
-    <div class="small">Load a run to color the matrix: Executed, Detected, and Gaps.</div>
-  </div>
-  <div class="row">
-    <button class="btn" onclick="loadRuns()">Load Runs</button>
-    <button class="btn primary" onclick="applyOverlay()">Apply Overlay</button>
-    <button class="btn" onclick="clearOverlay()">Clear</button>
-  </div>
-</div>
-</div>
-  </div>
-</div>
 
-<div class="card" style="padding:14px">
-  <div class="row" style="justify-content:space-between;align-items:center">
-    <div class="small">
-      Supported techniques in this build: <b class="mono">{{ supported|length }}</b>
-    </div>
-    <div class="row">
-      {% if ui_mode == 'sender' %}<span class="badge mono">Click = send live traffic</span>{% else %}<span class="badge mono">Receiver view: read-only</span>{% endif %}
-      {% if ui_mode == 'sender' %}<a class="btn" href="{{ url_for('web.sender') }}">Open Sender</a>{% endif %}
-            {% if ui_mode == 'sender' %}<a class="btn primary" href="{{ url_for('web.soc') }}">SOC Mode</a>{% endif %}
-    </div>
-  </div>
-</div>
-
-
-<div class="card" style="margin-bottom:12px;">
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <strong>Filter:</strong>
-    <button class="btn" onclick="setFilter('all')">All</button>
-    <button class="btn" onclick="setFilter('runnable')">Runnable</button>
-    <button class="btn" onclick="setFilter('precursor')">Precursor</button>
-    <button class="btn" onclick="setFilter('not')">Not runnable</button>
-    <span style="margin-left:auto;color:#666;font-size:12px;">Runnable = safe network execution. Precursor = network-observable behavior associated with technique.</span>
-  </div>
-</div>
-<script>
-let currentFilter='all';
-function setFilter(f){ currentFilter=f; filterTiles(); }
-function filterTiles(){
-  document.querySelectorAll('.tech').forEach(t=>{
-    const isRun = t.classList.contains('runnable');
-    const isPre = t.classList.contains('precursor');
-    let show=true;
-    if(currentFilter==='runnable') show=isRun;
-    else if(currentFilter==='precursor') show=isPre;
-    else if(currentFilter==='not') show=(!isRun && !isPre);
-    t.style.display = show ? '' : 'none';
-  });
-}
-</script>
-
-<div class="matrix">
+<!-- ─── Compact matrix ────────────────────────────────────────── -->
+<div class="matrix-compact" id="matrix_wrap">
   {% for tac in matrix.tactics %}
-  <div class="matrix-col">
-    <div class="matrix-head">
-      <div class="matrix-title">{{ tac.name }}</div>
-      <div class="small mono">{{ tac.shortname }}</div>
+  <div class="mc-col">
+    <div class="mc-head">
+      <div class="mc-title">{{ tac.name }}</div>
+      <div class="mono" style="font-size:8px;color:var(--muted);margin-top:1px">{{ tac.shortname }}</div>
     </div>
-    <div class="matrix-body">
+    <div class="mc-body">
       {% for tech in tac.techniques %}
       {% set st = status.get(tech.id, {'runnable': False, 'precursor': False}) %}
-      <div class="tech {{ "runnable" if st.get("runnable") else ("precursor" if st.get("precursor") else "") }}" data-techid="{{ tech.id }}" data-techname="{{ tech.name|e }}" data-runnable="{{ 1 if st.get("runnable") else 0 }}" data-precursor="{{ 1 if st.get("precursor") else 0 }}">
-        <div class="row" style="justify-content:space-between;gap:8px">
-          <div class="mono" style="font-weight:900">{{ tech.id }}</div>
-          {% if st.get("runnable") %}
-            <span class="badge good">RUNNABLE</span>
-          {% elif st.get("precursor") %}
-            <span class="badge warn">PRECURSOR</span>
-          {% else %}
-            <span class="badge">NOT RUNNABLE</span>
-          {% endif %}
-        </div>
-        <div style="margin-top:6px;font-weight:700">{{ tech.name }}</div>
+      <div class="mt {% if st.get('runnable') %}mt-run{% elif st.get('precursor') %}mt-pre{% else %}mt-nil{% endif %}"
+        data-techid="{{ tech.id }}"
+        data-techname="{{ tech.name|e }}"
+        data-runnable="{{ 1 if st.get('runnable') else 0 }}"
+        data-precursor="{{ 1 if st.get('precursor') else 0 }}">
+        <div class="mt-id">{{ tech.id }}</div>
+        <div class="mt-name">{{ tech.name }}</div>
       </div>
       {% endfor %}
     </div>
@@ -113,101 +69,224 @@ function filterTiles(){
   {% endfor %}
 </div>
 
+<!-- ─── Send modal (sender mode only) ────────────────────────── -->
 {% if ui_mode == 'sender' %}
 <div class="modal" id="modal" style="display:none">
   <div class="modal-inner card">
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <div style="font-size:18px;font-weight:900">Send Technique Traffic</div>
-      <button class="btn" onclick="closeModal()">Close</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-family:var(--display);font-size:18px;font-weight:900">Send Technique Traffic</div>
+      <button class="btn" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <span class="badge brand mono" id="m_tid" style="font-size:12px;padding:4px 10px">—</span>
+      <span id="m_name" style="font-weight:600;font-size:14px"></span>
     </div>
     <div class="hr"></div>
-    <div class="pills">
-      <span class="pill mono" id="m_tid">-</span>
-      <span class="pill" id="m_name">-</span>
-    </div>
-    <div class="hr"></div>
-    <div class="row" style="align-items:flex-end;gap:12px;flex-wrap:wrap">
-      <div class="field" style="min-width:300px">
-        <label>Destination IP (Receiver)</label>
-        <input id="m_dst" placeholder="Receiver IP" />
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="field">
+        <label>Destination IP</label>
+        <input id="m_dst" placeholder="Receiver IP">
       </div>
-      <div class="field" style="min-width:320px">
+      <div class="field">
         <label>Variant</label>
         <select id="m_variant"></select>
-        <div class="small" id="m_vnote"></div>
       </div>
-      <div class="field" style="min-width:240px">
-        <label>PCAP</label>
+      <div class="field">
+        <label>Build PCAP</label>
         <select id="m_pcap">
           <option value="0">No (live only)</option>
-          <option value="1">Yes (also build PCAP)</option>
+          <option value="1">Yes (+ PCAP)</option>
         </select>
       </div>
-<div class="field" style="min-width:220px">
-  <label>Timeout (s)</label>
-  <input id="m_timeout" type="number" value="2.0" step="0.1" />
-</div>
-<div class="field" style="min-width:280px">
-  <label>Allowlist</label>
-  <input id="m_allow" placeholder="comma separated, defaults to dst" />
-</div>
-<div class="field" style="min-width:260px">
-  <label>Outdir</label>
-  <input id="m_outdir" value="out" />
-</div>
-<div class="field" style="min-width:240px">
-  <label>Source IP (artifacts)</label>
-  <input id="m_src" value="127.0.0.1" />
-</div>
-<div class="field" style="min-width:220px">
-  <label>Interface (L2)</label>
-  <input id="m_iface" placeholder="e.g. eth0 (optional)" />
-</div>
-      <button class="btn primary" onclick="sendTech()">Send now</button>
+      <div class="field">
+        <label>Timeout (s)</label>
+        <input id="m_timeout" type="number" value="2.0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Source IP</label>
+        <input id="m_src" value="127.0.0.1">
+      </div>
+      <div class="field">
+        <label>Interface (L2)</label>
+        <input id="m_iface" placeholder="e.g. eth0">
+      </div>
     </div>
+    <div class="small" id="m_vnote" style="margin-bottom:8px;color:var(--muted)"></div>
+    <button class="btn primary" onclick="sendTech()" style="padding:10px 20px;font-size:13px">▶ Send now</button>
     <div class="hr"></div>
-    <div class="codebox" id="m_out">Ready.</div>
+    <div class="codebox" id="m_out" style="max-height:200px">Ready.</div>
   </div>
 </div>
 {% endif %}
 
-<script>
-let currentTech = null;
-
-function noop(){ /* non-clickable */ }
-
-function saveDst(){
-  const ip = document.getElementById("dst_ip").value.trim();
-  if(!ip){ toast("Missing IP","Enter receiver destination IP"); return; }
-  localStorage.setItem("icsforge.dst_ip", ip);
-  toast("Saved", "Destination IP stored");
+<style>
+/* ── Compact matrix layout ──────────────────────────────────── */
+.matrix-compact {
+  display: grid;
+  grid-template-columns: repeat({{ matrix.tactics|length }}, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 0;
+  /* All tactics in one row — no wrap */
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.mc-col {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow3);
+  min-width: 105px;
+}
+.mc-head {
+  padding: 6px 8px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--brand);
+}
+.mc-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 10.5px;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+}
+.mc-body {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
+/* ── Micro technique tile ────────────────────────────────────── */
+.mt {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: var(--panel2);
+  cursor: default;
+  transition: all .09s;
+  min-height: 38px;
+}
+.mt-id {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
+}
+.mt-name {
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 2px;
+  color: var(--text);
+}
+
+/* ── States ─────────────────────────────────────────────────── */
+.mt-run {
+  cursor: pointer;
+  border-left: 2px solid var(--brand);
+  border-color: rgba(245,158,11,.35);
+  background: rgba(245,158,11,.04);
+}
+.mt-run:hover {
+  border-color: var(--brand);
+  background: rgba(245,158,11,.12);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(245,158,11,.2);
+}
+.mt-pre {
+  cursor: pointer;
+  border-left: 2px solid var(--brand2);
+  border-color: rgba(34,211,238,.3);
+  background: rgba(34,211,238,.03);
+}
+.mt-pre:hover {
+  border-color: var(--brand2);
+  background: rgba(34,211,238,.1);
+}
+.mt-nil {
+  opacity: .4;
+}
+.mt-nil .mt-id,
+.mt-nil .mt-name { color: var(--muted) }
+
+/* ── Overlay states ──────────────────────────────────────────── */
+.mt.executed { background: rgba(16,185,129,.12) !important; border-color: var(--good) !important }
+.mt.detected { background: rgba(34,211,238,.1) !important; border-color: var(--brand2) !important }
+.mt.gap      { background: rgba(239,68,68,.1) !important; border-color: var(--bad) !important }
+.mt.dim      { opacity: .12 }
+
+/* ── Filter button active ────────────────────────────────────── */
+.btn.filter-active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: rgba(245,158,11,.1);
+}
+</style>
+
+<script>
+let currentTech = null;
+let currentFilter = 'all';
+
+/* ── Destination IP ─────────────────────────────────────────── */
+function saveDst(){
+  const ip = (document.getElementById("dst_ip")||{}).value||"";
+  if(ip) localStorage.setItem("icsforge.dst_ip", ip.trim());
+  window.toast("Saved", "Destination IP stored", "ok");
+}
 function loadDst(){
   const v = localStorage.getItem("icsforge.dst_ip") || "";
-  document.getElementById("dst_ip").value = v;
+  const el = document.getElementById("dst_ip");
+  if(el) el.value = v;
   return v;
 }
 
+/* ── Filter ──────────────────────────────────────────────────── */
+function setFilter(f){
+  currentFilter = f;
+  document.querySelectorAll('[id^="f_"]').forEach(b => b.classList.remove('filter-active'));
+  const btn = document.getElementById('f_' + f);
+  if(btn) btn.classList.add('filter-active');
+  document.querySelectorAll('.mt').forEach(el => {
+    const run = el.dataset.runnable === '1';
+    const pre = el.dataset.precursor === '1';
+    let show = true;
+    if(f === 'runnable') show = run;
+    else if(f === 'precursor') show = pre;
+    else if(f === 'gap') show = el.classList.contains('gap');
+    el.style.display = show ? '' : 'none';
+    // Hide empty tactic columns
+  });
+  document.querySelectorAll('.mc-col').forEach(col => {
+    const visible = col.querySelectorAll('.mt:not([style*="none"])').length;
+    col.style.display = visible ? '' : 'none';
+  });
+}
+
+/* ── Modal ──────────────────────────────────────────────────── */
+function closeModal(){ document.getElementById("modal").style.display = "none" }
+
 async function fetchVariants(tid){
-  const res = await fetch("{{ url_for('web.api_technique_variants') }}?technique="+encodeURIComponent(tid));
-  const data = await res.json();
+  const data = await window.fetchJSON("{{ url_for('web.api_technique_variants') }}?technique="+encodeURIComponent(tid));
   const sel = document.getElementById("m_variant");
   sel.innerHTML = "";
   (data.variants||[]).forEach(v=>{
-    const o=document.createElement("option");
-    o.value=v.id;
-    o.textContent = `${v.label} [${v.proto}]`;
-    o.dataset.note = v.notes || "";
+    const o = document.createElement("option");
+    o.value = v.id; o.textContent = `${v.label} [${v.proto}]`; o.dataset.note = v.notes||"";
     sel.appendChild(o);
   });
   const noteEl = document.getElementById("m_vnote");
-  const updateNote = ()=>{
+  const upNote = () => {
     const opt = sel.options[sel.selectedIndex];
-    noteEl.textContent = (opt && opt.dataset.note) ? opt.dataset.note : "";
+    noteEl.textContent = opt && opt.dataset.note ? opt.dataset.note : "";
   };
-  sel.onchange = updateNote;
-  updateNote();
+  sel.onchange = upNote; upNote();
 }
 
 function runTech(tid, name){
@@ -216,180 +295,149 @@ function runTech(tid, name){
   document.getElementById("m_tid").textContent = tid;
   document.getElementById("m_name").textContent = name;
   document.getElementById("m_dst").value = ip;
+  document.getElementById("m_out").textContent = "Ready.";
   fetchVariants(tid);
-  document.getElementById("m_out").textContent = "Ready to send.";
-  document.getElementById("modal").style.display = "block";
-}
-
-function closeModal(){
-  document.getElementById("modal").style.display = "none";
+  document.getElementById("modal").style.display = "flex";
 }
 
 async function sendTech(){
   const dst_ip = document.getElementById("m_dst").value.trim();
-  if(!dst_ip){ toast("Missing IP","Enter receiver destination IP"); return; }
+  if(!dst_ip){ window.toast("Missing IP","Enter receiver destination IP","err"); return; }
   localStorage.setItem("icsforge.dst_ip", dst_ip);
 
-  const variant = document.getElementById("m_variant").value;
-  const also_build_pcap = document.getElementById("m_pcap").value === "1";
-  const timeout = parseFloat(document.getElementById("m_timeout").value||"2.0");
-  const allowlist = (document.getElementById("m_allow").value||"").trim();
-  const outdir = (document.getElementById("m_outdir").value||"out").trim();
-  const src_ip = (document.getElementById("m_src").value||"127.0.0.1").trim();
-  const iface = (document.getElementById("m_iface").value||"").trim();
+  const variant      = document.getElementById("m_variant").value;
+  const also_pcap    = document.getElementById("m_pcap").value === "1";
+  const timeout      = parseFloat(document.getElementById("m_timeout").value||"2.0");
+  const src_ip       = document.getElementById("m_src").value.trim()||"127.0.0.1";
+  const iface        = document.getElementById("m_iface").value.trim();
+  document.getElementById("m_out").textContent = "Sending…";
 
-  document.getElementById("m_out").textContent = "Sending...";
-
-  const res = await fetch("{{ url_for('web.api_technique_send') }}", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({technique: currentTech.tid, variant, dst_ip, timeout, allowlist, outdir, src_ip, iface, also_build_pcap})
+  const data = await window.postJSON("{{ url_for('web.api_technique_send') }}", {
+    technique: currentTech.tid, variant, dst_ip, timeout, src_ip, iface, also_build_pcap: also_pcap
   });
-
-  const data = await res.json();
   if(data.error){
     document.getElementById("m_out").textContent = data.error;
-    toast("Error", data.error);
-    return;
+    window.toast("Error", data.error, "err"); return;
   }
   document.getElementById("m_out").textContent = JSON.stringify(data, null, 2);
-  toast("Sent", `run_id ${data.run_id}`);
+  window.toast("Sent", `run_id ${(data.run_id||"").slice(0,12)}`, "ok");
+
+  // v0.23: auto-overlay the fired tile immediately
+  if(data.run_id && currentTech){
+    const firedEl = document.querySelector(`.mt[data-techid="${currentTech.tid}"]`);
+    if(firedEl){ firedEl.classList.add("executed"); }
+    try {
+      const st = await window.fetchJSON("{{ url_for('web.api_matrix_status') }}?run_id="+encodeURIComponent(data.run_id));
+      if(st && st.status){
+        for(const el of document.querySelectorAll(".mt")){
+          const tid = el.dataset.techid; if(!tid) continue;
+          const s = st.status[tid]; if(!s) continue;
+          el.classList.remove("executed","detected","gap","dim");
+          if(s.executed) el.classList.add("executed");
+          if(s.detected) el.classList.add("detected");
+          if(s.gap)      el.classList.add("gap");
+        }
+        const sel = document.getElementById("run_sel");
+        if(sel){
+          const o = document.createElement("option");
+          o.value = data.run_id;
+          o.textContent = `${data.run_id.slice(0,12)} • ${currentTech.tid}`;
+          sel.insertBefore(o, sel.options[1]||null);
+          sel.value = data.run_id;
+        }
+      }
+    } catch(e){}
+  }
 }
 
-loadDst();
+/* ── Overlay controls ────────────────────────────────────────── */
 async function loadRuns(){
-  const data = await fetchJSON("{{ url_for('web.api_runs') }}");
-  const sel=document.getElementById("run_sel");
-  sel.innerHTML="";
-  const o0=document.createElement("option");
-  o0.value=""; o0.textContent="(no overlay)";
-  sel.appendChild(o0);
+  const data = await window.fetchJSON("{{ url_for('web.api_runs') }}");
+  const sel = document.getElementById("run_sel");
+  sel.innerHTML = '<option value="">(no overlay)</option>';
   for(const r of (data.runs||[])){
-    const o=document.createElement("option");
-    o.value=r.run_id;
-    o.textContent=`${r.run_id} • ${r.scenario||"-"} • ${r.ts||""}`;
+    const o = document.createElement("option");
+    o.value = r.run_id;
+    o.textContent = `${r.run_id.slice(0,12)} • ${r.scenario||"-"} • ${(r.ts||"").slice(0,16)}`;
     sel.appendChild(o);
   }
-  toast("Runs loaded", `${(data.runs||[]).length} run(s)`);
+  window.toast("Runs loaded", `${(data.runs||[]).length} run(s)`);
 }
 
 async function applyOverlay(){
-  const run_id=document.getElementById("run_sel").value;
-  if(!run_id){ toast("No run selected","Pick a run or Clear overlay"); return; }
-  const data = await fetchJSON("{{ url_for('web.api_matrix_status') }}?run_id="+encodeURIComponent(run_id));
+  const run_id = document.getElementById("run_sel").value;
+  if(!run_id){ window.toast("No run","Pick a run first","err"); return; }
+  const data = await window.fetchJSON("{{ url_for('web.api_matrix_status') }}?run_id="+encodeURIComponent(run_id));
   const st = data.status||{};
-  for(const el of document.querySelectorAll(".tech")){
-    const tid = el.querySelector(".mono")?.textContent?.trim();
-    if(!tid) continue;
+  for(const el of document.querySelectorAll(".mt")){
+    const tid = el.dataset.techid; if(!tid) continue;
     const s = st[tid];
-    el.classList.remove("executed","detected","gap","hostonly","dim");
+    el.classList.remove("executed","detected","gap","dim");
     if(!s){ el.classList.add("dim"); continue; }
-    if(s.class==="host_or_process") el.classList.add("hostonly");
     if(s.executed) el.classList.add("executed");
     if(s.detected) el.classList.add("detected");
-    if(s.gap) el.classList.add("gap");
+    if(s.gap)      el.classList.add("gap");
   }
-  toast("Overlay applied", `run_id: ${run_id}`);
+  window.toast("Overlay applied", `run_id: ${run_id.slice(0,12)}`, "ok");
 }
 
 function clearOverlay(){
-  for(const el of document.querySelectorAll(".tech")){
-    el.classList.remove("executed","detected","gap","hostonly","dim");
-  }
-  toast("Overlay cleared","");
+  document.querySelectorAll(".mt").forEach(el => el.classList.remove("executed","detected","gap","dim"));
+  window.toast("Overlay cleared","");
 }
 
-async function showWhy(tid){
-  const data = await fetchJSON("{{ url_for('web.api_matrix_status') }}");
-  const s = (data.status||{})[tid];
-  if(s && s.class==="host_or_process"){
-    toast("Host/Process technique", s.reason || "Not runnable via network in ICSForge.");
-  } else {
-    toast("Not runnable", "ICSForge does not currently implement a safe network scenario for this technique.");
-  }
+/* ── Why-not modal ────────────────────────────────────────────── */
+function showWhy(tid){
+  window.toast("Not runnable", "ICSForge does not implement a safe network scenario for this technique.");
 }
 
-</script>
-
-<style>
-.matrix{
-  display:grid;
-  grid-template-columns: repeat(6, minmax(220px, 1fr));
-  gap: 14px;
-}
-@media (max-width: 1400px){
-  .matrix{ grid-template-columns: repeat(4, minmax(220px, 1fr)); }
-}
-@media (max-width: 980px){
-  .matrix{ grid-template-columns: repeat(2, minmax(220px, 1fr)); }
-}
-.matrix-col{
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  overflow:hidden;
-  box-shadow: var(--shadow);
-}
-.matrix-head{
-  padding: 12px 14px;
-  background: linear-gradient(180deg, var(--panel2), var(--panel));
-  border-bottom: 1px solid var(--border);
-}
-.matrix-title{ font-weight: 900; }
-.matrix-body{
-  padding: 10px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  max-height: 720px;
-  overflow:auto;
-}
-.tech{
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--panel2);
-  cursor: default;
-}
-.tech.supported{
-  cursor: pointer;
-  border-color: rgba(37,99,235,.35);
-  box-shadow: 0 8px 18px rgba(37,99,235,.12);
-}
-.tech.supported:hover{
-  transform: translateY(-1px);
-  transition: all .12s ease;
-}
-.modal{
-  position: fixed; inset:0; background: rgba(2,6,23,.55);
-  display:flex; align-items:center; justify-content:center;
-  z-index: 60;
-  padding: 16px;
-}
-.modal-inner{ max-width: 900px; width: 100%; }
-.tech.precursor{ border:1px solid rgba(183,121,31,0.35); background: rgba(255,250,240,1); }
-.badge.warn{ background: rgba(255,190,120,0.25); border:1px solid rgba(183,121,31,0.35); }
-</style>
-<script>
-function wireMatrixClicks(){
-  document.querySelectorAll('.tech').forEach(el=>{
-    el.style.cursor = 'pointer';
+/* ── Wire clicks ─────────────────────────────────────────────── */
+function wireClicks(){
+  document.querySelectorAll('.mt').forEach(el=>{
     el.addEventListener('click', ()=>{
-      const run = el.dataset.runnable === '1';
-      const pre = el.dataset.precursor === '1';
-      const tid = el.dataset.techid;
+      const tid  = el.dataset.techid;
       const name = el.dataset.techname;
-      if(!(run || pre)){
-        if(typeof showWhy === 'function'){ showWhy(tid); }
-        return;
-      }
-      if(typeof runTech === 'function'){ runTech(tid, name, pre); }
+      const run  = el.dataset.runnable === '1';
+      const pre  = el.dataset.precursor === '1';
+      {% if ui_mode == 'sender' %}
+      if(run || pre){ runTech(tid, name); }
+      else           { showWhy(tid); }
+      {% endif %}
     });
   });
 }
-{% if ui_mode == 'sender' %}
-document.addEventListener('DOMContentLoaded', wireMatrixClicks);
-{% endif %}
+
+/* ── Tooltip on hover ────────────────────────────────────────── */
+(function(){
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:fixed;z-index:200;padding:6px 10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-size:11px;pointer-events:none;display:none;max-width:220px;line-height:1.4;box-shadow:var(--shadow2)';
+  document.body.appendChild(tip);
+  document.addEventListener('mouseover', e=>{
+    const mt = e.target.closest('.mt');
+    if(!mt){ tip.style.display='none'; return; }
+    const tid  = mt.dataset.techid;
+    const name = mt.dataset.techname;
+    const run  = mt.dataset.runnable==='1';
+    const pre  = mt.dataset.precursor==='1';
+    tip.innerHTML = `<b style="font-family:var(--mono)">${tid}</b> ${name}<br><span style="color:${run?'var(--good)':pre?'var(--brand2)':'var(--muted)'}">` +
+      (run ? '▶ Runnable' : pre ? '◎ Precursor' : '— Host/Process only') + '</span>';
+    tip.style.display='block';
+  });
+  document.addEventListener('mousemove', e=>{
+    tip.style.left = (e.clientX+14)+'px';
+    tip.style.top  = (e.clientY+10)+'px';
+    if(e.clientX > window.innerWidth-240) tip.style.left=(e.clientX-230)+'px';
+  });
+  document.addEventListener('mouseout', e=>{
+    if(!e.target.closest('.mt')) tip.style.display='none';
+  });
+})();
+
+loadDst();
+document.addEventListener('DOMContentLoaded', ()=>{
+  wireClicks();
+  document.getElementById('f_all').classList.add('filter-active');
+});
 </script>
 
 {% endblock %}
