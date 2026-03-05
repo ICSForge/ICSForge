@@ -10,7 +10,7 @@
       </div>
       <div class="small" style="margin-top:3px">
         <span class="badge good" style="font-size:9px">RUNNABLE</span> = live network traffic &nbsp;
-        <span class="badge warn" style="font-size:9px">PRECURSOR</span> = observable approximation &nbsp;
+        <span class="badge brand" style="font-size:9px">PRECURSOR</span> = observable approximation &nbsp;
         <span class="badge" style="font-size:9px">—</span> = host-only / not implemented
       </div>
     </div>
@@ -190,25 +190,25 @@
 /* ── States ─────────────────────────────────────────────────── */
 .mt-run {
   cursor: pointer;
+  border-left: 2px solid var(--good);
+  border-color: rgba(16,185,129,.4);
+  background: rgba(16,185,129,.05);
+}
+.mt-run:hover {
+  border-color: var(--good);
+  background: rgba(16,185,129,.12);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(16,185,129,.2);
+}
+.mt-pre {
+  cursor: pointer;
   border-left: 2px solid var(--brand);
   border-color: rgba(245,158,11,.35);
   background: rgba(245,158,11,.04);
 }
-.mt-run:hover {
+.mt-pre:hover {
   border-color: var(--brand);
   background: rgba(245,158,11,.12);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(245,158,11,.2);
-}
-.mt-pre {
-  cursor: pointer;
-  border-left: 2px solid var(--brand2);
-  border-color: rgba(34,211,238,.3);
-  background: rgba(34,211,238,.03);
-}
-.mt-pre:hover {
-  border-color: var(--brand2);
-  background: rgba(34,211,238,.1);
 }
 .mt-nil {
   opacity: .4;
@@ -419,7 +419,7 @@ function wireClicks(){
     const name = mt.dataset.techname;
     const run  = mt.dataset.runnable==='1';
     const pre  = mt.dataset.precursor==='1';
-    tip.innerHTML = `<b style="font-family:var(--mono)">${tid}</b> ${name}<br><span style="color:${run?'var(--good)':pre?'var(--brand2)':'var(--muted)'}">` +
+    tip.innerHTML = `<b style="font-family:var(--mono)">${tid}</b> ${name}<br><span style="color:${run?'var(--good)':pre?'var(--brand)':'var(--muted)'}">` +
       (run ? '▶ Runnable' : pre ? '◎ Precursor' : '— Host/Process only') + '</span>';
     tip.style.display='block';
   });

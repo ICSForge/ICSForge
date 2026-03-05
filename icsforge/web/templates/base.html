@@ -25,7 +25,9 @@
           <a class="nav-tab {{ 'active' if request.endpoint == 'web.tools' }}" href="{{ url_for('web.tools') }}">Tools</a>
         {% else %}
           <a class="nav-tab {{ 'active primary' if request.endpoint == 'web.sender' }}" href="{{ url_for('web.sender') }}">Sender</a>
+          <a class="nav-tab {{ 'active' if request.endpoint == 'web.campaigns' }}" href="{{ url_for('web.campaigns') }}">Campaigns</a>
           <a class="nav-tab {{ 'active' if request.endpoint == 'web.matrix' }}" href="{{ url_for('web.matrix') }}">ATT&amp;CK Matrix</a>
+          <a class="nav-tab {{ 'active' if request.endpoint == 'web.report' }}" href="{{ url_for('web.report') }}">Coverage Report</a>
           <a class="nav-tab {{ 'active' if request.endpoint == 'web.tools' }}" href="{{ url_for('web.tools') }}">Tools</a>
           <a class="nav-tab {{ 'active' if request.endpoint == 'web.index' }}" href="{{ url_for('web.index') }}">Home</a>
         {% endif %}

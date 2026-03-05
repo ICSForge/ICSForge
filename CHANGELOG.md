@@ -357,3 +357,107 @@ generation for them was fully implemented.
 **Fix:** `sock.recvfrom(max_payload)` returns `(data, (ifname, proto, pkttype, hatype, addr))`.
 - Frames with `pkttype == 4` (PACKET_OUTGOING) are skipped.
 - pkttype is also written to the receipt record for diagnostics.
+
+## v0.30 — "Close the Loop" (major release)
+
+### Theme
+Completes the validation lifecycle: Fire → Deliver → **Detect → Prove → Export**.
+Three new pillars that turn ICSForge from a traffic generator into a full
+coverage validation platform.
+
+---
+
+### 1 · Campaign Playbook (`/campaigns`)
+Define and execute multi-scenario attack campaigns with configurable dwell timers.
+Each campaign runs as a single `run_id` — fully correlated in run history and
+the ATT&CK Matrix overlay.
+
+Five built-in playbooks:
+- 🎯 **Full ICS Kill Chain** — 9 scenarios across all attack phases
+- ⚙ **Stuxnet-Style Campaign** — PROFINET discovery → SZL fingerprint → program upload/download
+- 📡 **AitM + Sensor Spoofing** — OPC UA relay + IEC-104 + DNP3 measurement injection
+- 🔑 **OT Credential Harvest** — 4-protocol default cred probe + lateral movement
+- ☢ **Safety System Attack (Triton-style)** — SIS monitoring → relay manipulation → failsafe zero
+
+Live progress stream (SSE): step-by-step visual progress bar, per-step status
+indicators (queued → active → done/error), real-time event log, abort button.
+Campaign complete → one click to ATT&CK Matrix or Coverage Report.
+
+New files:
+- `icsforge/campaigns/__init__.py`
+- `icsforge/campaigns/runner.py` — `CampaignRunner` class (SSE-friendly, stoppable)
+- `icsforge/campaigns/builtin.yml` — 5 playbooks, 29 total steps
+- `icsforge/web/templates/campaigns.html`
+
+New routes:
+- `GET  /campaigns`
+- `GET  /api/campaigns/list`
+- `POST /api/campaigns/run`  → SSE stream
+- `POST /api/campaigns/abort`
+
+---
+
+### 2 · Coverage Report (`/report`)
+Interactive ATT&CK for ICS heatmap with one-click export as a
+self-contained, print-ready HTML file.
+
+Four technique states with colour-coded tiles:
+- 🟢 **Detected** — confirmed by NSM/SIEM
+- 🟡 **Executed / Undetected** — fired but no alert
+- 🔴 **Gap** — explicitly flagged as blind spot
+- ⬛ **Not Tested** — outside current scope
+
+Features:
+- Load run_id → auto-populates executed technique list from events artifact
+- Live iframe preview (no page reload)
+- Executive summary with detection rate % and automated recommendations
+- Export as `icsforge_coverage_<run_id>.html` (23 KB, zero external deps)
+- Seamless handoff from Campaign Playbook (sessionStorage run_id forwarding)
+
+New files:
+- `icsforge/reports/__init__.py`
+- `icsforge/reports/coverage.py` — `generate_report()` function
+- `icsforge/web/templates/report.html`
+
+New routes:
+- `GET  /report`
+- `POST /api/report/generate`
+- `POST /api/report/download`
+
+---
+
+### 3 · Detection Rule Export
+Download all 129 ICSForge scenarios as production-ready detection content.
+
+**Suricata rules** (`icsforge_ics.rules`):
+- One rule per scenario
+- Protocol header bytes (depth:8) + ICSForge marker content match
+- Correct port, flow direction, classtype, SID range 9800000–9800128
+- ATT&CK technique + scenario ID in metadata field
+- `?marker=0` parameter removes marker match for use against real OT traffic
+
+**Sigma rules** (`sigma/*.yml`):
+- One YAML file per scenario
+- Zeek logsource, correct tags (`attack.ics.TXXXX`), `status: experimental`
+- `sigma convert -t splunk sigma/T0812__...yml` works out of the box
+
+Download: 101 KB zip with README, Suricata .rules, and 129 Sigma YAMLs.
+
+New files:
+- `icsforge/detections/__init__.py`
+- `icsforge/detections/generator.py` — `generate_all()`, `suricata_rule()`, `sigma_rule()`
+- `icsforge/data/detection_rules_specs.json` — pre-computed rule metadata for all 129 scenarios
+
+New routes:
+- `GET /api/detections/preview`
+- `GET /api/detections/download` (zip)
+
+---
+
+### Navigation
+Two new tabs added to the main nav bar: **Campaigns** and **Coverage Report**.
+
+---
+
+### Stats (unchanged from v0.29)
+- Scenarios: 140 · Techniques: 72 · Protocols: 7 · Variants: 129

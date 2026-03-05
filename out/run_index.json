@@ -1,0 +1,26 @@
+[
+  {
+    "run_id": "a526a821bf10",
+    "scenario": "T0864__transient_asset__profinet_new_device",
+    "pack": "/home/claude/icsforge_new/icsforge/scenarios/scenarios.yml",
+    "events": "out/events/a526a821bf10.jsonl",
+    "pcap": null,
+    "ts": "2026-03-05T19:28:48.394947Z"
+  },
+  {
+    "run_id": "0f6af044871a",
+    "scenario": "T0864__transient_asset__profinet_new_device",
+    "pack": "/home/claude/icsforge_new/icsforge/scenarios/scenarios.yml",
+    "events": "out/events/0f6af044871a.jsonl",
+    "pcap": null,
+    "ts": "2026-03-05T19:28:47.784285Z"
+  },
+  {
+    "run_id": "7df649413e05",
+    "scenario": "T0864__transient_asset__profinet_new_device",
+    "pack": "/home/claude/icsforge_new/icsforge/scenarios/scenarios.yml",
+    "events": "out/events/7df649413e05.jsonl",
+    "pcap": null,
+    "ts": "2026-03-05T19:16:59.544827Z"
+  }
+]

@@ -19,6 +19,8 @@
     <div class="kpi"><div class="fv" id="k_tech"  style="font-family:var(--display);font-size:32px;font-weight:900;color:var(--brand2);line-height:1">{{ stats.techniques }}</div><div class="l">Techniques seen</div></div>
     <div class="kpi"><div class="fv" id="k_proto" style="font-family:var(--display);font-size:32px;font-weight:900;color:var(--brand2);line-height:1">{{ stats.protocols }}</div><div class="l">Protocols seen</div></div>
   </div>
+  <!-- PROFINET L2 listener status banner -->
+  <div id="l2_banner" style="display:none;margin-top:12px;padding:8px 12px;border-radius:6px;font-size:12px"></div>
 </div>
 
 <div class="grid">
@@ -88,7 +90,7 @@ async function reloadReceipts(){
     tr.innerHTML = `
       <td class="mono" style="font-size:10px;white-space:nowrap">${ts}</td>
       <td>${protoBadge(r["receiver.proto"])}</td>
-      <td class="mono" style="font-size:10px">${r.src_ip||""}:${r.src_port||""}</td>
+      <td class="mono" style="font-size:10px">${r["receiver.l2"] ? (r.src_mac||"L2") : ((r.src_ip||"")+":"+(r.src_port||""))}</td>
       <td>${techBadge(r.technique)}</td>
       <td><a class="mono" style="color:var(--brand2);font-size:10px;cursor:pointer" onclick="loadRun('${r.run_id}')">${(r.run_id||"").slice(0,12)}</a></td>
       <td class="mono" style="font-size:10px">${r.bytes||0}</td>`;
@@ -127,6 +129,23 @@ async function reloadOverview(){
   $("k_total").textContent  = data.total ?? 0;
   $("k_tech").textContent   = (data.top_techniques||[]).length;
   $("k_proto").textContent  = (data.top_protocols||[]).length;
+  // L2 listener status banner
+  const banner = document.getElementById("l2_banner");
+  if (banner) {
+    if (data.l2_active) {
+      banner.style.display = "";
+      banner.style.background = "rgba(16,185,129,.1)";
+      banner.style.border = "1px solid rgba(16,185,129,.3)";
+      banner.style.color = "#10b981";
+      banner.textContent = "⬡ PROFINET L2 listener active on interface: " + data.l2_iface;
+    } else {
+      banner.style.display = "";
+      banner.style.background = "rgba(239,68,68,.08)";
+      banner.style.border = "1px solid rgba(239,68,68,.25)";
+      banner.style.color = "#ef4444";
+      banner.textContent = "⚠ PROFINET L2 listener not running. Start receiver with --l2-iface eth0 to capture PROFINET DCP frames.";
+    }
+  }
   if(dot){ dot.classList.remove("off"); }
   if(lbl){ lbl.textContent = `Last: ${(data.last_ts||"—").replace("T"," ").slice(0,19)}`; }
 }

@@ -1,0 +1,139 @@
+# ICSForge v0.30 Built-in Campaign Playbooks
+
+campaigns:
+
+  full_ics_kill_chain:
+    name: "Full ICS Kill Chain"
+    description: >
+      Comprehensive 9-scenario campaign covering the complete OT attack lifecycle:
+      reconnaissance → credential access → collection → C2 → impact.
+      Based on combined TTPs from Stuxnet, Industroyer, and Triton.
+    icon: "🎯"
+    estimated_duration: "~3 minutes"
+    steps:
+      - scenario: T0840__network_enum__enip_sweep
+        delay: 0s
+        label: "Phase 1 · Recon: EtherNet/IP device sweep"
+      - scenario: T0888__remote_sys_info__s7comm_szl
+        delay: 8s
+        label: "Phase 1 · Recon: S7comm SZL fingerprint"
+      - scenario: T0812__default_creds__s7comm_blank_auth
+        delay: 10s
+        label: "Phase 2 · Initial Access: Default credentials"
+      - scenario: T0801__monitor_process__modbus_poll
+        delay: 12s
+        label: "Phase 3 · Collection: Process state monitoring"
+      - scenario: T0877__io_image__s7comm_full_read
+        delay: 10s
+        label: "Phase 3 · Collection: Full I/O image read"
+      - scenario: T0869__c2_protocol__modbus_register_beacon
+        delay: 15s
+        label: "Phase 4 · C2: Covert beacon via Modbus registers"
+      - scenario: T0838__alarm_settings__modbus_threshold
+        delay: 12s
+        label: "Phase 5 · Inhibit: Alarm threshold manipulation"
+      - scenario: T0889__modify_program__s7comm_upload_dl
+        delay: 15s
+        label: "Phase 6 · Impact: PLC program modification"
+      - scenario: T0843__program_download__s7comm
+        delay: 10s
+        label: "Phase 6 · Impact: CPU STOP + program reload"
+
+  stuxnet_ttps:
+    name: "Stuxnet-Style Campaign"
+    description: >
+      Reproduces the Stuxnet attack sequence: PROFINET device discovery,
+      S7comm fingerprinting, program upload, modification, and re-injection.
+      Covers T0840, T0888, T0845, T0843, T0875.
+    icon: "⚙"
+    estimated_duration: "~90 seconds"
+    steps:
+      - scenario: T0840__network_enum__profinet_identify
+        delay: 0s
+        label: "PROFINET DCP device discovery"
+      - scenario: T0888__remote_sys_info__s7comm_szl
+        delay: 8s
+        label: "S7comm SZL fingerprinting"
+      - scenario: T0845__program_upload__s7comm
+        delay: 10s
+        label: "PLC program upload (read logic)"
+      - scenario: T0889__modify_program__s7comm_upload_dl
+        delay: 15s
+        label: "Program modification + re-download"
+      - scenario: T0843__program_download__s7comm
+        delay: 10s
+        label: "CPU STOP command"
+
+  sensor_spoofing:
+    name: "AitM + Sensor Spoofing"
+    description: >
+      Adversary-in-the-Middle attack against OPC UA historian followed by
+      spoofed sensor values injected into IEC-104 and DNP3 streams.
+      Based on Industroyer2 / Sandworm TTPs.
+    icon: "📡"
+    estimated_duration: "~75 seconds"
+    steps:
+      - scenario: T0830__aitm__opcua_relay_session
+        delay: 0s
+        label: "OPC UA session relay (AitM position)"
+      - scenario: T0856__spoof_reporting__opcua_write_sensor
+        delay: 10s
+        label: "Spoof OPC UA sensor node values"
+      - scenario: T0856__spoof_reporting__iec104_meas_inject
+        delay: 10s
+        label: "Inject false IEC-104 measurement values"
+      - scenario: T0856__spoof_reporting__dnp3_unsolicited
+        delay: 10s
+        label: "DNP3 unsolicited spoof response"
+      - scenario: T0838__alarm_settings__opcua_write_limit_node
+        delay: 15s
+        label: "Suppress alarms via OPC UA limit node"
+
+  credential_harvest:
+    name: "OT Credential Harvest"
+    description: >
+      Multi-protocol default credential probe across Modbus, S7comm, OPC UA,
+      and EtherNet/IP followed by lateral movement via OPC UA session pivoting.
+    icon: "🔑"
+    estimated_duration: "~60 seconds"
+    steps:
+      - scenario: T0812__default_creds__modbus_device_id
+        delay: 0s
+        label: "Modbus FC43 device ID + open write probe"
+      - scenario: T0812__default_creds__s7comm_blank_auth
+        delay: 8s
+        label: "S7comm blank/default password"
+      - scenario: T0812__default_creds__opcua_anonymous
+        delay: 8s
+        label: "OPC UA anonymous session"
+      - scenario: T0812__default_creds__enip_default_auth
+        delay: 8s
+        label: "EtherNet/IP CIP default auth"
+      - scenario: T0886__remote_services__opcua_session_pivot
+        delay: 15s
+        label: "Lateral movement via OPC UA session pivot"
+
+  safety_system_attack:
+    name: "Safety System Attack (Triton-style)"
+    description: >
+      Targets safety instrumented systems: reads SIS state, manipulates
+      protection relays, disables safety functions, zeroes failsafe outputs.
+      Based on Triton/TRISIS TTPs.
+    icon: "☢"
+    estimated_duration: "~90 seconds"
+    steps:
+      - scenario: T0801__monitor_process__modbus_poll
+        delay: 0s
+        label: "Monitor SIS process state"
+      - scenario: T0877__io_image__modbus_full_scan
+        delay: 10s
+        label: "Full I/O scan (identify SIS registers)"
+      - scenario: T0837__loss_protection__modbus_relay_thresholds
+        delay: 15s
+        label: "Manipulate protection relay thresholds"
+      - scenario: T0880__loss_safety__modbus_sis_disable
+        delay: 20s
+        label: "Disable SIS safety function (Triton-style)"
+      - scenario: T0880__loss_safety__s7comm_failsafe_zero
+        delay: 15s
+        label: "Zero S7comm F-CPU failsafe outputs"

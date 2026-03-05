@@ -213,14 +213,14 @@ def _l2_profinet_listener(iface: str, receipts_path: str, max_payload: int):
         except Exception:
             continue
 
-        # addr_info[2] = pkttype; skip OUTGOING (4) — those are frames we sent
         pkttype = addr_info[2] if len(addr_info) > 2 else 0
-        if pkttype == 4:   # PACKET_OUTGOING — ignore loopback of our own sends
-            continue
+        # Accept all pkttypes: 0=HOST, 1=BROADCAST, 2=MULTICAST, 3=OTHERHOST, 4=OUTGOING
+        # pkttype=4 (OUTGOING) occurs when sender and receiver run on the same machine —
+        # we must NOT filter it or same-host testing never logs profinet frames.
 
         ev = _parse_profinet_frame(raw)
         if ev is not None:
-            ev["pkttype"] = pkttype   # 0=host, 1=broadcast, 2=multicast
+            ev["pkttype"] = pkttype
             try:
                 _write_receipt(receipts_path, ev)
             except Exception:
@@ -266,6 +266,7 @@ def main():
     # L2 PROFINET listener
     pn_iface = (args.l2_iface or "").strip() or (l2_listen.get("profinet_dcp") or "").strip()
     if pn_iface:
+        os.environ["ICSFORGE_L2_IFACE"] = pn_iface   # expose to web UI status check
         threading.Thread(
             target=_l2_profinet_listener,
             args=(pn_iface, receipts_path, max(max_payload, 1518)),

@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:400px 1fr;gap:16px;align-items:start">
+
+  <!-- ── Left: selector ─────────────────────────────────────────── -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <!-- Attack Chains -->
+    <div class="card" style="padding:12px 14px;border-top:2px solid var(--good)">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">⛓ Attack Chains</div>
+      <div class="small muted">Pre-built multi-step attack sequences from the scenario library. Each chain fires as a single run_id.</div>
+    </div>
+
+    <div id="chains_list" style="display:flex;flex-direction:column;gap:8px">
+      <div class="small muted" style="padding:8px">Loading chains…</div>
+    </div>
+
+    <!-- Campaign Playbooks -->
+    <div class="card" style="padding:12px 14px;border-top:2px solid var(--brand);margin-top:8px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">🎯 Campaign Playbooks</div>
+      <div class="small muted">Multi-scenario sequenced campaigns with configurable dwell timers between steps.</div>
+    </div>
+
+    {% for cid, c in campaigns.items() %}
+    <div class="card camp-card" data-id="{{ cid }}" data-type="campaign" style="cursor:pointer"
+         onclick="selectItem('campaign', '{{ cid }}')">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:24px;line-height:1;flex-shrink:0">{{ c.icon }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;margin-bottom:2px">{{ c.name }}</div>
+          <div class="small muted" style="line-height:1.4">{{ (c.description or '')[:100] }}…</div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <span class="badge brand">{{ c.steps|length }} scenarios</span>
+            <span class="badge" style="color:var(--muted)">{{ c.estimated_duration }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <!-- ── Right: detail + run ────────────────────────────────────── -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <!-- Config panel -->
+    <div class="card" id="config_panel">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">
+        <div>
+          <h2 id="sel_title" style="margin-bottom:4px">Select a chain or campaign →</h2>
+          <p class="small muted" id="sel_desc"></p>
+        </div>
+        <span class="badge" id="sel_type_badge" style="flex-shrink:0;display:none"></span>
+      </div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><label>Destination IP</label>
+             <input id="dst_ip" placeholder="192.0.2.10" value="127.0.0.1"></div>
+        <div><label>Interface (PROFINET L2, optional)</label>
+             <input id="iface" placeholder="eth0"></div>
+      </div>
+
+      <!-- Step/scenario preview -->
+      <div id="steps_preview" style="margin-bottom:14px;display:none">
+        <label style="margin-bottom:6px;display:block">Steps</label>
+        <div id="steps_list" style="display:flex;flex-direction:column;gap:3px;max-height:220px;overflow:auto"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn primary" id="run_btn" onclick="runSelected()" disabled>Run</button>
+        <button class="btn danger" id="abort_btn" onclick="abortCampaign()" style="display:none">Abort</button>
+        <span class="small muted" id="run_status"></span>
+      </div>
+    </div>
+
+    <!-- Live progress -->
+    <div class="card" id="progress_card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">Live Progress</h2>
+        <span class="small mono muted" id="progress_run_id"></span>
+      </div>
+      <div style="background:var(--border);border-radius:4px;height:5px;margin-bottom:12px;overflow:hidden">
+        <div id="prog_bar" style="height:100%;background:var(--good);width:0%;transition:width .3s;border-radius:4px"></div>
+      </div>
+      <div id="step_rows" style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px"></div>
+      <label style="margin-bottom:4px;display:block">Event Stream</label>
+      <div id="event_log" class="codebox" style="height:150px;overflow:auto;font-size:11px;line-height:1.7"></div>
+    </div>
+
+    <!-- Result -->
+    <div class="card" id="result_card" style="display:none">
+      <h2 style="margin-bottom:12px">Complete</h2>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="kpi"><div class="v" id="res_ok">—</div><div class="l">Steps OK</div></div>
+        <div class="kpi"><div class="v" id="res_err" style="color:var(--bad)">—</div><div class="l">Errors</div></div>
+        <div class="kpi"><div class="v" id="res_rid" style="font-size:14px;color:var(--brand)">—</div><div class="l">Run ID</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="window.location='/matrix'">ATT&amp;CK Matrix →</button>
+        <button class="btn" onclick="goReport()">Coverage Report →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.camp-card { border:1px solid var(--border); transition: border-color .12s; }
+.camp-card.selected { border-color:var(--brand); background:rgba(245,158,11,.04); }
+.camp-card.selected.chain-type { border-color:var(--good); background:rgba(16,185,129,.04); }
+.step-row { display:flex;align-items:center;gap:10px;padding:5px 10px;
+            background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px; }
+.step-row.active { border-color:var(--brand); background:rgba(245,158,11,.06); }
+.step-row.done   { border-color:rgba(16,185,129,.5); background:rgba(16,185,129,.05); }
+.step-row.error  { border-color:rgba(239,68,68,.5);  background:rgba(239,68,68,.05); }
+.step-row .s-num { width:16px;text-align:center;flex-shrink:0;color:var(--muted);font-family:var(--mono);font-size:10px; }
+.step-row .s-delay { color:var(--muted);font-size:10px;flex-shrink:0; }
+</style>
+
+<script>
+let _selType = null;   // 'chain' | 'campaign'
+let _selId   = null;
+let _campaigns = {};
+let _chains  = [];
+let _currentRunId = null;
+let _totalSteps = 0;
+let _doneSteps  = 0;
+
+// Load campaigns
+fetch('/api/campaigns/list').then(r=>r.json()).then(d=>{
+  (d.campaigns||[]).forEach(c=>{ _campaigns[c.id]=c; });
+});
+
+// Load chains from scenario groups
+fetch('/api/scenarios_grouped').then(r=>r.json()).then(d=>{
+  const chainGroup = (d.groups||[]).find(g=>g.name.toLowerCase().includes('chain'));
+  _chains = chainGroup ? chainGroup.scenarios : [];
+  _renderChains();
+});
+
+const CHAIN_META = {
+  CHAIN__industroyer2__power_grid:          {icon:'⚡', label:'Industroyer2',          sub:'Ukraine 2022 · IEC-104 + S7comm'},
+  CHAIN__triton__safety_system:             {icon:'☢',  label:'Triton / TRISIS',        sub:'Safety system targeting · SIS'},
+  CHAIN__stuxnet__siemens_plc:              {icon:'⚙',  label:'Stuxnet-style',          sub:'Siemens PLC · Program manipulation'},
+  CHAIN__water_treatment_tampering:         {icon:'💧', label:'Water Treatment',         sub:'Oldsmar-style · Setpoint tampering'},
+  CHAIN__industrial_espionage__opcua:       {icon:'🕵', label:'OPC UA Espionage',        sub:'Silent exfil via OPC UA sessions'},
+  CHAIN__enip_manufacturing_attack:         {icon:'🏭', label:'EtherNet/IP MFG',         sub:'Allen-Bradley · CIP manipulation'},
+  CHAIN__firmware_persistence__s7comm:      {icon:'💾', label:'Firmware Persistence',    sub:'S7comm firmware implant + persistence'},
+  CHAIN__aitm_sensor_spoof__opcua_dnp3:     {icon:'📡', label:'AitM + Sensor Spoof',     sub:'OPC UA relay · DNP3 measurement injection'},
+  CHAIN__loss_of_availability__multi:       {icon:'🔴', label:'Loss of Availability',    sub:'Multi-protocol DoS · DNP3/IEC104/S7comm'},
+  CHAIN__default_creds_to_ics_impact__multi:{icon:'🔑', label:'Creds → ICS Impact',      sub:'Default creds across 5 protocols + impact'},
+  CHAIN__full_ics_kill_chain__s7comm:       {icon:'🎯', label:'Full ICS Kill Chain',      sub:'S7comm complete attack lifecycle'},
+};
+
+function _renderChains() {
+  const el = document.getElementById('chains_list');
+  if (!_chains.length) { el.innerHTML='<div class="small muted" style="padding:8px">No chains found.</div>'; return; }
+  el.innerHTML = _chains.map(sc => {
+    const m = CHAIN_META[sc.id] || {icon:'⛓', label:sc.title, sub:(sc.protocols||[]).join(' · ')};
+    const pills = (sc.techniques||[]).slice(0,5).map(t=>`<span class="badge" style="font-size:8px">${t}</span>`).join('');
+    return `<div class="card camp-card chain-type" data-id="${sc.id}" data-type="chain" onclick="selectItem('chain','${sc.id}')"
+                 style="cursor:pointer;padding:10px 12px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:22px;line-height:1;flex-shrink:0">${m.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;margin-bottom:1px">${m.label}</div>
+          <div class="small muted">${m.sub}</div>
+          <div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">${pills}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectItem(type, id) {
+  _selType = type;
+  _selId   = id;
+  document.querySelectorAll('.camp-card').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.id===id && el.dataset.type===type);
+  });
+  document.getElementById('run_btn').disabled = false;
+  document.getElementById('result_card').style.display = 'none';
+  document.getElementById('progress_card').style.display = 'none';
+
+  const badge = document.getElementById('sel_type_badge');
+  badge.style.display = '';
+
+  if (type === 'chain') {
+    const sc = _chains.find(s=>s.id===id);
+    const m  = CHAIN_META[id] || {icon:'⛓', label: (sc||{}).title||id};
+    document.getElementById('sel_title').textContent = m.icon + ' ' + m.label;
+    document.getElementById('sel_desc').textContent  = (sc||{}).description || m.sub || '';
+    badge.textContent = 'Attack Chain';
+    badge.className = 'badge good';
+    badge.style.display = '';
+    document.getElementById('run_btn').textContent = 'Run Chain';
+    // Steps preview from scenario steps
+    _renderChainSteps(sc);
+  } else {
+    const c = _campaigns[id];
+    document.getElementById('sel_title').textContent = c.icon + ' ' + c.name;
+    document.getElementById('sel_desc').textContent  = c.description;
+    badge.textContent = 'Campaign Playbook';
+    badge.className = 'badge brand';
+    document.getElementById('run_btn').textContent = 'Run Campaign';
+    _renderCampaignSteps(c.steps);
+  }
+}
+
+function _renderChainSteps(sc) {
+  const steps = (sc && sc.steps) || [];
+  const list  = document.getElementById('steps_list');
+  list.innerHTML = steps.map((s,i)=>{
+    const proto = s.proto || '';
+    const tech  = s.technique || '';
+    const style = s.style || '';
+    return `<div class="step-row">
+      <span class="s-num">${i+1}</span>
+      <span style="flex:1;font-weight:500">${tech}</span>
+      <span class="badge" style="font-size:9px">${proto}</span>
+      <span class="s-delay">${style}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('steps_preview').style.display = steps.length ? '' : 'none';
+  _totalSteps = steps.length;
+}
+
+function _renderCampaignSteps(steps) {
+  const list = document.getElementById('steps_list');
+  list.innerHTML = (steps||[]).map((s,i)=>`
+    <div class="step-row">
+      <span class="s-num">${i+1}</span>
+      <span style="flex:1;font-weight:500">${s.label || s.scenario}</span>
+      ${(s.delay && s.delay!=='0s') ? `<span class="s-delay">+${s.delay}</span>` : ''}
+    </div>`).join('');
+  document.getElementById('steps_preview').style.display = (steps||[]).length ? '' : 'none';
+  _totalSteps = (steps||[]).length;
+}
+
+function runSelected() {
+  if (!_selId) return;
+  const dst = document.getElementById('dst_ip').value.trim();
+  if (!dst) { window.toast('Missing IP','Set destination IP first','error'); return; }
+
+  // Reset UI
+  document.getElementById('progress_card').style.display = '';
+  document.getElementById('result_card').style.display   = 'none';
+  document.getElementById('step_rows').innerHTML   = '';
+  document.getElementById('event_log').innerHTML   = '';
+  document.getElementById('prog_bar').style.width  = '0%';
+  document.getElementById('run_btn').disabled      = true;
+  document.getElementById('abort_btn').style.display = '';
+  document.getElementById('run_status').textContent  = 'Running…';
+  _doneSteps = 0;
+  _currentRunId = null;
+
+  if (_selType === 'chain') {
+    _runChain();
+  } else {
+    _runCampaign();
+  }
+}
+
+function _runChain() {
+  // Chains run as a single scenario send via /api/send
+  const sc  = _chains.find(s=>s.id===_selId);
+  const steps = (sc && sc.steps) || [];
+
+  // Pre-render step rows
+  const rows = document.getElementById('step_rows');
+  steps.forEach((s,i)=>{
+    const row = document.createElement('div');
+    row.className = 'step-row';
+    row.id = `step_row_${i+1}`;
+    row.innerHTML = `<span class="s-num">${i+1}</span><span style="flex:1">${s.technique||''} · ${s.proto||''} · ${s.style||''}</span>`;
+    rows.appendChild(row);
+  });
+
+  const dst   = document.getElementById('dst_ip').value.trim();
+  const iface = document.getElementById('iface').value.trim();
+  const log   = document.getElementById('event_log');
+
+  function _log(msg, color) {
+    const line = document.createElement('div');
+    line.style.color = color||'var(--fg)';
+    line.textContent = new Date().toTimeString().slice(0,8)+' '+msg;
+    log.appendChild(line); log.scrollTop=log.scrollHeight;
+  }
+
+  // Mark all steps as active then done via /api/send
+  fetch('/api/send', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      scenario: _selId,
+      dst_ip: dst,
+      iface: iface||null,
+      confirm_live_network: true,
+      pcap: false,
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    _currentRunId = d.run_id || d.run?.run_id || null;
+    if (_currentRunId) {
+      document.getElementById('progress_run_id').textContent = 'run_id: '+_currentRunId.slice(0,12);
+    }
+    const sent = d.sent || d.run?.sent || 0;
+    const errs = d.warnings || d.run?.warnings || [];
+    _log(`Chain complete — ${sent} packet(s) sent`, 'var(--good)');
+    if (errs.length) errs.forEach(e=>_log('  ⚠ '+e,'var(--brand)'));
+
+    // Mark all step rows done
+    document.querySelectorAll('[id^="step_row_"]').forEach(el=>{
+      el.className='step-row done';
+      const num = el.querySelector('.s-num'); if(num) num.textContent='✓';
+    });
+    document.getElementById('prog_bar').style.width = '100%';
+    _chainEnded(steps.length, errs.length ? 1 : 0);
+  })
+  .catch(e=>{
+    _log('Error: '+e.message,'var(--bad)');
+    _chainEnded(0,1);
+  });
+}
+
+function _chainEnded(ok, err) {
+  document.getElementById('run_btn').disabled = false;
+  document.getElementById('abort_btn').style.display = 'none';
+  document.getElementById('run_status').textContent = 'Done';
+  document.getElementById('res_ok').textContent  = ok;
+  document.getElementById('res_err').textContent = err;
+  document.getElementById('res_rid').textContent = (_currentRunId||'').slice(0,12)||'—';
+  document.getElementById('result_card').style.display = '';
+}
+
+function _runCampaign() {
+  const c = _campaigns[_selId];
+  const steps = c.steps||[];
+  _totalSteps = steps.length;
+
+  // Pre-render step rows
+  const rows = document.getElementById('step_rows');
+  steps.forEach((s,i)=>{
+    const row = document.createElement('div');
+    row.className = 'step-row';
+    row.id = `step_row_${i+1}`;
+    row.innerHTML =
+      `<span class="s-num">${i+1}</span>`+
+      `<span style="flex:1;font-weight:500">${s.label||s.scenario}</span>`+
+      (s.delay&&s.delay!=='0s'?`<span class="s-delay">+${s.delay}</span>`:'');
+    rows.appendChild(row);
+  });
+
+  const dst   = document.getElementById('dst_ip').value.trim();
+  const iface = document.getElementById('iface').value.trim();
+
+  fetch('/api/campaigns/run', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({campaign_id:_selId, dst_ip:dst, iface:iface||null})
+  }).then(res=>{
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    const log = document.getElementById('event_log');
+    function _log(msg,color){
+      const l=document.createElement('div');l.style.color=color||'var(--fg)';
+      l.textContent=new Date().toTimeString().slice(0,8)+' '+msg;
+      log.appendChild(l);log.scrollTop=log.scrollHeight;
+    }
+    function _read(){
+      reader.read().then(({done,value})=>{
+        if(done){_campaignEnded();return;}
+        buf+=decoder.decode(value,{stream:true});
+        const lines=buf.split('\n'); buf=lines.pop();
+        lines.forEach(line=>{
+          if(!line.startsWith('data:'))return;
+          try{ _handleEvent(JSON.parse(line.slice(5).trim()),_log); }catch(e){}
+        });
+        _read();
+      });
+    }
+    _read();
+  }).catch(e=>{
+    document.getElementById('run_status').textContent='Error: '+e.message;
+    document.getElementById('run_btn').disabled=false;
+    document.getElementById('abort_btn').style.display='none';
+  });
+}
+
+function _handleEvent(ev,_log){
+  const type=ev.event||'';
+  if(type==='started'){
+    _currentRunId=ev.run_id;
+    document.getElementById('progress_run_id').textContent='run_id: '+ev.run_id.slice(0,12);
+    _log('Campaign started — run_id: '+ev.run_id,'var(--brand)');
+  } else if(type==='step_start'){
+    const row=document.getElementById(`step_row_${ev.step}`);
+    if(row){row.className='step-row active';row.querySelector('.s-num').textContent='▶';}
+    _log(`Step ${ev.step}/${ev.total}: ${ev.label||ev.scenario}`);
+  } else if(type==='step_ok'){
+    const row=document.getElementById(`step_row_${ev.step}`);
+    if(row){row.className='step-row done';row.querySelector('.s-num').textContent='✓';}
+    _doneSteps++;
+    document.getElementById('prog_bar').style.width=(100*_doneSteps/_totalSteps)+'%';
+    _log(`  ✓ ${ev.sent} packet(s)`, 'var(--good)');
+  } else if(type==='step_error'){
+    const row=document.getElementById(`step_row_${ev.step}`);
+    if(row){row.className='step-row error';row.querySelector('.s-num').textContent='✗';}
+    _log('  ✗ '+ev.error,'var(--bad)');
+  } else if(type==='delay'){
+    _log(`  ⏱ waiting ${ev.seconds}s…`,'var(--muted)');
+  } else if(type==='campaign_complete'){
+    _log(`Done — ${ev.steps_ok} OK, ${ev.steps_err} errors`,'var(--good)');
+  } else if(type==='stream_end'){
+    _campaignEnded();
+  }
+}
+
+function _campaignEnded(){
+  document.getElementById('run_btn').disabled=false;
+  document.getElementById('abort_btn').style.display='none';
+  document.getElementById('run_status').textContent='Done';
+  document.getElementById('prog_bar').style.width='100%';
+  const ok=document.querySelectorAll('.step-row.done').length;
+  const err=document.querySelectorAll('.step-row.error').length;
+  document.getElementById('res_ok').textContent=ok;
+  document.getElementById('res_err').textContent=err;
+  document.getElementById('res_rid').textContent=(_currentRunId||'').slice(0,12)||'—';
+  document.getElementById('result_card').style.display='';
+}
+
+function abortCampaign(){
+  if(!_currentRunId) return;
+  fetch('/api/campaigns/abort',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({run_id:_currentRunId})});
+}
+
+function goReport(){
+  if(_currentRunId) sessionStorage.setItem('report_run_id',_currentRunId);
+  window.location='/report';
+}
+</script>
+{% endblock %}

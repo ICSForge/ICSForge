@@ -326,6 +326,14 @@ async function doSend(offline=false){
     logln(`[OK] run_id=${data.run_id}  sent=${data.sent||"—"}`,"log-ok");
     if(data.pcap)   logln(`  pcap   → ${data.pcap}`,"log-info");
     if(data.events) logln(`  events → ${data.events}`,"log-info");
+    // Show any per-step warnings (e.g. profinet skipped due to missing iface)
+    if(data.warnings && data.warnings.length){
+      data.warnings.forEach(w => logln(`  ⚠ ${w}`, "log-warn"));
+      if(data.warnings.some(w => w.includes('profinet_dcp') && w.includes('iface'))){
+        window.toast("PROFINET skipped",
+          "No interface specified. Set the Interface (L2) field to e.g. eth0.", "warn");
+      }
+    }
     window.toast("Scenario fired", `${selectedName} · ${data.sent||"—"} packets`, "ok");
     // Refresh history after run
     setTimeout(loadHistory, 800);

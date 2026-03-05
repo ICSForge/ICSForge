@@ -79,6 +79,16 @@ def cmd_receiver(args):
     env['ICSFORGE_UI_MODE'] = 'receiver'
     env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
     cmd = [str(PY), "-m", "icsforge.receiver", "--host", host, "--port", port]
+    # Forward any extra args (e.g. --l2-iface eth0, --no-web, --bind) directly
+    skip_next = False
+    for i, arg in enumerate(args):
+        if skip_next:
+            skip_next = False
+            continue
+        if arg in ("--host", "--port"):
+            skip_next = True   # already handled above
+            continue
+        cmd.append(arg)
     subprocess.check_call(cmd, cwd=str(REPO), env=env)
 
 def cmd_selftest(args):

@@ -1,1 +1,1 @@
-from .coverage import coverage_report
+"""ICSForge v0.30 Coverage Report Generator."""

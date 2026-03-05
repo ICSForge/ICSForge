@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start">
+
+  <!-- Left: Inputs -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <div class="card" style="border-top:2px solid var(--brand);padding:14px 16px">
+      <h2 style="margin-bottom:4px">Coverage Report</h2>
+      <p class="small muted">Build an ATT&amp;CK for ICS heatmap. Fill in what was tested, what was detected, and where gaps were found. Export as a self-contained HTML report.</p>
+    </div>
+
+    <!-- Run ID -->
+    <div class="card">
+      <h3 style="margin-bottom:10px">Run Reference</h3>
+      <label>Run ID (auto-fills executed techniques)</label>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input id="run_id" placeholder="e.g. abc123def456" style="flex:1">
+        <button class="btn" onclick="loadRun()">Load</button>
+      </div>
+      <div id="run_loaded" class="small muted" style="display:none"></div>
+    </div>
+
+    <!-- Techniques -->
+    <div class="card">
+      <h3 style="margin-bottom:10px">Technique Coverage</h3>
+
+      <label>Executed — fired by ICSForge</label>
+      <textarea id="executed" placeholder="T0812&#10;T0840&#10;T0856" style="height:70px;font-family:var(--mono);font-size:11px;resize:vertical"></textarea>
+
+      <label style="margin-top:10px;display:block">Detected — confirmed by NSM / SIEM</label>
+      <textarea id="detected" placeholder="T0812&#10;T0840" style="height:55px;font-family:var(--mono);font-size:11px;resize:vertical"></textarea>
+
+      <label style="margin-top:10px;display:block">Gaps Found — executed but not detected (blind spots)</label>
+      <textarea id="gaps" placeholder="T0856&#10;T0877" style="height:55px;font-family:var(--mono);font-size:11px;resize:vertical" title="Techniques that were fired but generated no alert"></textarea>
+    </div>
+
+    <!-- Protocol Coverage -->
+    <div class="card">
+      <h3 style="margin-bottom:4px">Protocol Coverage Gaps</h3>
+      <p class="small muted" style="margin-bottom:10px">Flag specific protocols that are not firewalled, monitored, or have known blind spots. These appear as a dedicated table in the report.</p>
+
+      <div id="proto_gaps" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+        <!-- rows added by JS -->
+      </div>
+      <button class="btn" onclick="addProtoGap()" style="font-size:11px;padding:5px 10px">+ Add Protocol Gap</button>
+    </div>
+
+    <!-- Metadata -->
+    <div class="card">
+      <h3 style="margin-bottom:10px">Metadata</h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div><label>Organization</label><input id="org" placeholder="ACME Energy GmbH"></div>
+        <div><label>Analyst</label><input id="analyst" placeholder="Jane Smith"></div>
+        <div><label>Assessment Date</label><input id="assess_date" type="date"></div>
+        <div><label>Notes (optional)</label>
+             <textarea id="notes" placeholder="Scope, environment details…" style="height:55px;resize:vertical;font-size:12px"></textarea></div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn primary" onclick="generateReport()">Generate Report</button>
+      <button class="btn" id="dl_btn" onclick="downloadReport()" style="display:none">⬇ Download HTML Report</button>
+      <a href="/api/detections/download" class="btn" style="text-align:center">⬇ Detection Rules (Suricata + Sigma)</a>
+    </div>
+
+  </div>
+
+  <!-- Right: Preview -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div id="preview_placeholder" style="padding:48px;text-align:center;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:16px;opacity:.25">📊</div>
+      <div style="font-size:14px">Generate a report to preview the ATT&amp;CK heatmap here.</div>
+    </div>
+    <div id="preview_loading" style="display:none;padding:40px;text-align:center;color:var(--muted)">
+      <div style="font-size:13px">Generating…</div>
+    </div>
+    <iframe id="report_frame" style="display:none;width:100%;height:calc(100vh - 130px);border:none"
+            sandbox="allow-same-origin"></iframe>
+  </div>
+
+</div>
+
+<style>
+.proto-row { display:flex;gap:6px;align-items:center; }
+.proto-row input { flex:1; }
+.proto-row select { min-width:120px; }
+.proto-row button { flex-shrink:0; }
+</style>
+
+<script>
+// Pre-fill date to today
+document.getElementById('assess_date').value = new Date().toISOString().slice(0,10);
+
+// Pre-fill from sessionStorage if coming from campaigns page
+window.addEventListener('DOMContentLoaded', () => {
+  const rid = sessionStorage.getItem('report_run_id');
+  if (rid) {
+    document.getElementById('run_id').value = rid;
+    sessionStorage.removeItem('report_run_id');
+    loadRun();
+  }
+});
+
+function loadRun() {
+  const rid = document.getElementById('run_id').value.trim();
+  if (!rid) return;
+  const info = document.getElementById('run_loaded');
+  info.style.display = '';
+  info.textContent = 'Loading…';
+  fetch('/api/run_full?run_id=' + encodeURIComponent(rid))
+    .then(r=>r.json())
+    .then(d => {
+      const techs = d.techniques || [];
+      if (techs.length) {
+        document.getElementById('executed').value = techs.join('\n');
+        info.textContent = `Loaded ${techs.length} technique(s) from run ${rid.slice(0,12)}`;
+      } else {
+        info.textContent = 'Run found — no technique data. Enter manually.';
+      }
+    })
+    .catch(() => { info.textContent = 'Could not load run — enter manually.'; });
+}
+
+let _protoGapCount = 0;
+const PROTOCOLS = ['Modbus/TCP (502)','DNP3 (20000)','S7comm (102)','IEC 60870-5-104 (2404)',
+                   'OPC UA (4840)','EtherNet/IP (44818)','PROFINET DCP','Other'];
+const GAP_TYPES = ['Not firewalled','Not monitored by NSM','No IDS rule','No SIEM parser',
+                   'Allowed through DMZ','Unencrypted / No TLS','Custom'];
+
+function addProtoGap() {
+  _protoGapCount++;
+  const id = `pg_${_protoGapCount}`;
+  const row = document.createElement('div');
+  row.className = 'proto-row';
+  row.id = id;
+  row.innerHTML =
+    `<select class="pg-proto" style="min-width:170px">${PROTOCOLS.map(p=>`<option>${p}</option>`).join('')}</select>` +
+    `<select class="pg-type"  style="min-width:150px">${GAP_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>` +
+    `<input  class="pg-note"  placeholder="Note (optional)" style="min-width:100px">` +
+    `<button class="btn" style="padding:4px 8px;font-size:11px" onclick="this.closest('.proto-row').remove()">✕</button>`;
+  document.getElementById('proto_gaps').appendChild(row);
+}
+
+function _parseLines(id) {
+  return document.getElementById(id).value
+    .split('\n').map(s=>s.trim()).filter(s=>/^T\d+/.test(s));
+}
+
+function _collectProtoGaps() {
+  return [...document.querySelectorAll('.proto-row')].map(row => ({
+    protocol: row.querySelector('.pg-proto')?.value || '',
+    gap_type: row.querySelector('.pg-type')?.value  || '',
+    note:     row.querySelector('.pg-note')?.value  || '',
+  }));
+}
+
+function _buildPayload() {
+  return {
+    run_id:              document.getElementById('run_id').value.trim() || null,
+    executed_techniques: _parseLines('executed'),
+    detected_techniques: _parseLines('detected'),
+    gap_techniques:      _parseLines('gaps'),
+    protocol_gaps:       _collectProtoGaps(),
+    meta: {
+      org:         document.getElementById('org').value.trim(),
+      analyst:     document.getElementById('analyst').value.trim(),
+      assess_date: document.getElementById('assess_date').value,
+      notes:       document.getElementById('notes').value.trim(),
+    }
+  };
+}
+
+function generateReport() {
+  const ph=document.getElementById('preview_placeholder');
+  const ld=document.getElementById('preview_loading');
+  const frm=document.getElementById('report_frame');
+  ph.style.display='none'; ld.style.display=''; frm.style.display='none';
+
+  fetch('/api/report/generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(_buildPayload())
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    ld.style.display='none';
+    if(d.error){ ph.style.display=''; window.toast('Error',d.error,'error'); return; }
+    const blob=new Blob([d.html],{type:'text/html'});
+    frm.src=URL.createObjectURL(blob);
+    frm.style.display='';
+    document.getElementById('dl_btn').style.display='';
+    window.toast('Report ready',`${d.executed} executed · ${d.detected} detected · ${d.gaps} gaps found`);
+  })
+  .catch(e=>{ ld.style.display='none'; ph.style.display=''; window.toast('Error',e.message,'error'); });
+}
+
+function downloadReport() {
+  fetch('/api/report/download',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(_buildPayload())
+  })
+  .then(r=>r.blob())
+  .then(blob=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`icsforge_coverage_${Date.now()}.html`;
+    a.click();
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,2680 @@
+{
+  "T0840__network_enum__enip_sweep": {
+    "id": "T0840__network_enum__enip_sweep",
+    "title": "T0840 – EtherNet/IP identity sweep (Network Connection Enumeration)",
+    "technique": "T0840",
+    "tech_name": "Network Connection Enumeration",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "list_identity",
+      "list_services",
+      "list_interfaces"
+    ],
+    "header_hex": "6300220000000000",
+    "all_techniques": [
+      "T0840"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0840__network_enum__profinet_identify": {
+    "id": "T0840__network_enum__profinet_identify",
+    "title": "T0840 – PROFINET DCP multicast identify (Network Connection Enumeration)",
+    "technique": "T0840",
+    "tech_name": "Network Connection Enumeration",
+    "proto": "profinet_dcp",
+    "proto_label": "PROFINET DCP",
+    "port": null,
+    "styles": [
+      "identify"
+    ],
+    "header_hex": "fefe0500c7a23391",
+    "all_techniques": [
+      "T0840"
+    ],
+    "all_protos": [
+      "profinet_dcp"
+    ]
+  },
+  "T0888__remote_sys_info__enip_identity": {
+    "id": "T0888__remote_sys_info__enip_identity",
+    "title": "T0888 – EtherNet/IP device fingerprint (Remote System Information Discovery)",
+    "technique": "T0888",
+    "tech_name": "Remote System Information Discovery",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "get_identity",
+      "get_device_type"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0888"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0888__remote_sys_info__opcua_discovery": {
+    "id": "T0888__remote_sys_info__opcua_discovery",
+    "title": "T0888 – OPC UA server discovery and endpoint enumeration",
+    "technique": "T0888",
+    "tech_name": "Remote System Information Discovery",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "hello",
+      "find_servers",
+      "get_endpoints"
+    ],
+    "header_hex": "48454c4655000000",
+    "all_techniques": [
+      "T0888"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0888__remote_sys_info__s7comm_szl": {
+    "id": "T0888__remote_sys_info__s7comm_szl",
+    "title": "T0888 – S7comm SZL/SSL read (System Status List)",
+    "technique": "T0888",
+    "tech_name": "Remote System Information Discovery",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "szl_read"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0888"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0861__point_tag_id__opcua_browse": {
+    "id": "T0861__point_tag_id__opcua_browse",
+    "title": "T0861 – OPC UA Browse tree traversal (Point & Tag Identification)",
+    "technique": "T0861",
+    "tech_name": "Point & Tag Identification",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "browse",
+      "browse_next",
+      "translate_paths"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0861"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0861__point_tag_id__modbus_register_sweep": {
+    "id": "T0861__point_tag_id__modbus_register_sweep",
+    "title": "T0861 – Modbus register address sweep (Point & Tag Identification)",
+    "technique": "T0861",
+    "tech_name": "Point & Tag Identification",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "read_input",
+      "read_coils",
+      "read_discrete",
+      "exception_probe"
+    ],
+    "header_hex": "3ec700000028f503",
+    "all_techniques": [
+      "T0861"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0841__network_scanning__multi": {
+    "id": "T0841__network_scanning__multi",
+    "title": "T0841 – OT protocol port sweep (Network Service Scanning)",
+    "technique": "T0841",
+    "tech_name": "Network Service Scanning",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_exception_status",
+      "delay_measure",
+      "get_endpoints",
+      "list_identity",
+      "setup",
+      "testfr"
+    ],
+    "header_hex": "7dce000000248807",
+    "all_techniques": [
+      "T0841"
+    ],
+    "all_protos": [
+      "modbus",
+      "dnp3",
+      "opcua",
+      "enip",
+      "s7comm",
+      "iec104"
+    ]
+  },
+  "T0842__network_sniffing__profinet_passive": {
+    "id": "T0842__network_sniffing__profinet_passive",
+    "title": "T0842 – PROFINET DCP Hello observation (Network Sniffing)",
+    "technique": "T0842",
+    "tech_name": "Network Sniffing",
+    "proto": "profinet_dcp",
+    "proto_label": "PROFINET DCP",
+    "port": null,
+    "styles": [
+      "hello",
+      "get_name",
+      "get_ip"
+    ],
+    "header_hex": "fefd040021de9dde",
+    "all_techniques": [
+      "T0842"
+    ],
+    "all_protos": [
+      "profinet_dcp"
+    ]
+  },
+  "T0846__remote_sys_discovery__dnp3_probe": {
+    "id": "T0846__remote_sys_discovery__dnp3_probe",
+    "title": "T0846 – DNP3 device probing (Remote System Discovery)",
+    "technique": "T0846",
+    "tech_name": "Remote System Discovery",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "delay_measure",
+      "assign_class",
+      "read"
+    ],
+    "header_hex": "0564642ac4000900",
+    "all_techniques": [
+      "T0846"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0801__monitor_process__modbus_poll": {
+    "id": "T0801__monitor_process__modbus_poll",
+    "title": "T0801 – Modbus sustained process state polling (Monitor Process State)",
+    "technique": "T0801",
+    "tech_name": "Monitor Process State",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "read_coils",
+      "read_input"
+    ],
+    "header_hex": "ad1c000000289b03",
+    "all_techniques": [
+      "T0801"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0801__monitor_process__iec104_subscribe": {
+    "id": "T0801__monitor_process__iec104_subscribe",
+    "title": "T0801 – IEC-104 STARTDT + interrogation (Monitor Process State)",
+    "technique": "T0801",
+    "tech_name": "Monitor Process State",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "interrogation",
+      "meas_sp",
+      "meas_mv"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0801"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0801__monitor_process__opcua_subscription": {
+    "id": "T0801__monitor_process__opcua_subscription",
+    "title": "T0801 – OPC UA subscription polling (Monitor Process State)",
+    "technique": "T0801",
+    "tech_name": "Monitor Process State",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "create_sub",
+      "publish"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0801"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0802__automated_collection__modbus_burst": {
+    "id": "T0802__automated_collection__modbus_burst",
+    "title": "T0802 – Modbus rapid systematic register dump (Automated Collection)",
+    "technique": "T0802",
+    "tech_name": "Automated Collection",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "read_coils",
+      "read_input",
+      "get_comm_event_counter",
+      "read_exception_status"
+    ],
+    "header_hex": "a345000000283403",
+    "all_techniques": [
+      "T0802"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0882__theft_operational_info__opcua_history": {
+    "id": "T0882__theft_operational_info__opcua_history",
+    "title": "T0882 – OPC UA HistoryRead data exfil (Theft of Operational Information)",
+    "technique": "T0882",
+    "tech_name": "Theft of Operational Information",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "read_history"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0882"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0882__theft_operational_info__s7comm_db_extract": {
+    "id": "T0882__theft_operational_info__s7comm_db_extract",
+    "title": "T0882 – S7comm systematic DB read (Theft of Operational Information)",
+    "technique": "T0882",
+    "tech_name": "Theft of Operational Information",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "read_db",
+      "szl_read"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0882"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0883__internet_accessible__multi": {
+    "id": "T0883__internet_accessible__multi",
+    "title": "T0883 – Exposed OT service probe (Internet Accessible Device)",
+    "technique": "T0883",
+    "tech_name": "Internet Accessible Device",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "hello",
+      "list_identity",
+      "delay_measure"
+    ],
+    "header_hex": "3a2c000000280103",
+    "all_techniques": [
+      "T0883"
+    ],
+    "all_protos": [
+      "modbus",
+      "opcua",
+      "enip",
+      "dnp3"
+    ]
+  },
+  "T0822__external_remote_services__opcua": {
+    "id": "T0822__external_remote_services__opcua",
+    "title": "T0822 – OPC UA anonymous session establishment (External Remote Services)",
+    "technique": "T0822",
+    "tech_name": "External Remote Services",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "hello",
+      "open_session",
+      "activate_session",
+      "browse"
+    ],
+    "header_hex": "48454c4655000000",
+    "all_techniques": [
+      "T0822"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0859__valid_accounts__opcua_cred": {
+    "id": "T0859__valid_accounts__opcua_cred",
+    "title": "T0859 – OPC UA credential-based session (Valid Accounts)",
+    "technique": "T0859",
+    "tech_name": "Valid Accounts",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "hello",
+      "open_session",
+      "activate_session"
+    ],
+    "header_hex": "48454c4655000000",
+    "all_techniques": [
+      "T0859"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0848__rogue_master__modbus": {
+    "id": "T0848__rogue_master__modbus",
+    "title": "T0848 – Modbus rogue master (Rogue Master)",
+    "technique": "T0848",
+    "tech_name": "Rogue Master",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "read_coils",
+      "write_single_register",
+      "write_multiple_registers"
+    ],
+    "header_hex": "5a60000000282f03",
+    "all_techniques": [
+      "T0848"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0848__rogue_master__dnp3": {
+    "id": "T0848__rogue_master__dnp3",
+    "title": "T0848 – DNP3 rogue master select-before-operate (Rogue Master)",
+    "technique": "T0848",
+    "tech_name": "Rogue Master",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "read",
+      "select",
+      "operate"
+    ],
+    "header_hex": "0564642ec4000400",
+    "all_techniques": [
+      "T0848"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0848__rogue_master__iec104": {
+    "id": "T0848__rogue_master__iec104",
+    "title": "T0848 – IEC-104 rogue master STARTDT + commands (Rogue Master)",
+    "technique": "T0848",
+    "tech_name": "Rogue Master",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "interrogation",
+      "single_command",
+      "double_command"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0848"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0855__unauth_command__modbus": {
+    "id": "T0855__unauth_command__modbus",
+    "title": "T0855 – Modbus unauthorized write burst (Unauthorized Command Message)",
+    "technique": "T0855",
+    "tech_name": "Unauthorized Command Message",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "write_single_register",
+      "write_multiple_registers",
+      "write_single_coil"
+    ],
+    "header_hex": "053300000028b003",
+    "all_techniques": [
+      "T0855"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0855__unauth_command__dnp3_direct_operate": {
+    "id": "T0855__unauth_command__dnp3_direct_operate",
+    "title": "T0855 – DNP3 direct operate without select (Unauthorized Command Message)",
+    "technique": "T0855",
+    "tech_name": "Unauthorized Command Message",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "direct_operate",
+      "direct_operate_nr"
+    ],
+    "header_hex": "05646436c4000500",
+    "all_techniques": [
+      "T0855"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0855__unauth_command__iec104": {
+    "id": "T0855__unauth_command__iec104",
+    "title": "T0855 – IEC-104 mass control command sequence (Unauthorized Command Message)",
+    "technique": "T0855",
+    "tech_name": "Unauthorized Command Message",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "single_command",
+      "double_command",
+      "setpoint_float"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0855"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0855__unauth_command__s7comm": {
+    "id": "T0855__unauth_command__s7comm",
+    "title": "T0855 – S7comm write outputs from unexpected host (Unauthorized Command Message)",
+    "technique": "T0855",
+    "tech_name": "Unauthorized Command Message",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "read_outputs",
+      "write_var",
+      "write_outputs"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0855"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0831__manipulation_control__modbus_setpoint": {
+    "id": "T0831__manipulation_control__modbus_setpoint",
+    "title": "T0831 – Modbus setpoint drift manipulation (Manipulation of Control)",
+    "technique": "T0831",
+    "tech_name": "Manipulation of Control",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "mask_write_register",
+      "write_single_register"
+    ],
+    "header_hex": "db9100000028ab03",
+    "all_techniques": [
+      "T0831"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0831__manipulation_control__dnp3_sbo": {
+    "id": "T0831__manipulation_control__dnp3_sbo",
+    "title": "T0831 – DNP3 repeated Select-Before-Operate (Manipulation of Control)",
+    "technique": "T0831",
+    "tech_name": "Manipulation of Control",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "select",
+      "operate"
+    ],
+    "header_hex": "05646436c4000500",
+    "all_techniques": [
+      "T0831"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0831__manipulation_control__iec104_setpoint": {
+    "id": "T0831__manipulation_control__iec104_setpoint",
+    "title": "T0831 – IEC-104 float setpoint ramping (Manipulation of Control)",
+    "technique": "T0831",
+    "tech_name": "Manipulation of Control",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "setpoint_float",
+      "regulating_step"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0831"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0831__manipulation_control__opcua_write": {
+    "id": "T0831__manipulation_control__opcua_write",
+    "title": "T0831 – OPC UA node value write (Manipulation of Control)",
+    "technique": "T0831",
+    "tech_name": "Manipulation of Control",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "read_value",
+      "write_value"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0831"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0836__modify_parameter__modbus": {
+    "id": "T0836__modify_parameter__modbus",
+    "title": "T0836 – Modbus parameter register writes (Modify Parameter)",
+    "technique": "T0836",
+    "tech_name": "Modify Parameter",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "mask_write_register",
+      "write_multiple_registers",
+      "read_holding"
+    ],
+    "header_hex": "b9e10000002a0b16",
+    "all_techniques": [
+      "T0836"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0836__modify_parameter__s7comm_db": {
+    "id": "T0836__modify_parameter__s7comm_db",
+    "title": "T0836 – S7comm Data Block parameter modification (Modify Parameter)",
+    "technique": "T0836",
+    "tech_name": "Modify Parameter",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "read_db",
+      "write_db"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0836"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0836__modify_parameter__enip_parameter": {
+    "id": "T0836__modify_parameter__enip_parameter",
+    "title": "T0836 – ENIP/CIP parameter object write (Modify Parameter)",
+    "technique": "T0836",
+    "tech_name": "Modify Parameter",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "get_param",
+      "set_param"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0836"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0806__brute_force_io__modbus": {
+    "id": "T0806__brute_force_io__modbus",
+    "title": "T0806 – Modbus sequential address write sweep (Brute Force I/O)",
+    "technique": "T0806",
+    "tech_name": "Brute Force I/O",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "brute_force_write",
+      "write_multiple_coils"
+    ],
+    "header_hex": "8352000000413d10",
+    "all_techniques": [
+      "T0806"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0813__denial_of_control__s7comm_stop": {
+    "id": "T0813__denial_of_control__s7comm_stop",
+    "title": "T0813 – S7comm CPU STOP (Denial of Control)",
+    "technique": "T0813",
+    "tech_name": "Denial of Control",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "cpu_stop"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0813"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0813__denial_of_control__modbus_coils_off": {
+    "id": "T0813__denial_of_control__modbus_coils_off",
+    "title": "T0813 – Modbus all coils de-energise (Denial of Control)",
+    "technique": "T0813",
+    "tech_name": "Denial of Control",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "write_single_coil",
+      "write_multiple_coils"
+    ],
+    "header_hex": "4be9000000281e05",
+    "all_techniques": [
+      "T0813"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0815__denial_of_view__iec104_stopdt": {
+    "id": "T0815__denial_of_view__iec104_stopdt",
+    "title": "T0815 – IEC-104 STOPDT disruption (Denial of View)",
+    "technique": "T0815",
+    "tech_name": "Denial of View",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "meas_sp",
+      "stopdt"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0815"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0815__denial_of_view__dnp3_disable_unsol": {
+    "id": "T0815__denial_of_view__dnp3_disable_unsol",
+    "title": "T0815 – DNP3 disable unsolicited reporting (Denial of View)",
+    "technique": "T0815",
+    "tech_name": "Denial of View",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "disable_unsolicited"
+    ],
+    "header_hex": "0564642ec4000600",
+    "all_techniques": [
+      "T0815"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0815__denial_of_view__opcua_delete_sub": {
+    "id": "T0815__denial_of_view__opcua_delete_sub",
+    "title": "T0815 – OPC UA delete subscriptions (Denial of View)",
+    "technique": "T0815",
+    "tech_name": "Denial of View",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "delete_sub"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0815"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0878__alarm_suppression__iec104_inhibit": {
+    "id": "T0878__alarm_suppression__iec104_inhibit",
+    "title": "T0878 – IEC-104 parameter activation inhibit (Alarm Suppression)",
+    "technique": "T0878",
+    "tech_name": "Alarm Suppression",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "inhibit_alarm"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0878"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0829__loss_of_protection__modbus_safety": {
+    "id": "T0829__loss_of_protection__modbus_safety",
+    "title": "T0829 – Modbus safety register zero-out (Loss of Protection)",
+    "technique": "T0829",
+    "tech_name": "Loss of View",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "safety_write"
+    ],
+    "header_hex": "e5e300000028a803",
+    "all_techniques": [
+      "T0829"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0876__loss_of_safety__s7comm_outputs": {
+    "id": "T0876__loss_of_safety__s7comm_outputs",
+    "title": "T0876 – S7comm process output zeroing (Loss of Safety)",
+    "technique": "T0876",
+    "tech_name": "Loss of Safety",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "write_outputs"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0876"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0814__denial_of_service__modbus_flood": {
+    "id": "T0814__denial_of_service__modbus_flood",
+    "title": "T0814 – Modbus max-register read flood (Denial of Service)",
+    "technique": "T0814",
+    "tech_name": "Denial of Service",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "dos_read"
+    ],
+    "header_hex": "3a07000000281603",
+    "all_techniques": [
+      "T0814"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0814__denial_of_service__dnp3_flood": {
+    "id": "T0814__denial_of_service__dnp3_flood",
+    "title": "T0814 – DNP3 read flood (Denial of Service)",
+    "technique": "T0814",
+    "tech_name": "Denial of Service",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "read"
+    ],
+    "header_hex": "0564642ec4000a00",
+    "all_techniques": [
+      "T0814"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0814__denial_of_service__iec104_flood": {
+    "id": "T0814__denial_of_service__iec104_flood",
+    "title": "T0814 – IEC-104 connection flood (Denial of Service)",
+    "technique": "T0814",
+    "tech_name": "Denial of Service",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0814"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0816__device_restart__s7comm": {
+    "id": "T0816__device_restart__s7comm",
+    "title": "T0816 – S7comm CPU STOP/START cycle (Device Restart/Shutdown)",
+    "technique": "T0816",
+    "tech_name": "Device Restart/Shutdown",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "cpu_stop",
+      "cpu_start_warm"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0816"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0816__device_restart__enip_reset": {
+    "id": "T0816__device_restart__enip_reset",
+    "title": "T0816 – EtherNet/IP CIP Reset (Device Restart/Shutdown)",
+    "technique": "T0816",
+    "tech_name": "Device Restart/Shutdown",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "reset_device"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0816"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0881__service_stop__s7comm": {
+    "id": "T0881__service_stop__s7comm",
+    "title": "T0881 – S7comm persistent CPU STOP (Service Stop)",
+    "technique": "T0881",
+    "tech_name": "Service Stop",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "cpu_stop"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0881"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0881__service_stop__enip_stop": {
+    "id": "T0881__service_stop__enip_stop",
+    "title": "T0881 – EtherNet/IP CIP Stop (Service Stop)",
+    "technique": "T0881",
+    "tech_name": "Service Stop",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "stop_device"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0881"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0827__loss_of_control__multi": {
+    "id": "T0827__loss_of_control__multi",
+    "title": "T0827 – Loss of control chain (Loss of Control)",
+    "technique": "T0827",
+    "tech_name": "Loss of Control",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "cpu_stop",
+      "write_multiple_coils",
+      "stopdt"
+    ],
+    "header_hex": "0300004302f08032",
+    "all_techniques": [
+      "T0827"
+    ],
+    "all_protos": [
+      "s7comm",
+      "modbus",
+      "iec104"
+    ]
+  },
+  "T0832__manipulation_of_view__modbus_spoof": {
+    "id": "T0832__manipulation_of_view__modbus_spoof",
+    "title": "T0832 – Modbus read-write pattern hiding real values (Manipulation of View)",
+    "technique": "T0832",
+    "tech_name": "Manipulation of View",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_write_multiple"
+    ],
+    "header_hex": "99a20000002f3017",
+    "all_techniques": [
+      "T0832"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0832__manipulation_of_view__opcua_write_sensor": {
+    "id": "T0832__manipulation_of_view__opcua_write_sensor",
+    "title": "T0832 – OPC UA sensor value injection (Manipulation of View)",
+    "technique": "T0832",
+    "tech_name": "Manipulation of View",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "write_value"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0832"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0820__exploitation_evasion__modbus_exception": {
+    "id": "T0820__exploitation_evasion__modbus_exception",
+    "title": "T0820 – Modbus exception-inducing probes (Exploitation for Evasion)",
+    "technique": "T0820",
+    "tech_name": "Exploitation for Evasion",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "diagnostic",
+      "exception_probe"
+    ],
+    "header_hex": "5f9600000028da08",
+    "all_techniques": [
+      "T0820"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0849__masquerading__profinet_set_name": {
+    "id": "T0849__masquerading__profinet_set_name",
+    "title": "T0849 – PROFINET DCP device rename (Masquerading)",
+    "technique": "T0849",
+    "tech_name": "Masquerading",
+    "proto": "profinet_dcp",
+    "proto_label": "PROFINET DCP",
+    "port": null,
+    "styles": [
+      "identify",
+      "set_name",
+      "set_ip"
+    ],
+    "header_hex": "fefe050069e2d6f0",
+    "all_techniques": [
+      "T0849"
+    ],
+    "all_protos": [
+      "profinet_dcp"
+    ]
+  },
+  "T0849__masquerading__iec104_clock_inject": {
+    "id": "T0849__masquerading__iec104_clock_inject",
+    "title": "T0849 – IEC-104 clock synchronisation injection (Masquerading)",
+    "technique": "T0849",
+    "tech_name": "Masquerading",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "clock_sync"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0849"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0821__modify_controller_tasking__s7comm": {
+    "id": "T0821__modify_controller_tasking__s7comm",
+    "title": "T0821 – S7comm program download (Modify Controller Tasking)",
+    "technique": "T0821",
+    "tech_name": "Modify Controller Tasking",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "download_req",
+      "download_block",
+      "download_end"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0821"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0843__program_download__s7comm": {
+    "id": "T0843__program_download__s7comm",
+    "title": "T0843 – S7comm full program download (Program Download)",
+    "technique": "T0843",
+    "tech_name": "Program Download",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "cpu_stop",
+      "download_req",
+      "download_block",
+      "download_end",
+      "cpu_start_warm"
+    ],
+    "header_hex": "0300004302f08032",
+    "all_techniques": [
+      "T0843"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0845__program_upload__s7comm": {
+    "id": "T0845__program_upload__s7comm",
+    "title": "T0845 – S7comm program upload (Program Upload)",
+    "technique": "T0845",
+    "tech_name": "Program Upload",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "setup",
+      "upload_req",
+      "upload_block",
+      "upload_end"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0845"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0875__change_program_state__s7comm": {
+    "id": "T0875__change_program_state__s7comm",
+    "title": "T0875 – S7comm PLC state transitions (Change Program State)",
+    "technique": "T0875",
+    "tech_name": "Change Program State",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "cpu_stop",
+      "cpu_start_cold",
+      "cpu_start_warm"
+    ],
+    "header_hex": "0300004302f08032",
+    "all_techniques": [
+      "T0875"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0871__execution_through_api__opcua_call": {
+    "id": "T0871__execution_through_api__opcua_call",
+    "title": "T0871 – OPC UA Method call (Execution through API)",
+    "technique": "T0871",
+    "tech_name": "Execution through API",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "call_method"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0871"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0868__detect_operating_mode__enip": {
+    "id": "T0868__detect_operating_mode__enip",
+    "title": "T0868 – EtherNet/IP CIP GetAttribute operating mode (Detect Operating Mode)",
+    "technique": "T0868",
+    "tech_name": "Detect Operating Mode",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "get_device_type"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0868"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0800__fw_update_mode__s7comm": {
+    "id": "T0800__fw_update_mode__s7comm",
+    "title": "Firmware Update Mode — S7comm CPU stop + module flash (T0800)",
+    "technique": "T0800",
+    "tech_name": "Activate Firmware Update Mode",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "cpu_stop",
+      "firmware_module",
+      "firmware_full"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0800"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0800__fw_update_mode__enip": {
+    "id": "T0800__fw_update_mode__enip",
+    "title": "Firmware Update Mode — EtherNet/IP CIP services (T0800)",
+    "technique": "T0800",
+    "tech_name": "Activate Firmware Update Mode",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "get_identity",
+      "firmware_update",
+      "boot_firmware"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0800"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0803__block_command__dnp3_broadcast": {
+    "id": "T0803__block_command__dnp3_broadcast",
+    "title": "Block Command Message — DNP3 broadcast operate flood (T0803)",
+    "technique": "T0803",
+    "tech_name": "Block Command Message",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "broadcast_operate"
+    ],
+    "header_hex": "0564642ec400ffff",
+    "all_techniques": [
+      "T0803"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0803__block_command__modbus_channel_flood": {
+    "id": "T0803__block_command__modbus_channel_flood",
+    "title": "Block Command Message — Modbus channel saturation (T0803)",
+    "technique": "T0803",
+    "tech_name": "Block Command Message",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "channel_flood"
+    ],
+    "header_hex": "9610000000281503",
+    "all_techniques": [
+      "T0803"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0804__block_reporting__modbus_listen_only": {
+    "id": "T0804__block_reporting__modbus_listen_only",
+    "title": "Block Reporting Message — Modbus Force Listen-Only Mode (T0804)",
+    "technique": "T0804",
+    "tech_name": "Block Reporting Message",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "report_block"
+    ],
+    "header_hex": "5dfa000000286108",
+    "all_techniques": [
+      "T0804"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0804__block_reporting__dnp3_disable_unsolicited": {
+    "id": "T0804__block_reporting__dnp3_disable_unsolicited",
+    "title": "Block Reporting Message — DNP3 Disable Unsolicited + clear events (T0804)",
+    "technique": "T0804",
+    "tech_name": "Block Reporting Message",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "disable_unsolicited",
+      "clear_events"
+    ],
+    "header_hex": "0564642ec4000600",
+    "all_techniques": [
+      "T0804"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0805__block_serial_com__modbus_gateway_flood": {
+    "id": "T0805__block_serial_com__modbus_gateway_flood",
+    "title": "Block Serial COM — Modbus gateway serial saturation (T0805 precursor)",
+    "technique": "T0805",
+    "tech_name": "Block Serial COM",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "channel_flood"
+    ],
+    "header_hex": "5edc00000028e703",
+    "all_techniques": [
+      "T0805"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0807__cmdline_dnp3_file_transfer__dnp3": {
+    "id": "T0807__cmdline_dnp3_file_transfer__dnp3",
+    "title": "Command-Line Interface — DNP3 file push to outstation (T0807 precursor)",
+    "technique": "T0807",
+    "tech_name": "Command-Line Interface",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "file_open"
+    ],
+    "header_hex": "05646435c4000900",
+    "all_techniques": [
+      "T0807"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0809__data_destruction__modbus_zero_regs": {
+    "id": "T0809__data_destruction__modbus_zero_regs",
+    "title": "Data Destruction — Modbus zero-fill holding registers (T0809)",
+    "technique": "T0809",
+    "tech_name": "Data Destruction",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "zero_all"
+    ],
+    "header_hex": "66a7000000283a03",
+    "all_techniques": [
+      "T0809"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0809__data_destruction__s7comm_zero_db": {
+    "id": "T0809__data_destruction__s7comm_zero_db",
+    "title": "Data Destruction — S7comm zero-fill all data blocks (T0809)",
+    "technique": "T0809",
+    "tech_name": "Data Destruction",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "zero_db",
+      "szl_clear"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0809"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0811__data_repositories__opcua_historian": {
+    "id": "T0811__data_repositories__opcua_historian",
+    "title": "Data from Information Repositories — OPC UA historian bulk exfil (T0811)",
+    "technique": "T0811",
+    "tech_name": "Data from Information Repositories",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "browse",
+      "history_read",
+      "read_history",
+      "close_session"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0811"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0811__data_repositories__s7comm_db_dump": {
+    "id": "T0811__data_repositories__s7comm_db_dump",
+    "title": "Data from Information Repositories — S7comm DB bulk dump (T0811)",
+    "technique": "T0811",
+    "tech_name": "Data from Information Repositories",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "read_all_dbs",
+      "read_db"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0811"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0812__default_creds__s7comm_blank_auth": {
+    "id": "T0812__default_creds__s7comm_blank_auth",
+    "title": "Default Credentials — S7comm blank/default password (T0812)",
+    "technique": "T0812",
+    "tech_name": "Default Credentials",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "default_creds",
+      "szl_read"
+    ],
+    "header_hex": "0300003b02f08032",
+    "all_techniques": [
+      "T0812"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0812__default_creds__opcua_anonymous": {
+    "id": "T0812__default_creds__opcua_anonymous",
+    "title": "Default Credentials — OPC UA anonymous/default session (T0812)",
+    "technique": "T0812",
+    "tech_name": "Default Credentials",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "get_endpoints",
+      "activate_default",
+      "browse"
+    ],
+    "header_hex": "4d53474673000000",
+    "all_techniques": [
+      "T0812"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0812__default_creds__modbus_device_id": {
+    "id": "T0812__default_creds__modbus_device_id",
+    "title": "Default Credentials — Modbus FC43 device ID probe + open write (T0812)",
+    "technique": "T0812",
+    "tech_name": "Default Credentials",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "default_creds_probe",
+      "read_holding"
+    ],
+    "header_hex": "442d00000027b42b",
+    "all_techniques": [
+      "T0812"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0812__default_creds__enip_default_auth": {
+    "id": "T0812__default_creds__enip_default_auth",
+    "title": "Default Credentials — EtherNet/IP CIP default authentication (T0812)",
+    "technique": "T0812",
+    "tech_name": "Default Credentials",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "list_identity",
+      "default_auth",
+      "get_param"
+    ],
+    "header_hex": "6300220000000000",
+    "all_techniques": [
+      "T0812"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0819__exploit_public_app__s7comm_malformed": {
+    "id": "T0819__exploit_public_app__s7comm_malformed",
+    "title": "Exploit Public-Facing Application — S7comm malformed PDU exploit (T0819)",
+    "technique": "T0819",
+    "tech_name": "Exploit Public-Facing Application",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "malformed_param"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0819"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0819__exploit_public_app__opcua_malformed": {
+    "id": "T0819__exploit_public_app__opcua_malformed",
+    "title": "Exploit Public-Facing Application — OPC UA malformed Browse exploit (T0819)",
+    "technique": "T0819",
+    "tech_name": "Exploit Public-Facing Application",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "hello",
+      "malformed_browse"
+    ],
+    "header_hex": "48454c4655000000",
+    "all_techniques": [
+      "T0819"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0819__exploit_public_app__enip_ucmm_crash": {
+    "id": "T0819__exploit_public_app__enip_ucmm_crash",
+    "title": "Exploit Public-Facing Application — EtherNet/IP malformed UCMM exploit (T0819)",
+    "technique": "T0819",
+    "tech_name": "Exploit Public-Facing Application",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "list_identity",
+      "malformed_ucmm"
+    ],
+    "header_hex": "6300220000000000",
+    "all_techniques": [
+      "T0819"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0826__loss_availability__multi_protocol_dos": {
+    "id": "T0826__loss_availability__multi_protocol_dos",
+    "title": "Loss of Availability — Multi-protocol concurrent DoS (T0826)",
+    "technique": "T0826",
+    "tech_name": "Loss of Availability",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "dos_read",
+      "read",
+      "interrogation",
+      "channel_flood"
+    ],
+    "header_hex": "e78f00000028e103",
+    "all_techniques": [
+      "T0826"
+    ],
+    "all_protos": [
+      "modbus",
+      "dnp3",
+      "iec104"
+    ]
+  },
+  "T0826__loss_availability__s7comm_read_flood": {
+    "id": "T0826__loss_availability__s7comm_read_flood",
+    "title": "Loss of Availability — S7comm DB read flood (T0826)",
+    "technique": "T0826",
+    "tech_name": "Loss of Availability",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "read_all_dbs"
+    ],
+    "header_hex": "0300004102f08032",
+    "all_techniques": [
+      "T0826"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0828__loss_productivity__modbus_setpoint_chaos": {
+    "id": "T0828__loss_productivity__modbus_setpoint_chaos",
+    "title": "Loss of Productivity and Revenue — Modbus setpoint chaos (T0828)",
+    "technique": "T0828",
+    "tech_name": "Loss of Productivity and Revenue",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "write_multiple_registers",
+      "mask_write_register",
+      "brute_force_write"
+    ],
+    "header_hex": "db03000000288903",
+    "all_techniques": [
+      "T0828"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0828__loss_productivity__iec104_setpoint_spam": {
+    "id": "T0828__loss_productivity__iec104_setpoint_spam",
+    "title": "Loss of Productivity and Revenue — IEC-104 setpoint/regulating spam (T0828)",
+    "technique": "T0828",
+    "tech_name": "Loss of Productivity and Revenue",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "setpoint_float",
+      "regulating_step",
+      "setpoint_scale"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0828"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0830__aitm__opcua_relay_session": {
+    "id": "T0830__aitm__opcua_relay_session",
+    "title": "Adversary-in-the-Middle — OPC UA session relay (T0830)",
+    "technique": "T0830",
+    "tech_name": "Adversary-in-the-Middle",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "relay_session",
+      "read_value"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0830"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0830__aitm__dnp3_spoof_response": {
+    "id": "T0830__aitm__dnp3_spoof_response",
+    "title": "Adversary-in-the-Middle — DNP3 unsolicited response injection (T0830)",
+    "technique": "T0830",
+    "tech_name": "Adversary-in-the-Middle",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "read",
+      "spoof_response"
+    ],
+    "header_hex": "0564642ec4000a00",
+    "all_techniques": [
+      "T0830"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0834__native_api__s7comm_cotp_raw": {
+    "id": "T0834__native_api__s7comm_cotp_raw",
+    "title": "Native API — Raw COTP/S7 API call (T0834 precursor)",
+    "technique": "T0834",
+    "tech_name": "Native API",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "native_cotp",
+      "szl_read"
+    ],
+    "header_hex": "030000120be00000",
+    "all_techniques": [
+      "T0834"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0835__manipulate_io_image__modbus_input_write": {
+    "id": "T0835__manipulate_io_image__modbus_input_write",
+    "title": "Manipulate I/O Image — Modbus input register poisoning (T0835)",
+    "technique": "T0835",
+    "tech_name": "Manipulate I/O Image",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "input_write"
+    ],
+    "header_hex": "a0ae000000280b03",
+    "all_techniques": [
+      "T0835"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0835__manipulate_io_image__s7comm_io_override": {
+    "id": "T0835__manipulate_io_image__s7comm_io_override",
+    "title": "Manipulate I/O Image — S7comm direct process image write (T0835)",
+    "technique": "T0835",
+    "tech_name": "Manipulate I/O Image",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "read_inputs",
+      "write_inputs",
+      "write_outputs"
+    ],
+    "header_hex": "0300004102f08032",
+    "all_techniques": [
+      "T0835"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0837__loss_protection__modbus_relay_thresholds": {
+    "id": "T0837__loss_protection__modbus_relay_thresholds",
+    "title": "Loss of Protection — Modbus protection relay threshold raise (T0837)",
+    "technique": "T0837",
+    "tech_name": "Loss of Protection",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "protection_relay"
+    ],
+    "header_hex": "ef9c000000283003",
+    "all_techniques": [
+      "T0837"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0838__alarm_settings__modbus_threshold": {
+    "id": "T0838__alarm_settings__modbus_threshold",
+    "title": "Modify Alarm Settings — Modbus alarm register overwrite (T0838)",
+    "technique": "T0838",
+    "tech_name": "Modify Alarm Settings",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "alarm_threshold"
+    ],
+    "header_hex": "b3e3000000282d03",
+    "all_techniques": [
+      "T0838"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0838__alarm_settings__opcua_write_limit_node": {
+    "id": "T0838__alarm_settings__opcua_write_limit_node",
+    "title": "Modify Alarm Settings — OPC UA alarm limit node write (T0838)",
+    "technique": "T0838",
+    "tech_name": "Modify Alarm Settings",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "browse",
+      "write_alarm_node"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0838"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0838__alarm_settings__iec104_param_threshold": {
+    "id": "T0838__alarm_settings__iec104_param_threshold",
+    "title": "Modify Alarm Settings — IEC-104 parameter threshold modification (T0838)",
+    "technique": "T0838",
+    "tech_name": "Modify Alarm Settings",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "interrogation",
+      "param_threshold",
+      "param_mv"
+    ],
+    "header_hex": "6830e2a400006401",
+    "all_techniques": [
+      "T0838"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0839__module_firmware__s7comm_module_flash": {
+    "id": "T0839__module_firmware__s7comm_module_flash",
+    "title": "Module Firmware — S7comm CP module firmware flash (T0839)",
+    "technique": "T0839",
+    "tech_name": "Module Firmware",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "cpu_stop",
+      "firmware_module"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0839"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0839__module_firmware__enip_io_module": {
+    "id": "T0839__module_firmware__enip_io_module",
+    "title": "Module Firmware — EtherNet/IP I/O module firmware flash (T0839)",
+    "technique": "T0839",
+    "tech_name": "Module Firmware",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "get_identity",
+      "register_session",
+      "firmware_update"
+    ],
+    "header_hex": "6f003800304c4900",
+    "all_techniques": [
+      "T0839"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0853__scripting_dnp3_file_push__dnp3": {
+    "id": "T0853__scripting_dnp3_file_push__dnp3",
+    "title": "Scripting — DNP3 file transfer script push (T0853 precursor)",
+    "technique": "T0853",
+    "tech_name": "Scripting",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "file_open"
+    ],
+    "header_hex": "05646435c4000300",
+    "all_techniques": [
+      "T0853"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0856__spoof_reporting__iec104_meas_inject": {
+    "id": "T0856__spoof_reporting__iec104_meas_inject",
+    "title": "Spoof Reporting Message — IEC-104 false measurement injection (T0856)",
+    "technique": "T0856",
+    "tech_name": "Spoof Reporting Message",
+    "proto": "iec104",
+    "proto_label": "IEC 60870-5-104",
+    "port": 2404,
+    "styles": [
+      "startdt",
+      "meas_inject",
+      "meas_sp"
+    ],
+    "header_hex": "6804070000004943",
+    "all_techniques": [
+      "T0856"
+    ],
+    "all_protos": [
+      "iec104"
+    ]
+  },
+  "T0856__spoof_reporting__opcua_write_sensor": {
+    "id": "T0856__spoof_reporting__opcua_write_sensor",
+    "title": "Spoof Reporting Message — OPC UA sensor value write (T0856)",
+    "technique": "T0856",
+    "tech_name": "Spoof Reporting Message",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "spoof_value",
+      "write_value"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0856"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0856__spoof_reporting__dnp3_unsolicited": {
+    "id": "T0856__spoof_reporting__dnp3_unsolicited",
+    "title": "Spoof Reporting Message — DNP3 unsolicited response injection (T0856)",
+    "technique": "T0856",
+    "tech_name": "Spoof Reporting Message",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "read",
+      "spoof_response"
+    ],
+    "header_hex": "0564642ec4000800",
+    "all_techniques": [
+      "T0856"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0857__system_firmware__s7comm_full_flash": {
+    "id": "T0857__system_firmware__s7comm_full_flash",
+    "title": "System Firmware — S7comm full CPU firmware replacement (T0857)",
+    "technique": "T0857",
+    "tech_name": "System Firmware",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "cpu_stop",
+      "szl_clear",
+      "firmware_full",
+      "cpu_start_cold"
+    ],
+    "header_hex": "0300004302f08032",
+    "all_techniques": [
+      "T0857"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0857__system_firmware__enip_plc_reimage": {
+    "id": "T0857__system_firmware__enip_plc_reimage",
+    "title": "System Firmware — EtherNet/IP PLC full firmware re-image (T0857)",
+    "technique": "T0857",
+    "tech_name": "System Firmware",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "get_identity",
+      "firmware_update",
+      "boot_firmware"
+    ],
+    "header_hex": "6f003800e6bf7300",
+    "all_techniques": [
+      "T0857"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0858__change_opmode__s7comm_mode_cycle": {
+    "id": "T0858__change_opmode__s7comm_mode_cycle",
+    "title": "Change Operating Mode — S7comm PLC mode cycle (T0858)",
+    "technique": "T0858",
+    "tech_name": "Change Operating Mode",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "program_mode",
+      "cpu_stop",
+      "cpu_start_warm"
+    ],
+    "header_hex": "0300004602f08032",
+    "all_techniques": [
+      "T0858"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0858__change_opmode__dnp3_restart": {
+    "id": "T0858__change_opmode__dnp3_restart",
+    "title": "Change Operating Mode — DNP3 warm/cold restart (T0858)",
+    "technique": "T0858",
+    "tech_name": "Change Operating Mode",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "warm_restart",
+      "cold_restart"
+    ],
+    "header_hex": "0564642ac4000500",
+    "all_techniques": [
+      "T0858"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0864__transient_asset__profinet_new_device": {
+    "id": "T0864__transient_asset__profinet_new_device",
+    "title": "Transient Cyber Asset — PROFINET device announcement (T0864 precursor)",
+    "technique": "T0864",
+    "tech_name": "Transient Cyber Asset",
+    "proto": "profinet_dcp",
+    "proto_label": "PROFINET DCP",
+    "port": null,
+    "styles": [
+      "hello",
+      "identify",
+      "get_ip"
+    ],
+    "header_hex": "fefd04000b8a7083",
+    "all_techniques": [
+      "T0864"
+    ],
+    "all_protos": [
+      "profinet_dcp"
+    ]
+  },
+  "T0866__exploit_remote_services__s7comm_malformed": {
+    "id": "T0866__exploit_remote_services__s7comm_malformed",
+    "title": "Exploitation of Remote Services — S7comm malformed parameter exploit (T0866)",
+    "technique": "T0866",
+    "tech_name": "Exploitation of Remote Services",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "malformed_param"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0866"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0866__exploit_remote_services__enip_ucmm": {
+    "id": "T0866__exploit_remote_services__enip_ucmm",
+    "title": "Exploitation of Remote Services — EtherNet/IP UCMM exploit (T0866)",
+    "technique": "T0866",
+    "tech_name": "Exploitation of Remote Services",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "list_identity",
+      "malformed_ucmm"
+    ],
+    "header_hex": "6300220000000000",
+    "all_techniques": [
+      "T0866"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0867__lateral_tool__s7comm_db_transfer": {
+    "id": "T0867__lateral_tool__s7comm_db_transfer",
+    "title": "Lateral Tool Transfer — S7comm DB as payload staging area (T0867)",
+    "technique": "T0867",
+    "tech_name": "Lateral Tool Transfer",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "tool_transfer_db"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0867"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0867__lateral_tool__enip_cip_transfer": {
+    "id": "T0867__lateral_tool__enip_cip_transfer",
+    "title": "Lateral Tool Transfer — EtherNet/IP CIP file object transfer (T0867)",
+    "technique": "T0867",
+    "tech_name": "Lateral Tool Transfer",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "tool_transfer"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0867"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0869__c2_protocol__modbus_register_beacon": {
+    "id": "T0869__c2_protocol__modbus_register_beacon",
+    "title": "C2 via Standard Application Layer — Modbus register beacon port 502 (T0869)",
+    "technique": "T0869",
+    "tech_name": "Standard Application Layer Protocol",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "c2_beacon"
+    ],
+    "header_hex": "268300000028e106",
+    "all_techniques": [
+      "T0869"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0869__c2_protocol__enip_cip_beacon": {
+    "id": "T0869__c2_protocol__enip_cip_beacon",
+    "title": "C2 via Standard Application Layer — EtherNet/IP CIP tag write beacon (T0869)",
+    "technique": "T0869",
+    "tech_name": "Standard Application Layer Protocol",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "c2_beacon"
+    ],
+    "header_hex": "6f003c00380b6100",
+    "all_techniques": [
+      "T0869"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0869__c2_protocol__opcua_write_custom_node": {
+    "id": "T0869__c2_protocol__opcua_write_custom_node",
+    "title": "C2 via Standard Application Layer — OPC UA node write beacon (T0869)",
+    "technique": "T0869",
+    "tech_name": "Standard Application Layer Protocol",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "c2_write"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0869"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0872__indicator_removal__dnp3_clear_events": {
+    "id": "T0872__indicator_removal__dnp3_clear_events",
+    "title": "Indicator Removal — DNP3 event buffer clear (T0872 precursor)",
+    "technique": "T0872",
+    "tech_name": "Indicator Removal on Host",
+    "proto": "dnp3",
+    "proto_label": "DNP3",
+    "port": 20000,
+    "styles": [
+      "clear_events"
+    ],
+    "header_hex": "0564642ac4000600",
+    "all_techniques": [
+      "T0872"
+    ],
+    "all_protos": [
+      "dnp3"
+    ]
+  },
+  "T0877__io_image__s7comm_full_read": {
+    "id": "T0877__io_image__s7comm_full_read",
+    "title": "I/O Image — S7comm full process image read (T0877)",
+    "technique": "T0877",
+    "tech_name": "I/O Image",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "read_inputs",
+      "read_outputs",
+      "read_db"
+    ],
+    "header_hex": "0300004102f08032",
+    "all_techniques": [
+      "T0877"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0877__io_image__enip_assembly_read": {
+    "id": "T0877__io_image__enip_assembly_read",
+    "title": "I/O Image — EtherNet/IP assembly object full I/O read (T0877)",
+    "technique": "T0877",
+    "tech_name": "I/O Image",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "register_session",
+      "assembly_read",
+      "read_tag"
+    ],
+    "header_hex": "6500260000000000",
+    "all_techniques": [
+      "T0877"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0877__io_image__modbus_full_scan": {
+    "id": "T0877__io_image__modbus_full_scan",
+    "title": "I/O Image — Modbus full coil + register I/O scan (T0877)",
+    "technique": "T0877",
+    "tech_name": "I/O Image",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "io_image_read",
+      "read_coils",
+      "read_discrete",
+      "read_input"
+    ],
+    "header_hex": "d4ef00000028d603",
+    "all_techniques": [
+      "T0877"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0880__loss_safety__modbus_sis_disable": {
+    "id": "T0880__loss_safety__modbus_sis_disable",
+    "title": "Loss of Safety — Modbus SIS inhibit/bypass write (T0880)",
+    "technique": "T0880",
+    "tech_name": "Loss of Safety",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "sis_disable"
+    ],
+    "header_hex": "c1b4000000280203",
+    "all_techniques": [
+      "T0880"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0880__loss_safety__s7comm_failsafe_zero": {
+    "id": "T0880__loss_safety__s7comm_failsafe_zero",
+    "title": "Loss of Safety — S7comm F-CPU failsafe zero-write (T0880)",
+    "technique": "T0880",
+    "tech_name": "Loss of Safety",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "write_failsafe"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0880"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0884__connection_proxy__opcua_relay_session": {
+    "id": "T0884__connection_proxy__opcua_relay_session",
+    "title": "Connection Proxy — OPC UA session relay proxy (T0884)",
+    "technique": "T0884",
+    "tech_name": "Connection Proxy",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "relay_session",
+      "browse"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0884"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0885__commonly_used_port__modbus_c2_502": {
+    "id": "T0885__commonly_used_port__modbus_c2_502",
+    "title": "Commonly Used Port — C2 over Modbus port 502 (T0885)",
+    "technique": "T0885",
+    "tech_name": "Commonly Used Port",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "c2_beacon"
+    ],
+    "header_hex": "19de000000289c06",
+    "all_techniques": [
+      "T0885"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0885__commonly_used_port__enip_c2_44818": {
+    "id": "T0885__commonly_used_port__enip_c2_44818",
+    "title": "Commonly Used Port — C2 over EtherNet/IP port 44818 (T0885)",
+    "technique": "T0885",
+    "tech_name": "Commonly Used Port",
+    "proto": "enip",
+    "proto_label": "EtherNet/IP CIP",
+    "port": 44818,
+    "styles": [
+      "c2_beacon"
+    ],
+    "header_hex": "6f003c0036215200",
+    "all_techniques": [
+      "T0885"
+    ],
+    "all_protos": [
+      "enip"
+    ]
+  },
+  "T0886__remote_services__opcua_session_pivot": {
+    "id": "T0886__remote_services__opcua_session_pivot",
+    "title": "Remote Services — OPC UA session-based lateral access (T0886)",
+    "technique": "T0886",
+    "tech_name": "Remote Services",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "get_endpoints",
+      "open_session",
+      "activate_session",
+      "browse",
+      "read_value"
+    ],
+    "header_hex": "4d53474673000000",
+    "all_techniques": [
+      "T0886"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0886__remote_services__s7comm_lateral_pivot": {
+    "id": "T0886__remote_services__s7comm_lateral_pivot",
+    "title": "Remote Services — S7comm lateral pivot to secondary PLC (T0886)",
+    "technique": "T0886",
+    "tech_name": "Remote Services",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "lateral_pivot",
+      "read_db"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0886"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0889__modify_program__s7comm_upload_dl": {
+    "id": "T0889__modify_program__s7comm_upload_dl",
+    "title": "Modify Program — S7comm upload → modify OB1 → re-download (T0889)",
+    "technique": "T0889",
+    "tech_name": "Modify Program",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "szl_read",
+      "upload_req",
+      "upload_block",
+      "upload_end",
+      "modify_ob1",
+      "modified_ob1_dl"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0889"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0890__priv_esc__opcua_privilege_escalate": {
+    "id": "T0890__priv_esc__opcua_privilege_escalate",
+    "title": "Exploitation for Privilege Escalation — OPC UA role escalation (T0890 precursor)",
+    "technique": "T0890",
+    "tech_name": "Exploitation for Privilege Escalation",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "privilege_escalate",
+      "write_value"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0890"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0891__hardcoded_creds__s7comm_factory_pin": {
+    "id": "T0891__hardcoded_creds__s7comm_factory_pin",
+    "title": "Hardcoded Credentials — S7comm factory/hardcoded PIN (T0891)",
+    "technique": "T0891",
+    "tech_name": "Hardcoded Credentials",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "hardcoded_creds",
+      "szl_read",
+      "read_db"
+    ],
+    "header_hex": "0300003f02f08032",
+    "all_techniques": [
+      "T0891"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  },
+  "T0891__hardcoded_creds__opcua_embedded_password": {
+    "id": "T0891__hardcoded_creds__opcua_embedded_password",
+    "title": "Hardcoded Credentials — OPC UA embedded hardcoded password (T0891)",
+    "technique": "T0891",
+    "tech_name": "Hardcoded Credentials",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "get_endpoints",
+      "activate_hardcoded",
+      "browse"
+    ],
+    "header_hex": "4d53474673000000",
+    "all_techniques": [
+      "T0891"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0892__change_credential__modbus_register_write": {
+    "id": "T0892__change_credential__modbus_register_write",
+    "title": "Change Credential — Modbus credential register overwrite (T0892)",
+    "technique": "T0892",
+    "tech_name": "Change Credential",
+    "proto": "modbus",
+    "proto_label": "Modbus/TCP",
+    "port": 502,
+    "styles": [
+      "read_holding",
+      "credential_write"
+    ],
+    "header_hex": "f8c1000000284b03",
+    "all_techniques": [
+      "T0892"
+    ],
+    "all_protos": [
+      "modbus"
+    ]
+  },
+  "T0892__change_credential__opcua_password_change": {
+    "id": "T0892__change_credential__opcua_password_change",
+    "title": "Change Credential — OPC UA ChangePassword (T0892)",
+    "technique": "T0892",
+    "tech_name": "Change Credential",
+    "proto": "opcua",
+    "proto_label": "OPC UA",
+    "port": 4840,
+    "styles": [
+      "open_session",
+      "change_password"
+    ],
+    "header_hex": "4f504e46bb000000",
+    "all_techniques": [
+      "T0892"
+    ],
+    "all_protos": [
+      "opcua"
+    ]
+  },
+  "T0895__autorun_image__s7comm_sdb0_download": {
+    "id": "T0895__autorun_image__s7comm_sdb0_download",
+    "title": "Autorun Image — S7comm SDB0 startup configuration download (T0895)",
+    "technique": "T0895",
+    "tech_name": "Autorun Image",
+    "proto": "s7comm",
+    "proto_label": "S7comm (ISO-TSAP)",
+    "port": 102,
+    "styles": [
+      "program_mode",
+      "download_sdb0",
+      "download_end",
+      "szl_clear"
+    ],
+    "header_hex": "0300004602f08032",
+    "all_techniques": [
+      "T0895"
+    ],
+    "all_protos": [
+      "s7comm"
+    ]
+  }
+}

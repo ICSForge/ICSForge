@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, Flask, jsonify, render_template, request, session, redirect, url_for
+from flask import Blueprint, Flask, jsonify, render_template, request, session, redirect, url_for, Response, stream_with_context, send_file
 
 from icsforge import __version__
 from icsforge.live.sender import send_scenario_live
@@ -406,7 +406,6 @@ def matrix():
 @web.route("/soc")
 def soc():
     """SOC Mode removed — redirect to Sender."""
-    from flask import redirect
     return redirect(url_for("web.sender"))
 def _soc_removed():
     return render_template(
@@ -460,12 +459,16 @@ def api_receiver_overview():
         protos[p]=protos.get(p,0)+1
     top_tech=sorted(techniques.items(), key=lambda x: x[1], reverse=True)[:8]
     top_proto=sorted(protos.items(), key=lambda x: x[1], reverse=True)[:8]
+    # L2 listener status — set by receiver main() when thread starts
+    l2_iface = os.environ.get("ICSFORGE_L2_IFACE", "").strip()
     return jsonify({
         "total": total,
-        "last_ts": (last.get("ts") if last else None),
+        "last_ts": (last.get("@timestamp") or last.get("ts")) if last else None,
         "last_run_id": (last.get("run_id") if last else None),
         "top_techniques": top_tech,
-        "top_protocols": top_proto
+        "top_protocols": top_proto,
+        "l2_iface": l2_iface or None,
+        "l2_active": bool(l2_iface),
     })
 
 @web.route("/api/receipts")
@@ -750,6 +753,7 @@ def api_send():
                 "sent": res["sent"],
                 "events": gt.get("events"),
                 "pcap": gt.get("pcap"),
+                "warnings": res.get("warnings", []),
             }
         )
     except Exception as e:
@@ -1116,7 +1120,6 @@ def api_download():
     real = os.path.realpath(path)
     if not real.startswith(os.path.realpath(safe_root)):
         return jsonify({"error": "blocked"}), 403
-    from flask import send_file
     return send_file(real, as_attachment=True)
 
 
@@ -1598,3 +1601,302 @@ def api_download_pcap(fname):
     if not p.exists() or not str(p).startswith(str(base)):
         return {"error": "pcap not found"}, 404
     return send_file(str(p), as_attachment=True, download_name=p.name)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# v0.30 — Campaign Playbook, Coverage Report, Detection Export
+# ═══════════════════════════════════════════════════════════════════════════
+
+import io, zipfile, threading
+
+_CAMPAIGNS_BUILTIN = os.path.join(os.path.dirname(__file__), "..", "campaigns", "builtin.yml")
+_CAMPAIGN_THREADS: dict = {}   # run_id -> CampaignRunner (for abort)
+
+
+# ── Page routes ────────────────────────────────────────────────────────────
+
+@web.route("/campaigns")
+def campaigns():
+    import yaml as _yaml
+    try:
+        doc   = _yaml.safe_load(Path(_CAMPAIGNS_BUILTIN).read_text(encoding="utf-8")) or {}
+        camps = doc.get("campaigns") or {}
+    except Exception:
+        camps = {}
+    return render_template(
+        "campaigns.html",
+        title="Campaign Playbooks",
+        subtitle="Multi-scenario sequenced attack campaigns",
+        env_label="CAMPAIGNS",
+        version=__version__,
+        campaigns=camps,
+    )
+
+
+@web.route("/report")
+def report():
+    return render_template(
+        "report.html",
+        title="Coverage Report",
+        subtitle="ATT&CK for ICS detection coverage analysis",
+        env_label="REPORT",
+        version=__version__,
+    )
+
+
+# ── Campaign APIs ──────────────────────────────────────────────────────────
+
+@web.route("/api/campaigns/list")
+def api_campaigns_list():
+    import yaml as _yaml
+    try:
+        doc   = _yaml.safe_load(Path(_CAMPAIGNS_BUILTIN).read_text(encoding="utf-8")) or {}
+        camps = doc.get("campaigns") or {}
+        out = []
+        for cid, c in camps.items():
+            out.append({
+                "id":          cid,
+                "name":        c.get("name", cid),
+                "description": c.get("description", ""),
+                "icon":        c.get("icon", "⛓"),
+                "estimated_duration": c.get("estimated_duration", ""),
+                "step_count":  len(c.get("steps", [])),
+                "steps":       [{"scenario": s["scenario"], "delay": s.get("delay","0s"),
+                                 "label": s.get("label", s["scenario"])}
+                                for s in c.get("steps", [])],
+            })
+        return jsonify({"campaigns": out})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@web.route("/api/campaigns/run", methods=["POST"])
+def api_campaigns_run():
+    """
+    Start a campaign and stream SSE events back to the client.
+    POST body: {campaign_id, dst_ip, iface?, timeout?}
+    Returns: text/event-stream of JSON event lines.
+    """
+    import yaml as _yaml
+    data        = request.get_json(force=True) or {}
+    campaign_id = (data.get("campaign_id") or "").strip()
+    dst_ip      = (data.get("dst_ip") or "").strip()
+    iface       = (data.get("iface") or "").strip() or None
+    timeout     = float(data.get("timeout") or 2.0)
+
+    if not campaign_id:
+        return jsonify({"error": "campaign_id required"}), 400
+    if not dst_ip:
+        return jsonify({"error": "dst_ip required"}), 400
+
+    try:
+        doc   = _yaml.safe_load(Path(_CAMPAIGNS_BUILTIN).read_text(encoding="utf-8")) or {}
+        camps = doc.get("campaigns") or {}
+        camp  = camps.get(campaign_id)
+        if not camp:
+            return jsonify({"error": f"campaign '{campaign_id}' not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    rr       = _repo_root()
+    sc_path  = MATRIX_SINGLETON_PACK
+    out_dir  = os.path.join(rr, "out")
+
+    queue:  list[dict] = []
+    done    = threading.Event()
+
+    def _progress(ev: dict):
+        queue.append(ev)
+
+    from icsforge.campaigns.runner import CampaignRunner
+    runner = CampaignRunner(
+        campaign=camp,
+        scenarios_path=sc_path,
+        dst_ip=dst_ip,
+        iface=iface,
+        timeout=timeout,
+        outdir=out_dir,
+        progress_cb=_progress,
+    )
+
+    def _run():
+        try:
+            runner.run()
+        except Exception as e:
+            queue.append({"event": "error", "message": str(e)})
+        finally:
+            done.set()
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    _CAMPAIGN_THREADS[runner.run_id] = runner
+
+    def _generate():
+        import time
+        yield f"data: {json.dumps({'event':'started','run_id':runner.run_id})}\n\n"
+        while not done.is_set() or queue:
+            while queue:
+                ev = queue.pop(0)
+                yield f"data: {json.dumps(ev)}\n\n"
+            time.sleep(0.15)
+        yield f"data: {json.dumps({'event':'stream_end'})}\n\n"
+
+    return Response(
+        stream_with_context(_generate()),
+        content_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@web.route("/api/campaigns/abort", methods=["POST"])
+def api_campaigns_abort():
+    run_id = (request.get_json(force=True) or {}).get("run_id", "")
+    runner = _CAMPAIGN_THREADS.get(run_id)
+    if runner:
+        runner.stop()
+        return jsonify({"aborted": True})
+    return jsonify({"error": "run not found"}), 404
+
+
+# ── Coverage Report APIs ───────────────────────────────────────────────────
+
+@web.route("/api/report/generate", methods=["POST"])
+def api_report_generate():
+    """Generate a self-contained HTML coverage report."""
+    data     = request.get_json(force=True) or {}
+    run_id   = (data.get("run_id") or "").strip() or None
+    executed = data.get("executed_techniques") or []
+    detected = data.get("detected_techniques") or []
+    gaps     = data.get("gap_techniques")     or []
+    scenario = (data.get("scenario_name") or "").strip() or None
+    meta     = data.get("meta") or {}
+
+    # If run_id given, try to auto-derive executed techniques from events
+    if run_id and not executed:
+        try:
+            reg    = _registry()
+            run    = reg.get_run(run_id) or {}
+            events_path = None
+            for a in run.get("artifacts", []):
+                if a.get("kind") == "events":
+                    events_path = a.get("path")
+                    break
+            if events_path and os.path.exists(events_path):
+                with open(events_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            j = json.loads(line.strip())
+                            t = j.get("mitre.ics.technique")
+                            if t and t not in executed:
+                                executed.append(t)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    try:
+        from icsforge.reports.coverage import generate_report
+        html = generate_report(
+            run_id=run_id,
+            scenario_name=scenario,
+            executed_techniques=executed,
+            detected_techniques=detected,
+            gap_techniques=gaps,
+            protocol_gaps=data.get("protocol_gaps") or [],
+            meta=meta,
+        )
+        return jsonify({"html": html, "executed": len(executed),
+                        "detected": len(detected), "gaps": len(gaps)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@web.route("/api/report/download", methods=["POST"])
+def api_report_download():
+    """Return the coverage report HTML as a file download."""
+    data     = request.get_json(force=True) or {}
+    run_id   = (data.get("run_id") or "").strip() or None
+    executed = data.get("executed_techniques") or []
+    detected = data.get("detected_techniques") or []
+    gaps     = data.get("gap_techniques")     or []
+    meta     = data.get("meta") or {}
+    try:
+        from icsforge.reports.coverage import generate_report
+        html = generate_report(run_id=run_id, scenario_name=None,
+                               executed_techniques=executed,
+                               detected_techniques=detected,
+                               gap_techniques=gaps, meta=meta)
+        buf = io.BytesIO(html.encode("utf-8"))
+        buf.seek(0)
+        fname = f"icsforge_coverage_{run_id or 'report'}.html"
+        return send_file(buf, mimetype="text/html",
+                                as_attachment=True, download_name=fname)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Detection Rule Export APIs ─────────────────────────────────────────────
+
+@web.route("/api/detections/preview")
+def api_detections_preview():
+    """Return metadata about available detection rules."""
+    try:
+        from icsforge.detections.generator import generate_all
+        r = generate_all()
+        return jsonify({"count": r["count"], "techniques": r["techniques"]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@web.route("/api/detections/download")
+def api_detections_download():
+    """
+    Download all detection rules as a zip containing:
+      - icsforge_ics.rules   (Suricata)
+      - sigma/               (one YAML per scenario)
+      - README.txt
+    """
+    technique_filter = request.args.getlist("technique") or None
+    include_marker   = request.args.get("marker", "1") != "0"
+
+    try:
+        from icsforge.detections.generator import generate_all
+        r = generate_all(technique_filter=technique_filter,
+                         include_marker=include_marker)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    readme = f"""ICSForge v{__version__} Detection Rules
+Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+Techniques: {len(r['techniques'])} | Rules: {r['count']}
+
+FILES
+  icsforge_ics.rules   — Suricata rules (SID range 9800000–9800{r['count']-1:03d})
+  sigma/               — Sigma rules (one YAML per scenario)
+
+SURICATA USAGE
+  suricata -r your_capture.pcap -S icsforge_ics.rules -l /tmp/logs/
+
+SIGMA USAGE
+  sigma convert -t splunk sigma/T0812__default_creds__s7comm_blank_auth.yml
+
+NOTE
+  Rules match the ICSForge marker bytes (ICSFORGE_SYNTH|) to fire ONLY
+  on synthetic traffic. Remove the marker content match for production
+  use against real OT traffic (download with ?marker=0).
+
+ATT&CK for ICS techniques covered:
+  {chr(10).join('  ' + t for t in r['techniques'])}
+"""
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("icsforge_ics.rules", r["suricata"])
+        zf.writestr("README.txt", readme)
+        for sc_id, sigma_text in r["sigma"].items():
+            zf.writestr(f"sigma/{sc_id}.yml", sigma_text)
+    buf.seek(0)
+
+    fname = f"icsforge_detection_rules_v{__version__}.zip"
+    return send_file(buf, mimetype="application/zip",
+                            as_attachment=True, download_name=fname)
