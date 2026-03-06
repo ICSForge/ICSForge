@@ -1,8 +1,10 @@
 # ICSForge PROFINET DCP payload builder — upgraded for ATT&CK realism
 # PROFINET Discovery and Configuration Protocol (DCP) over Ethernet
 import random, struct
-from icsforge.core import MARKER
+
 from .common import ether_frame
+from icsforge.core import MARKER
+
 
 # DCP Service IDs
 SVC_ID = {
@@ -85,7 +87,12 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
     """
     rnd = random.random
     xid = random.randint(0, 0xFFFFFFFF)
-    mb  = run_marker
+    # Accept both bytes (from build_marker) and str (from marker_bytes/tests)
+    if isinstance(run_marker, str):
+        from .common import marker_bytes
+        mb = marker_bytes(run_marker)
+    else:
+        mb = run_marker
 
     if style == "identify":
         # Identify request with All suboption — T0840/T0888

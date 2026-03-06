@@ -1,0 +1,82 @@
+# ICSForge v0.4 — Full-Stack Demo
+# Usage: docker compose up
+# Sender UI:   http://localhost:8080
+# Receiver UI: http://localhost:8081
+# Suricata:    reads from shared pcap volume
+
+services:
+  sender:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ICSFORGE_UI_MODE=sender
+      - ICSFORGE_LOG_LEVEL=INFO
+    volumes:
+      - shared-data:/app/out
+      - shared-pcaps:/app/pcaps
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.10
+    command: ["python", "-m", "icsforge.web.app", "--host", "0.0.0.0", "--port", "8080"]
+
+  receiver:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.receiver
+    ports:
+      - "8081:8080"
+      - "502:502"
+      - "20000:20000"
+      - "102:102"
+      - "2404:2404"
+      - "4840:4840"
+      - "44818:44818"
+      - "47808:47808/udp"
+    environment:
+      - ICSFORGE_UI_MODE=receiver
+      - ICSFORGE_LOG_LEVEL=INFO
+    volumes:
+      - receiver-data:/app/receiver_out
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.20
+    command: >
+      python -m icsforge.receiver.receiver
+      --bind 0.0.0.0
+      --web-host 0.0.0.0
+      --web-port 8080
+
+  suricata:
+    image: jasonish/suricata:latest
+    volumes:
+      - shared-pcaps:/pcaps:ro
+      - suricata-logs:/var/log/suricata
+      - ./docker/suricata.yaml:/etc/suricata/suricata.yaml:ro
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.30
+    command: >
+      suricata -c /etc/suricata/suricata.yaml
+      --af-packet=eth0
+      -l /var/log/suricata
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    profiles:
+      - suricata  # opt-in: docker compose --profile suricata up
+
+volumes:
+  shared-data:
+  shared-pcaps:
+  receiver-data:
+  suricata-logs:
+
+networks:
+  icsforge-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

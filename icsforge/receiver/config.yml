@@ -9,6 +9,10 @@ listen:
   opcua:   4840
   enip:    44818
 
+# UDP listeners — protocols using datagram transport
+udp_listen:
+  bacnet:  47808
+
 # Layer-2 listeners (Linux AF_PACKET, requires root/CAP_NET_RAW)
 # Set the interface name for the NIC connected to the OT network segment.
 # Leave blank or comment out to disable (PROFINET traffic will not be captured).

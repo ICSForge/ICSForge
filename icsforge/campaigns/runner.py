@@ -17,15 +17,11 @@ Campaign YAML format:
       - scenario: T0889__modify_program__s7comm_upload_dl
         delay: 60s
 """
-from __future__ import annotations
-import json, os, time, uuid, threading
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Callable
+import json, os, time, threading
 
-import yaml
-
-from icsforge.core import parse_interval
+from icsforge.core import parse_interval, generate_run_id
 
 
 def _now() -> str:
@@ -52,7 +48,7 @@ class CampaignRunner:
         self.timeout      = timeout
         self.outdir       = outdir
         self.progress_cb  = progress_cb or (lambda ev: None)
-        self.run_id       = uuid.uuid4().hex[:12]
+        self.run_id       = generate_run_id()
         self.events_path  = os.path.join(outdir, f"campaign_{self.run_id}_events.jsonl")
         self._stop        = threading.Event()
 

@@ -2,14 +2,20 @@
 ICSForge live sender — pure Python, zero scapy dependency.
 
 TCP protocols: standard socket.create_connection()
+UDP protocols: standard socket.SOCK_DGRAM (BACnet/IP)
 PROFINET DCP:  AF_PACKET raw socket (Linux only; requires root/CAP_NET_RAW)
 """
-from __future__ import annotations
-import socket, struct, time, uuid
 from typing import List
+import socket, struct, time
+
 import yaml
-from icsforge.core import build_marker, parse_interval
-from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp
+
+from icsforge.core import build_marker, parse_interval, generate_run_id
+from icsforge.log import get_logger
+from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp, bacnet
+
+
+log = get_logger(__name__)
 
 TCP_PROTOS = {
     "modbus":       (502,   modbus.build_payload),
@@ -18,6 +24,10 @@ TCP_PROTOS = {
     "iec104":       (2404,  iec104.build_payload),
     "opcua":        (4840,  opcua.build_payload),
     "enip":         (44818, enip.build_payload),
+}
+
+UDP_PROTOS = {
+    "bacnet":       (47808, bacnet.build_payload),
 }
 
 # PROFINET DCP multicast MAC (DCP Identify / Hello target)
@@ -34,6 +44,16 @@ def _tcp_send(dst_ip: str, port: int, payload: bytes, timeout: float):
     finally:
         try: s.shutdown(socket.SHUT_RDWR)
         except Exception: pass
+        s.close()
+
+
+def _udp_send(dst_ip: str, port: int, payload: bytes, timeout: float):
+    """Send a UDP datagram. Used for BACnet/IP (port 47808)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(timeout)
+    try:
+        s.sendto(payload, (dst_ip, port))
+    finally:
         s.close()
 
 
@@ -99,7 +119,7 @@ def send_scenario_live(
     if not sc:
         raise ValueError(f"Scenario '{scenario_name}' not found")
 
-    run_id = uuid.uuid4().hex[:12]
+    run_id = generate_run_id()
     sent   = 0
     errors = []
 
@@ -131,20 +151,33 @@ def send_scenario_live(
                     time.sleep(interval)
 
         else:
-            if proto not in TCP_PROTOS:
+            if proto in TCP_PROTOS:
+                port, builder = TCP_PROTOS[proto]
+                for _ in range(count):
+                    marker  = build_marker(run_id, tech, step_id)
+                    payload = builder(marker, style=style)
+                    try:
+                        _tcp_send(dst_ip, port, payload, timeout)
+                        sent += 1
+                    except Exception as e:
+                        errors.append(f"step {idx} {proto} TCP send: {e}")
+                    if interval:
+                        time.sleep(interval)
+            elif proto in UDP_PROTOS:
+                port, builder = UDP_PROTOS[proto]
+                for _ in range(count):
+                    marker  = build_marker(run_id, tech, step_id)
+                    payload = builder(marker, style=style)
+                    try:
+                        _udp_send(dst_ip, port, payload, timeout)
+                        sent += 1
+                    except Exception as e:
+                        errors.append(f"step {idx} {proto} UDP send: {e}")
+                    if interval:
+                        time.sleep(interval)
+            else:
                 errors.append(f"step {idx}: unsupported proto '{proto}' (skipped)")
                 continue
-            port, builder = TCP_PROTOS[proto]
-            for _ in range(count):
-                marker  = build_marker(run_id, tech, step_id)
-                payload = builder(marker, style=style)
-                try:
-                    _tcp_send(dst_ip, port, payload, timeout)
-                    sent += 1
-                except Exception as e:
-                    errors.append(f"step {idx} {proto} TCP send: {e}")
-                if interval:
-                    time.sleep(interval)
 
     result: dict = {"run_id": run_id, "dst_ip": dst_ip, "sent": sent}
     if errors:

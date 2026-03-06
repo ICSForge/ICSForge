@@ -1,11 +1,11 @@
 """
 ICSForge v0.30 Coverage Report Generator
 """
-from __future__ import annotations
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import json
+
 
 _MATRIX_PATH = Path(__file__).parent.parent / "data" / "ics_attack_matrix.json"
 

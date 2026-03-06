@@ -1,6 +1,8 @@
 # ICSForge EtherNet/IP (CIP over ENIP encapsulation) — upgraded for ATT&CK realism
 import struct, random
+
 from .common import marker_bytes
+
 
 # ENIP encapsulation commands
 CMD = {

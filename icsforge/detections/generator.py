@@ -8,11 +8,11 @@ Rules are based on:
   3. ICSForge marker prefix (ICSFORGE_SYNTH|) for precise lab validation
   4. ATT&CK technique ID embedded in rule metadata
 """
-from __future__ import annotations
-import json, re
 from datetime import date
 from pathlib import Path
 from typing import Any
+import json, re
+
 
 _SPECS_PATH = Path(__file__).parent.parent / "data" / "detection_rules_specs.json"
 
@@ -117,7 +117,7 @@ def sigma_rule(spec: dict, include_marker: bool = True) -> str:
         f"    Protocol: {proto_label} (port {port})\n"
         f"references:\n"
         f"    - https://attack.mitre.org/techniques/ics/{tech}/\n"
-        f"author: ICSForge v0.30\n"
+        f"author: ICSForge v0.42\n"
         f"date: {today}\n"
         f"tags:\n"
         f"    - attack.ics.{tech.lower()}\n"
@@ -153,10 +153,10 @@ def generate_all(
                  if v.get("technique") in technique_filter}
 
     suricata_lines = [
-        f"# ICSForge v0.30 — ATT&CK for ICS Detection Rules",
+        "# ICSForge v0.42 — ATT&CK for ICS Detection Rules",
         f"# Generated {date.today().isoformat()}",
         f"# {len(specs)} rules | SID range {_SID_BASE}–{_SID_BASE+len(specs)-1}",
-        f"# Usage: suricata -r capture.pcap -S icsforge_ics.rules",
+        "# Usage: suricata -r capture.pcap -S icsforge_ics.rules",
         "",
     ]
     sigma_rules: dict[str, str] = {}

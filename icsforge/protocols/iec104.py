@@ -1,6 +1,8 @@
 # ICSForge IEC-60870-5-104 payload builder — upgraded for ATT&CK realism
 import struct, random
+
 from .common import marker_bytes
+
 
 # IEC-104 ASDU Type IDs
 TYPE = {

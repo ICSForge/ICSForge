@@ -3,304 +3,313 @@ ICSForge Receiver — pure Python, zero scapy dependency.
 
 TCP listeners   : SOCK_STREAM accept loop per protocol/port
 L2 PROFINET DCP : AF_PACKET raw socket with promiscuous mode (Linux only)
+
+v0.4: thread-safe receipt writing, structured logging, proper error handling.
 """
-from __future__ import annotations
-import fcntl, os, json, socket, struct, threading, hashlib, time
+
 from datetime import datetime, timezone
+import fcntl
+import hashlib
+import json
+import os
+import socket
+import struct
+import threading
+import time
+
 import yaml
+
 from icsforge.core import marker_prefix
+from icsforge.log import get_logger
+
+
+log = get_logger(__name__)
+
+# ── Thread-safe receipt writer ────────────────────────────────────────
+
+_receipt_lock = threading.Lock()
+
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
-def _ensure_dir(p: str):
-    os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
 
 def _parse_marker(payload: bytes) -> dict:
     pref = marker_prefix()
     i = payload.find(pref)
     if i < 0:
         return {"marker_found": False}
-    tail  = payload[i:]
+    tail = payload[i:]
     parts = tail.split(b"|", 3)
     run_id = parts[1].decode("utf-8", "ignore") if len(parts) > 1 else ""
-    tech   = parts[2].decode("utf-8", "ignore") if len(parts) > 2 else ""
-    step   = parts[3].decode("utf-8", "ignore") if len(parts) > 3 else ""
+    tech = parts[2].decode("utf-8", "ignore") if len(parts) > 2 else ""
+    step = parts[3].decode("utf-8", "ignore") if len(parts) > 3 else ""
     return {"marker_found": True, "run_id": run_id, "technique": tech, "step": step}
 
+
 def _write_receipt(path: str, ev: dict):
-    _ensure_dir(path)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+    """Thread-safe append of a receipt event to JSONL file."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    line = json.dumps(ev, ensure_ascii=False) + "\n"
+    with _receipt_lock:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(line)
+            f.flush()
 
 
 # ── TCP listener (Modbus/DNP3/S7comm/IEC-104/OPC-UA/EtherNet-IP) ─────
 
-def _handle_tcp(conn: socket.socket, addr, proto: str, port: int,
-                receipts_path: str, max_payload: int):
+
+def _handle_tcp(conn, addr, proto, port, receipts_path, max_payload):
     try:
         data = conn.recv(max_payload)
         if not data:
             return
         meta = _parse_marker(data)
         ev = {
-            "@timestamp":     _now(),
+            "@timestamp": _now(),
             "receiver.proto": proto,
-            "receiver.port":  port,
-            "src_ip":         addr[0],
-            "src_port":       addr[1],
-            "bytes":          len(data),
-            "sha256":         hashlib.sha256(data).hexdigest(),
+            "receiver.port": port,
+            "src_ip": addr[0],
+            "src_port": addr[1],
+            "bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
             **meta,
         }
         _write_receipt(receipts_path, ev)
+        if meta.get("marker_found"):
+            log.debug("Receipt: %s %s from %s:%d", proto, meta.get("technique", "?"), addr[0], addr[1])
+    except Exception as e:
+        log.debug("TCP handler error (%s:%d): %s", proto, port, e)
     finally:
-        try: conn.close()
-        except Exception: pass
+        try:
+            conn.close()
+        except Exception:
+            pass
 
-def _tcp_server(bind_ip: str, port: int, proto: str,
-                receipts_path: str, max_payload: int):
+
+def _tcp_server(bind_ip, port, proto, receipts_path, max_payload):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((bind_ip, port))
+    try:
+        s.bind((bind_ip, port))
+    except OSError as e:
+        log.error("Cannot bind %s TCP on %s:%d — %s", proto, bind_ip, port, e)
+        return
     s.listen(200)
-    print(f"[ICSForge Receiver] {proto} TCP listening on {bind_ip}:{port}")
+    log.info("%s TCP listening on %s:%d", proto, bind_ip, port)
     while True:
-        c, a = s.accept()
-        threading.Thread(
-            target=_handle_tcp,
-            args=(c, a, proto, port, receipts_path, max_payload),
-            daemon=True,
-        ).start()
+        try:
+            c, a = s.accept()
+            threading.Thread(
+                target=_handle_tcp,
+                args=(c, a, proto, port, receipts_path, max_payload),
+                daemon=True,
+            ).start()
+        except Exception as e:
+            log.error("TCP accept error (%s:%d): %s", proto, port, e)
+
+
+# ── UDP listener (BACnet/IP) ──────────────────────────────────────────
+
+
+def _udp_server(bind_ip, port, proto, receipts_path, max_payload):
+    """UDP datagram listener. Used for BACnet/IP (port 47808)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind((bind_ip, port))
+    except OSError as e:
+        log.error("Cannot bind %s UDP on %s:%d — %s", proto, bind_ip, port, e)
+        return
+    log.info("%s UDP listening on %s:%d", proto, bind_ip, port)
+    while True:
+        try:
+            data, addr = s.recvfrom(max_payload)
+            if not data:
+                continue
+            meta = _parse_marker(data)
+            ev = {
+                "@timestamp": _now(),
+                "receiver.proto": proto,
+                "receiver.port": port,
+                "receiver.transport": "udp",
+                "src_ip": addr[0],
+                "src_port": addr[1],
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+                **meta,
+            }
+            _write_receipt(receipts_path, ev)
+            if meta.get("marker_found"):
+                log.debug("Receipt: %s %s from %s:%d (UDP)", proto, meta.get("technique", "?"), addr[0], addr[1])
+        except Exception as e:
+            log.error("UDP recv error (%s:%d): %s", proto, port, e)
 
 
 # ── L2 PROFINET DCP listener ──────────────────────────────────────────
-#
-# PROFINET DCP uses ethertype 0x8892, multicast dst MAC 01:0e:cf:00:00:00.
-# Three requirements for reliable capture:
-#
-# 1. AF_PACKET / SOCK_RAW with ETH_P_ALL in the constructor (htons'd)
-# 2. Promiscuous mode ON the interface — without it, the NIC hardware
-#    filter drops 01:0e:cf:00:00:00 frames because the host hasn't joined
-#    that multicast group via IGMP/MLD.
-# 3. Use recvfrom() not recv() so we get the (ifname, proto, pkttype, ...)
-#    tuple and can confirm the frame arrived on the right interface and
-#    filter out PACKET_OUTGOING (pkttype=4) loopback copies.
 
-_ETH_P_PN_DCP   = 0x8892
-_ETH_P_ALL      = 0x0003
-
-# ioctl constants for promiscuous mode
-_SIOCGIFFLAGS   = 0x8913
-_SIOCSIFFLAGS   = 0x8914
-_IFF_PROMISC    = 0x100
-
-# PACKET_ADD_MEMBERSHIP / PACKET_MR_PROMISC constants
-_SOL_PACKET            = 263
+_ETH_P_PN_DCP = 0x8892
+_ETH_P_ALL = 0x0003
+_SOL_PACKET = 263
 _PACKET_ADD_MEMBERSHIP = 1
-_PACKET_DROP_MEMBERSHIP= 2
-_PACKET_MR_PROMISC     = 1
+_PACKET_DROP_MEMBERSHIP = 2
+_PACKET_MR_PROMISC = 1
 
 
-def _get_ifindex(iface: str) -> int:
-    """Return the interface index for iface via SIOCGIFINDEX ioctl."""
+def _get_ifindex(iface):
     SIOCGIFINDEX = 0x8933
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         ifreq = struct.pack("16sI", iface.encode()[:15], 0)
-        res   = fcntl.ioctl(s.fileno(), SIOCGIFINDEX, ifreq)
+        res = fcntl.ioctl(s.fileno(), SIOCGIFINDEX, ifreq)
         return struct.unpack("16sI", res)[1]
     finally:
         s.close()
 
 
-def _set_promisc(sock: socket.socket, iface: str, enable: bool):
-    """
-    Enable/disable promiscuous mode on *iface* for *sock* via
-    PACKET_ADD_MEMBERSHIP / PACKET_DROP_MEMBERSHIP setsockopt.
-
-    This is the per-socket approach: promisc is automatically released
-    when the socket is closed, so we don't need to clean up manually.
-    """
+def _set_promisc(sock, iface, enable):
     try:
         ifindex = _get_ifindex(iface)
-        # struct packet_mreq: mr_ifindex(4) + mr_type(2) + mr_alen(2) + mr_address(8)
         mreq = struct.pack("IHH8s", ifindex, _PACKET_MR_PROMISC, 0, b"\x00" * 8)
-        opt  = _PACKET_ADD_MEMBERSHIP if enable else _PACKET_DROP_MEMBERSHIP
-        sock.setsockopt(_SOL_PACKET, opt, mreq)  # type: ignore[attr-defined]
+        opt = _PACKET_ADD_MEMBERSHIP if enable else _PACKET_DROP_MEMBERSHIP
+        sock.setsockopt(_SOL_PACKET, opt, mreq)
     except Exception as e:
-        # Non-fatal: log and continue. Frame may still arrive if switch forwards it.
-        print(f"[ICSForge Receiver] promisc {'enable' if enable else 'disable'} "
-              f"on '{iface}': {e}")
+        log.warning("promisc %s on '%s': %s", "enable" if enable else "disable", iface, e)
 
 
-def _parse_profinet_frame(raw: bytes) -> dict | None:
-    """
-    Parse a raw Ethernet frame captured by AF_PACKET SOCK_RAW.
-    Returns a receipt dict if it's a PROFINET DCP frame (ethertype 0x8892)
-    containing an ICSForge marker; None otherwise.
-    """
+def _parse_profinet_frame(raw):
     if len(raw) < 14:
         return None
     ethertype = struct.unpack(">H", raw[12:14])[0]
     if ethertype != _ETH_P_PN_DCP:
         return None
-
     src_mac = ":".join(f"{b:02x}" for b in raw[6:12])
     dst_mac = ":".join(f"{b:02x}" for b in raw[0:6])
     payload = raw[14:]
-    meta    = _parse_marker(payload)
-
+    meta = _parse_marker(payload)
     return {
-        "@timestamp":        _now(),
-        "receiver.proto":    "profinet_dcp",
-        "receiver.port":     0,
-        "receiver.l2":       True,
-        "src_mac":           src_mac,
-        "dst_mac":           dst_mac,
-        "bytes":             len(raw),
-        "sha256":            hashlib.sha256(raw).hexdigest(),
+        "@timestamp": _now(),
+        "receiver.proto": "profinet_dcp",
+        "receiver.port": 0,
+        "receiver.l2": True,
+        "src_mac": src_mac,
+        "dst_mac": dst_mac,
+        "bytes": len(raw),
+        "sha256": hashlib.sha256(raw).hexdigest(),
         **meta,
     }
 
 
-def _l2_profinet_listener(iface: str, receipts_path: str, max_payload: int):
-    """
-    Capture PROFINET DCP frames (ethertype 0x8892) on *iface*.
-
-    Uses AF_PACKET SOCK_RAW + ETH_P_ALL + promiscuous mode.
-    Promiscuous mode is required for multicast dst MAC 01:0e:cf:00:00:00.
-    Requires Linux + root/CAP_NET_RAW.
-    """
+def _l2_profinet_listener(iface, receipts_path, max_payload):
     if not hasattr(socket, "AF_PACKET"):
-        print("[ICSForge Receiver] PROFINET L2 listener skipped: "
-              "AF_PACKET not available (Linux only)")
+        log.warning("PROFINET L2 skipped: AF_PACKET not available (Linux only)")
         return
-
     try:
-        sock = socket.socket(
-            socket.AF_PACKET,           # type: ignore[attr-defined]
-            socket.SOCK_RAW,
-            socket.htons(_ETH_P_ALL),
-        )
+        sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(_ETH_P_ALL))
     except PermissionError:
-        print(f"[ICSForge Receiver] PROFINET L2 listener on '{iface}': "
-              "permission denied — run receiver as root or grant CAP_NET_RAW")
+        log.error("PROFINET L2 on '%s': permission denied — run as root or grant CAP_NET_RAW", iface)
         return
     except OSError as e:
-        print(f"[ICSForge Receiver] PROFINET L2 listener on '{iface}': {e}")
+        log.error("PROFINET L2 on '%s': %s", iface, e)
         return
-
-    # Bind to the specific interface
     try:
         sock.bind((iface, socket.htons(_ETH_P_ALL)))
     except OSError as e:
-        print(f"[ICSForge Receiver] PROFINET L2 bind to '{iface}': {e}")
+        log.error("PROFINET L2 bind to '%s': %s", iface, e)
         sock.close()
         return
 
-    # Enable promiscuous mode — REQUIRED to receive multicast 01:0e:cf:00:00:00
     _set_promisc(sock, iface, enable=True)
-
-    print(f"[ICSForge Receiver] profinet_dcp L2 listening on '{iface}' "
-          f"(ethertype 0x{_ETH_P_PN_DCP:04x}, promiscuous mode ON)")
+    log.info("profinet_dcp L2 listening on '%s' (ethertype 0x%04x, promiscuous ON)", iface, _ETH_P_PN_DCP)
 
     while True:
         try:
-            # recvfrom returns (data, (ifname, proto, pkttype, hatype, addr))
-            # pkttype: 0=HOST, 1=BROADCAST, 2=MULTICAST, 3=OTHERHOST, 4=OUTGOING
             raw, addr_info = sock.recvfrom(max_payload)
         except Exception:
             continue
-
         pkttype = addr_info[2] if len(addr_info) > 2 else 0
-        # Accept all pkttypes: 0=HOST, 1=BROADCAST, 2=MULTICAST, 3=OTHERHOST, 4=OUTGOING
-        # pkttype=4 (OUTGOING) occurs when sender and receiver run on the same machine —
-        # we must NOT filter it or same-host testing never logs profinet frames.
-
         ev = _parse_profinet_frame(raw)
         if ev is not None:
             ev["pkttype"] = pkttype
             try:
                 _write_receipt(receipts_path, ev)
-            except Exception:
-                pass
+            except Exception as e:
+                log.error("Failed to write PROFINET receipt: %s", e)
 
 
 # ── Entry point ───────────────────────────────────────────────────────
 
+
 def main():
     import argparse
+    from icsforge.log import configure as configure_logging
+
     ap = argparse.ArgumentParser(prog="icsforge-receiver")
-    ap.add_argument("--web",       action="store_true", default=True)
-    ap.add_argument("--web-host",  default="0.0.0.0")
-    ap.add_argument("--web-port",  type=int, default=8080)
-    ap.add_argument("--host",      dest="web_host",
-                    help="Alias for --web-host")
-    ap.add_argument("--port",      dest="web_port", type=int,
-                    help="Alias for --web-port")
-    ap.add_argument("--no-web",    action="store_true")
-    ap.add_argument("--config",    default=os.path.join(os.path.dirname(__file__), "config.yml"))
-    ap.add_argument("--bind",      default="0.0.0.0")
-    ap.add_argument("--l2-iface",  default="",
-                    help="Interface for PROFINET DCP L2 capture (e.g. eth0)")
+    ap.add_argument("--web", action="store_true", default=True)
+    ap.add_argument("--web-host", default="0.0.0.0")
+    ap.add_argument("--web-port", type=int, default=8080)
+    ap.add_argument("--host", dest="web_host", help="Alias for --web-host")
+    ap.add_argument("--port", dest="web_port", type=int, help="Alias for --web-port")
+    ap.add_argument("--no-web", action="store_true")
+    ap.add_argument("--config", default=os.path.join(os.path.dirname(__file__), "config.yml"))
+    ap.add_argument("--bind", default="0.0.0.0")
+    ap.add_argument("--l2-iface", default="", help="Interface for PROFINET DCP L2 capture")
+    ap.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
+    ap.add_argument("--log-file", default=None, help="Log to file in addition to stderr")
     args = ap.parse_args()
+
+    configure_logging(level=args.log_level, log_file=args.log_file)
 
     if getattr(args, "web_host", None) and args.bind == "0.0.0.0":
         args.bind = args.web_host
 
-    cfg           = yaml.safe_load(open(args.config, "r", encoding="utf-8")) or {}
-    listen        = cfg.get("listen") or {}
-    l2_listen     = cfg.get("l2_listen") or {}
+    with open(args.config, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+    listen = cfg.get("listen") or {}
+    udp_listen = cfg.get("udp_listen") or {}
+    l2_listen = cfg.get("l2_listen") or {}
     receipts_path = (cfg.get("log") or {}).get("receipts", "./receiver_out/receipts.jsonl")
-    max_payload   = int((cfg.get("safety") or {}).get("max_payload", 8192))
+    max_payload = int((cfg.get("safety") or {}).get("max_payload", 8192))
 
     # TCP listeners
     for proto, port in listen.items():
-        threading.Thread(
-            target=_tcp_server,
-            args=(args.bind, int(port), proto, receipts_path, max_payload),
-            daemon=True,
-        ).start()
+        threading.Thread(target=_tcp_server, args=(args.bind, int(port), proto, receipts_path, max_payload), daemon=True).start()
 
-    # L2 PROFINET listener
+    # UDP listeners (BACnet/IP)
+    for proto, port in udp_listen.items():
+        threading.Thread(target=_udp_server, args=(args.bind, int(port), proto, receipts_path, max_payload), daemon=True).start()
+
     pn_iface = (args.l2_iface or "").strip() or (l2_listen.get("profinet_dcp") or "").strip()
     if pn_iface:
-        os.environ["ICSFORGE_L2_IFACE"] = pn_iface   # expose to web UI status check
-        threading.Thread(
-            target=_l2_profinet_listener,
-            args=(pn_iface, receipts_path, max(max_payload, 1518)),
-            daemon=True,
-        ).start()
+        os.environ["ICSFORGE_L2_IFACE"] = pn_iface
+        threading.Thread(target=_l2_profinet_listener, args=(pn_iface, receipts_path, max(max_payload, 1518)), daemon=True).start()
     else:
-        print("[ICSForge Receiver] PROFINET L2 listener disabled "
-              "(set l2_listen.profinet_dcp in config.yml or pass --l2-iface eth0)")
+        log.info("PROFINET L2 listener disabled (set l2_listen.profinet_dcp or --l2-iface)")
 
-    print("[ICSForge Receiver] receipts:", receipts_path)
+    log.info("Receipts: %s", receipts_path)
 
     enable_web = (not args.no_web) and args.web
     if enable_web:
         try:
-            from threading import Thread
             from icsforge.web.app import main as web_main
 
             def _run_web():
                 os.environ["ICSFORGE_UI_MODE"] = "receiver"
                 import sys
-                sys.argv = ["icsforge-web", "--host", args.web_host,
-                            "--port", str(args.web_port)]
+                sys.argv = ["icsforge-web", "--host", args.web_host, "--port", str(args.web_port)]
                 web_main()
 
-            Thread(target=_run_web, daemon=True).start()
-            print(f"[ICSForge Receiver] Web UI: http://{args.web_host}:{args.web_port}")
+            threading.Thread(target=_run_web, daemon=True).start()
+            log.info("Web UI: http://%s:%d", args.web_host, args.web_port)
         except Exception as e:
-            print("[ICSForge Receiver] Web UI failed to start:", e)
+            log.error("Web UI failed to start: %s", e)
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n[ICSForge Receiver] stopped.")
+        log.info("Receiver stopped.")
 
 
 if __name__ == "__main__":

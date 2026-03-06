@@ -1,7 +1,35 @@
 # ICSForge DNP3 payload builder — upgraded for ATT&CK for ICS realism
 # Implements real DNP3/TCP link+transport+application layer framing
+# CRC-16/DNP computed per IEEE 1815 / IEC 62351-5
 import random, struct
+
 from .common import marker_bytes
+
+
+# ── DNP3 CRC-16 lookup table (polynomial 0x3D65, bit-reversed) ───────
+# Ref: IEEE 1815-2012 Annex E, identical to IEC 62351-5
+_CRC_TABLE = [0] * 256
+
+def _build_crc_table():
+    poly = 0xA6BC  # reversed 0x3D65
+    for i in range(256):
+        crc = i
+        for _ in range(8):
+            if crc & 1:
+                crc = (crc >> 1) ^ poly
+            else:
+                crc >>= 1
+        _CRC_TABLE[i] = crc & 0xFFFF
+
+_build_crc_table()
+
+
+def dnp3_crc(data: bytes) -> int:
+    """Compute DNP3 CRC-16 over *data* (returns 16-bit int, little-endian on wire)."""
+    crc = 0x0000
+    for b in data:
+        crc = (_CRC_TABLE[(crc ^ b) & 0xFF] ^ (crc >> 8)) & 0xFFFF
+    return (~crc) & 0xFFFF
 
 # Application Function Codes (IEC 60870-5 / IEEE 1815)
 FC = {
@@ -41,15 +69,17 @@ OBJ = {
 
 
 def _link_header(dest: int, src: int, payload_len: int) -> bytes:
-    """DNP3 link layer header (10 bytes) + CRC placeholder."""
+    """DNP3 link layer header (10 bytes) with valid CRC-16.
+
+    Format: 0x0564 | length | ctrl | dest(LE) | src(LE) | CRC(LE)
+    The CRC covers bytes 0-7 (start, length, ctrl, dest, src).
+    """
     ctrl = 0xC4  # PRM=1, FCB=0, FCV=0, FC=4 (USER_DATA_NO_ACK)
-    # length = 5 (link header remainder) + len(transport+app+data)
     length = 5 + payload_len
     length = max(5, min(255, length))
-    hdr = struct.pack("<BBHH", 0x64, length, ctrl, dest & 0xFFFF)
-    src_b = struct.pack("<H", src & 0xFFFF)
-    crc = b"\x00\x00"  # placeholder; real CRC-16/DNP omitted for speed
-    return b"\x05\x64" + hdr + src_b + crc
+    hdr_body = struct.pack("<BBBBHH", 0x05, 0x64, length, ctrl, dest & 0xFFFF, src & 0xFFFF)
+    crc = dnp3_crc(hdr_body)
+    return hdr_body + struct.pack("<H", crc)
 
 
 def _app_layer(fc_byte: int, obj_group: int = 60, obj_var: int = 1,
@@ -163,7 +193,7 @@ def build_payload(marker: str, style: str = "read", **kwargs) -> bytes:
         dest = 0xFFFF  # override destination to broadcast
         app  = _app_layer(FC["direct_operate"], obj_group=10, obj_var=2, count=1, extra=mb)
         lhdr = _link_header(dest, src, len(app))
-        return lhdr + app + b"\x00\x00"
+        return lhdr + app + struct.pack("<H", dnp3_crc(app))
 
     elif style == "file_open":
         # FC open_file — T0807 Command-Line Interface (file operations on outstation)
@@ -190,5 +220,5 @@ def build_payload(marker: str, style: str = "read", **kwargs) -> bytes:
         app = _app_layer(FC["read"], obj_group=60, obj_var=1, count=1, extra=mb)
 
     lhdr = _link_header(dest, src, len(app))
-    crc_data = b"\x00\x00"
-    return lhdr + app + crc_data
+    data_crc = struct.pack("<H", dnp3_crc(app))
+    return lhdr + app + data_crc

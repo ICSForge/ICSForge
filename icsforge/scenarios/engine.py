@@ -1,17 +1,17 @@
-from __future__ import annotations
 
+from typing import Any, Dict, List, Optional
 import json
 import os
 import time
-from typing import Any, Dict, List, Optional
 
 import yaml
 
-from icsforge.core import event_base, is_allowed_dest, parse_interval, write_pcap, build_marker
-from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp
-from icsforge.protocols.common import tcp_packet, ether_frame
+from icsforge.core import event_base, parse_interval, write_pcap, build_marker
+from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp, bacnet
+from icsforge.protocols.common import tcp_packet, udp_packet, ether_frame
 
-# Payload builders (return bytes) + default destination ports
+
+# TCP payload builders (return bytes) + default destination ports
 PROTO_PAYLOADS = {
     "modbus": (502, modbus.build_payload),
     "dnp3": (20000, dnp3.build_payload),
@@ -19,6 +19,11 @@ PROTO_PAYLOADS = {
     "iec104": (2404, iec104.build_payload),
     "opcua": (4840, opcua.build_payload),
     "enip": (44818, enip.build_payload),
+}
+
+# UDP payload builders + default destination ports
+UDP_PAYLOADS = {
+    "bacnet": (47808, bacnet.build_payload),
 }
 
 def load_scenarios(scenario_path: str) -> Dict[str, Any]:
@@ -62,7 +67,7 @@ def run_scenario(
     rid = (run_id or "offline")
     events_path = os.path.join(events_dir, f"{rid}.jsonl")
     pcap_path = os.path.join(pcaps_dir, f"{rid}.pcap")
-    
+
     packets: List[Any] = []
 
     with open(events_path, "w", encoding="utf-8") as ef:
@@ -96,14 +101,23 @@ def run_scenario(
                             time.sleep(interval)
                 else:
                     pb = PROTO_PAYLOADS.get(proto)
-                    if not pb:
+                    upb = UDP_PAYLOADS.get(proto)
+                    if not pb and not upb:
                         raise ValueError(f"Unknown proto '{proto}'")
-                    dport, payload_builder = pb
-                    for _ in range(count):
-                        marker = build_marker(run_id, tech, step_id)
-                        packets.append(tcp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
-                        if interval:
-                            time.sleep(interval)
+                    if pb:
+                        dport, payload_builder = pb
+                        for _ in range(count):
+                            marker = build_marker(run_id, tech, step_id)
+                            packets.append(tcp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
+                            if interval:
+                                time.sleep(interval)
+                    elif upb:
+                        dport, payload_builder = upb
+                        for _ in range(count):
+                            marker = build_marker(run_id, tech, step_id)
+                            packets.append(udp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
+                            if interval:
+                                time.sleep(interval)
 
             # Always write ground-truth events
             for _ in range(count):

@@ -1,22 +1,26 @@
-from __future__ import annotations
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import List
+import collections
 import json
 import os
-import sys
+import secrets
 import subprocess
-import collections
-from collections import defaultdict
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+import sys
+import time
 
-from flask import Blueprint, Flask, jsonify, render_template, request, session, redirect, url_for, Response, stream_with_context, send_file
+from flask import Blueprint, Flask, jsonify, render_template, request, redirect, url_for, Response, stream_with_context, send_file
 
 from icsforge import __version__
-from icsforge.live.sender import send_scenario_live
-from icsforge.scenarios.engine import run_scenario
-from icsforge.reports.network_validation import build_network_validation_report
-from icsforge.state import RunRegistry, default_db_path
 from icsforge.detection.mapping import correlate_run
+from icsforge.live.sender import send_scenario_live
+from icsforge.log import get_logger
+from icsforge.reports.network_validation import build_network_validation_report
+from icsforge.scenarios.engine import run_scenario
+from icsforge.state import RunRegistry, default_db_path
+
+
+log = get_logger(__name__)
 
 # ATT&CK for ICS matrix data (bundled)
 MATRIX_JSON_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ics_attack_matrix.json")
@@ -60,8 +64,6 @@ def _guard_ui_mode():
             return redirect(url_for("web.receiver"))
         if ep == "web.index":
             return redirect(url_for("web.receiver"))
-
-
 
 
 def _registry():
@@ -117,7 +119,6 @@ def _canonical_scenarios_path() -> str:
     return str(Path(_repo_root()) / "icsforge" / "scenarios" / "scenarios.yml")
 
 
-
 def _tech_name(tid: str) -> str:
     try:
         mat = _load_matrix()
@@ -128,10 +129,6 @@ def _tech_name(tid: str) -> str:
     except Exception:
         pass
     return tid
-
-
-
-
 
 
 def _default_receipts_path() -> str:
@@ -157,8 +154,6 @@ def _default_pack() -> str | None:
     return _canonical_scenarios_path()
 
 
-
-
 def _list_profiles() -> List[str]:
     rr = _repo_root()
     pdir = os.path.join(rr, "icsforge", "profiles")
@@ -181,7 +176,6 @@ def _read_jsonl_tail(path: str, limit: int = 250) -> List[dict]:
             except Exception:
                 continue
     return items[-limit:]
-
 
 
 # Phase 4.3: run index (for SOC Mode)
@@ -402,7 +396,6 @@ def matrix():
     )
 
 
-
 @web.route("/soc")
 def soc():
     """SOC Mode removed — redirect to Sender."""
@@ -443,32 +436,74 @@ def sender():
     )
 
 
-
 @web.route("/api/receiver/overview")
 def api_receiver_overview():
     receipts_path = _default_receipts_path()
+    # Count total lines in the file without loading all into memory
+    total = 0
+    if os.path.exists(receipts_path):
+        with open(receipts_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    total += 1
+    # Load a capped tail for top-lists and run tracking
     items = _read_jsonl_tail(receipts_path, limit=2000)
-    total=len(items)
     last = items[-1] if items else None
-    techniques={}
-    protos={}
+    techniques = {}
+    protos = {}
+    runs = set()
     for r in items:
-        t=r.get("technique") or "unknown"
-        p=r.get("receiver.proto") or "unknown"
-        techniques[t]=techniques.get(t,0)+1
-        protos[p]=protos.get(p,0)+1
-    top_tech=sorted(techniques.items(), key=lambda x: x[1], reverse=True)[:8]
-    top_proto=sorted(protos.items(), key=lambda x: x[1], reverse=True)[:8]
-    # L2 listener status — set by receiver main() when thread starts
-    l2_iface = os.environ.get("ICSFORGE_L2_IFACE", "").strip()
+        t = r.get("technique") or "unknown"
+        p = r.get("receiver.proto") or "unknown"
+        techniques[t] = techniques.get(t, 0) + 1
+        protos[p]     = protos.get(p, 0) + 1
+        if r.get("run_id"):
+            runs.add(r["run_id"])
+    top_tech  = sorted(techniques.items(), key=lambda x: x[1], reverse=True)[:8]
+    top_proto = sorted(protos.items(),     key=lambda x: x[1], reverse=True)[:8]
+    l2_iface  = os.environ.get("ICSFORGE_L2_IFACE", "").strip()
     return jsonify({
-        "total": total,
-        "last_ts": (last.get("@timestamp") or last.get("ts")) if last else None,
-        "last_run_id": (last.get("run_id") if last else None),
-        "top_techniques": top_tech,
-        "top_protocols": top_proto,
-        "l2_iface": l2_iface or None,
-        "l2_active": bool(l2_iface),
+        "total":           total,
+        "runs":            len(runs),
+        "last_ts":         (last.get("@timestamp") or last.get("ts")) if last else None,
+        "last_run_id":     (last.get("run_id") if last else None),
+        "top_techniques":  top_tech,
+        "top_protocols":   top_proto,
+        "l2_iface":        l2_iface or None,
+        "l2_active":       bool(l2_iface),
+    })
+
+@web.route("/api/receiver/reset", methods=["POST"])
+def api_receiver_reset():
+    """
+    Archive receipts.jsonl → receipts_YYYYMMDDTHHMMSS.jsonl, then truncate.
+    Returns {archived: filename, lines: N} or {cleared: True, lines: 0} if empty.
+    """
+    receipts_path = _default_receipts_path()
+    if not os.path.exists(receipts_path):
+        return jsonify({"cleared": True, "lines": 0})
+    # Count lines before archiving
+    lines = 0
+    with open(receipts_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                lines += 1
+    if lines == 0:
+        return jsonify({"cleared": True, "lines": 0})
+    # Archive with timestamp
+    from datetime import datetime, timezone
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    archive_path = receipts_path.replace("receipts.jsonl", f"receipts_{ts}.jsonl")
+    try:
+        os.rename(receipts_path, archive_path)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    # Truncate (create empty file)
+    os.makedirs(os.path.dirname(receipts_path), exist_ok=True)
+    open(receipts_path, "w").close()
+    return jsonify({
+        "archived": os.path.basename(archive_path),
+        "lines":    lines,
     })
 
 @web.route("/api/receipts")
@@ -683,17 +718,12 @@ def api_send():
     pack = _canonical_scenarios_path()
     name = data.get("name")
     dst_ip = (data.get("dst_ip") or "").strip()
+    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
     outdir = (data.get("outdir") or "out").strip()
     allowlist = (data.get("allowlist") or "").strip()
     timeout = float(data.get("timeout") or 2.0)
     also_build_pcap = bool(data.get("also_build_pcap"))
-    timeout = float(data.get("timeout") or 2.0)
-    allowlist = (data.get("allowlist") or "").strip()
     iface = (data.get("iface") or "").strip() or None
-    outdir = (data.get("outdir") or "out").strip()
-    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
-    iface = (data.get("iface") or "").strip() or None
-    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
     if not name:
         return jsonify({"error": "Scenario name missing"}), 400
     if not dst_ip:
@@ -740,7 +770,7 @@ def api_send():
             "pack": pack,
             "events": gt.get("events"),
             "pcap": gt.get("pcap"),
-            "ts": datetime.utcnow().isoformat() + "Z",
+            "ts": datetime.now(timezone.utc).isoformat() + "Z",
         }
         try:
             _append_run_index(entry)
@@ -760,27 +790,36 @@ def api_send():
         return jsonify({"error": str(e)}), 500
 
 
-
-
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
+    app.secret_key = os.environ.get("ICSFORGE_SECRET_KEY", secrets.token_hex(32))
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.register_blueprint(web)
-    # Expose blueprint routes
     app.add_url_rule("/", endpoint="web.index", view_func=index)
     return app
 
 
 def main():
     import argparse
+    from icsforge.log import configure as configure_logging
+
     ap = argparse.ArgumentParser(prog="icsforge-web")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--log-level", default="INFO")
     args = ap.parse_args()
+
+    configure_logging(level="DEBUG" if args.debug else args.log_level)
 
     app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), "static"),
                 template_folder=os.path.join(os.path.dirname(__file__), "templates"))
+    app.secret_key = os.environ.get("ICSFORGE_SECRET_KEY", secrets.token_hex(32))
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.register_blueprint(web)
+    log.info("ICSForge Web UI v%s starting on %s:%d", __version__, args.host, args.port)
     app.run(host=args.host, port=args.port, debug=args.debug)
 
 
@@ -925,7 +964,7 @@ table{{width:100%;border-collapse:collapse}} td,th{{text-align:left;padding:8px;
 pre{{white-space:pre-wrap;background:#f2f4f8;border:1px solid #e5e7eb;border-radius:16px;padding:12px}}
 </style></head><body><div class='wrap'>
 <div class='card'><h1>ICSForge SOC Validation Report</h1>
-<div class='muted'>run_id: <span class='mono'>{run_id}</span> • scenario: {idx.get('scenario','-')} • generated: {datetime.utcnow().isoformat()}Z</div>
+<div class='muted'>run_id: <span class='mono'>{run_id}</span> • scenario: {idx.get('scenario','-')} • generated: {datetime.now(timezone.utc).isoformat()}Z</div>
 </div>
 
 <div class='card'><h2>Summary</h2>
@@ -954,7 +993,6 @@ PCAP: <span class='mono'>{idx.get('pcap','-')}</span></div>
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     Path(out_path).write_text(html, encoding="utf-8")
     return jsonify({"ok": True, "path": out_path, "download_url": f"/download?path={out_path}"})
-
 
 
 @web.route("/api/interfaces")
@@ -986,7 +1024,6 @@ def api_interfaces():
             pass
     ifaces = sorted(set(ifaces))
     return jsonify({"interfaces": ifaces})
-
 
 
 @web.route("/api/pcap/replay", methods=["POST"])
@@ -1022,7 +1059,6 @@ def api_pcap_replay():
         return jsonify({"ok": True, "sent": sent})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 def _save_run_index(items: List[dict]) -> None:
@@ -1195,7 +1231,7 @@ def api_technique_send():
             "pack": MATRIX_SINGLETON_PACK,
             "events": gt.get("events"),
             "pcap": gt.get("pcap"),
-            "ts": datetime.utcnow().isoformat() + "Z",
+            "ts": datetime.now(timezone.utc).isoformat() + "Z",
         }
         try:
             _append_run_index(entry)
@@ -1205,8 +1241,6 @@ def api_technique_send():
         return jsonify({"ok": True, "run_id": res["run_id"], "sent": res.get("sent"), "events": gt.get("events"), "pcap": gt.get("pcap")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
 
 
 @web.route("/api/generate_offline", methods=["POST"])
@@ -1224,7 +1258,7 @@ def api_generate_offline():
 
     try:
         gt = run_scenario(pack, name, outdir, dst_ip=dst_ip, src_ip=src_ip, run_id=run_id, build_pcap=build_pcap)
-        entry = {"run_id": gt.get("run_id") or run_id or "offline", "scenario": name, "pack": pack, "events": gt.get("events"), "pcap": gt.get("pcap"), "ts": datetime.utcnow().isoformat()+"Z"}
+        entry = {"run_id": gt.get("run_id") or run_id or "offline", "scenario": name, "pack": pack, "events": gt.get("events"), "pcap": gt.get("pcap"), "ts": datetime.now(timezone.utc).isoformat()+"Z"}
         try:
             _append_run_index(entry)
         except Exception:
@@ -1332,7 +1366,7 @@ def api_health():
 
     return jsonify({
         "ok": True,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "repo_root": rr,
         "scenario_pack_count": len(packs),
         "scenario_packs": packs,
@@ -1457,7 +1491,7 @@ def api_correlate_run():
     with open(events_path, "r", encoding="utf-8") as f:
         for line in f:
             line=line.strip()
-            if not line: 
+            if not line:
                 continue
             try:
                 j=json.loads(line)
@@ -1562,7 +1596,7 @@ def api_matrix_status():
     for tac in mat.get("tactics", []):
         for tech in tac.get("techniques", []):
             tid = tech.get("id")
-            if not tid: 
+            if not tid:
                 continue
             cls = support.get(tid, {}).get("class","unknown")
             # A technique is precursor if support says so AND it's not classified as fully runnable
@@ -1867,7 +1901,7 @@ def api_detections_download():
         return jsonify({"error": str(e)}), 500
 
     readme = f"""ICSForge v{__version__} Detection Rules
-Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
 Techniques: {len(r['techniques'])} | Rules: {r['count']}
 
 FILES

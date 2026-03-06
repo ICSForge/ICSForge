@@ -1,7 +1,7 @@
-from __future__ import annotations
+from datetime import datetime, timezone
+from typing import Tuple
 import os, json, sqlite3, hashlib, zipfile
-from typing import Any, Dict, List, Tuple
-from datetime import datetime
+
 
 def default_db_path(repo_root: str) -> str:
     out_dir = os.path.join(repo_root, "out")
@@ -58,7 +58,7 @@ class RunRegistry:
             c.executescript(SCHEMA_SQL)
 
     def upsert_run(self, run_id: str, **fields):
-        created_ts = fields.pop("created_ts", None) or datetime.utcnow().isoformat()+"Z"
+        created_ts = fields.pop("created_ts", None) or datetime.now(timezone.utc).isoformat()+"Z"
         meta = fields.pop("meta", None) or {}
         meta_json = json.dumps(meta, separators=(",",":"))
         with self._conn() as c:
@@ -98,7 +98,7 @@ class RunRegistry:
         with self._conn() as c:
             c.execute("""INSERT INTO artifacts(run_id,kind,path,sha256,bytes,created_ts)
                          VALUES(?,?,?,?,?,?)""", (
-                run_id, kind, path, sha, size, datetime.utcnow().isoformat()+"Z"
+                run_id, kind, path, sha, size, datetime.now(timezone.utc).isoformat()+"Z"
             ))
 
     def list_runs(self, limit: int = 50):

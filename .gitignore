@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+htmlcov/
+coverage.xml
+.coverage
+
+# ICSForge runtime artifacts
+out/pcaps/*.pcap
+out/events/*.jsonl
+out/runs.db
+out/run_index.json
+receiver_out/
+*.pcap
+
+# OS
+.DS_Store
+Thumbs.db

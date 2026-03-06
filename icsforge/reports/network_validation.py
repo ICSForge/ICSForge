@@ -1,6 +1,6 @@
-from __future__ import annotations
-import json
 from collections import defaultdict
+import json
+
 
 def _load_jsonl(path: str):
     with open(path,"r",encoding="utf-8") as f:

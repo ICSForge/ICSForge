@@ -1,7 +1,9 @@
 # ICSForge S7comm payload builder — upgraded for ATT&CK for ICS realism
 # TPKT (RFC1006) + COTP + S7comm proper PDU structure
 import random, struct
+
 from .common import marker_bytes
+
 
 # S7comm ROSCTR (PDU types)
 ROSCTR_JOB     = 0x01  # Request (master → PLC)

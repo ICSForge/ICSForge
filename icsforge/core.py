@@ -5,10 +5,14 @@ write_pcap()   : struct-based pcap writer, LINKTYPE_ETHERNET (1)
 replay_pcap()  : sends TCP payloads from PCAP via raw sockets (scapy optional)
 build_marker() : on-wire correlation marker bytes
 """
-from __future__ import annotations
 
-import json, os, time, socket, ipaddress, random, struct
 from datetime import datetime, timezone
+import json, os, time, socket, ipaddress, random, struct
+
+from icsforge.log import get_logger as _get_logger
+
+
+_log = _get_logger(__name__)
 
 TEST_NETS = [
     ipaddress.ip_network("127.0.0.0/8"),
@@ -89,13 +93,13 @@ def _send_http(url: str, event: dict):
     try:
         import requests
         requests.post(url, json=event, timeout=3)
-    except Exception:
-        pass
+    except Exception as e:
+        _log.warning("HTTP output to %s failed: %s", url, e)
 
 def _send_syslog(host: str, port: int, event: dict):
     if not is_allowed_dest(host):
         raise ValueError("Syslog blocked: host must be loopback/TEST-NET.")
-    msg = f"<134>{datetime.utcnow():%b %d %H:%M:%S} icsforge app: {json.dumps(event, separators=(',',':'), ensure_ascii=False)}"
+    msg = f"<134>{datetime.now(timezone.utc):%b %d %H:%M:%S} icsforge app: {json.dumps(event, separators=(',',':'), ensure_ascii=False)}"
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.sendto(msg.encode("utf-8"), (host, port))
@@ -138,24 +142,29 @@ def event_base(technique: str | None, source: str, **fields) -> dict:
     return ev
 
 # ── Pure-Python pcap writer (LINKTYPE_ETHERNET) ───────────────────────
-def write_pcap(packets: list, out_path: str) -> int:
+def write_pcap(packets: list, out_path: str, base_interval_ms: float = 50.0) -> int:
     """
     Write a list of raw-bytes packets to a pcap file.
 
     All packets are written as Ethernet frames (LINKTYPE_ETHERNET = 1).
-    tcp_packet() and ether_frame() in protocols/common.py both return
-    complete Ethernet frames, so no wrapping is needed here.
+    Timestamps include realistic jitter (±30% of base_interval_ms) to avoid
+    the uniform-spacing pattern that flags synthetic PCAPs.
     """
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     base_ts = time.time()
+    rnd = random.Random(42)  # deterministic jitter for reproducibility
+    current_ts = base_ts
     with open(out_path, "wb") as f:
         f.write(_PCAP_GLOBAL_HDR)
         for i, pkt in enumerate(packets):
-            raw     = bytes(pkt) if not isinstance(pkt, bytes) else pkt
-            ts_sec  = int(base_ts) + i // 1000
-            ts_usec = (i % 1000) * 1000
+            raw = bytes(pkt) if not isinstance(pkt, bytes) else pkt
+            ts_sec = int(current_ts)
+            ts_usec = int((current_ts - ts_sec) * 1_000_000)
             f.write(struct.pack("<IIII", ts_sec, ts_usec, len(raw), len(raw)))
             f.write(raw)
+            # Add jitter: base interval ± 30%
+            jitter = base_interval_ms * (0.7 + rnd.random() * 0.6) / 1000.0
+            current_ts += jitter
     return len(packets)
 
 
@@ -222,6 +231,34 @@ def replay_pcap(pcap_path: str, dst_ip: str, interval: float = 0.05) -> int:
                 time.sleep(interval)
 
     return sent
+
+# ── Run ID generation ────────────────────────────────────────────────
+_NATO = [
+    "ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT",
+    "GOLF", "HOTEL", "INDIA", "JULIET", "KILO", "LIMA",
+    "MIKE", "NOVEMBER", "OSCAR", "PAPA", "QUEBEC", "ROMEO",
+    "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY", "XRAY",
+    "YANKEE", "ZULU",
+]
+
+def generate_run_id() -> str:
+    """
+    Human-readable run ID: YYYY-MM-DD-NATO-NN
+    e.g. 2026-03-05-BRAVO-07
+
+    Sortable by date, memorable by word, 00-99 handles same-second collisions.
+    Legacy hex IDs (12-char alphanumeric) remain valid everywhere — they are
+    displayed with a 'legacy' badge in the dashboard but never rejected.
+    """
+    date  = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    word  = random.choice(_NATO)
+    num   = random.randint(0, 99)
+    return f"{date}-{word}-{num:02d}"
+
+def is_legacy_run_id(run_id: str) -> bool:
+    """Return True for old hex run IDs (12 lowercase hex chars)."""
+    import re
+    return bool(re.fullmatch(r"[0-9a-f]{12}", run_id or ""))
 
 # ── On-wire correlation marker ────────────────────────────────────────
 def build_marker(run_id: str | None, technique: str | None = None, step: str | None = None) -> bytes:

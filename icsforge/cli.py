@@ -1,25 +1,28 @@
-from __future__ import annotations
 
+from pathlib import Path
+from typing import List
 import argparse
 import json
 import os
+import signal
+import subprocess
 import sys
 import tempfile
 import time
-import subprocess
-import signal
-from typing import List
 
-from icsforge.scenarios.engine import run_scenario
 from icsforge.live.sender import send_scenario_live
+from icsforge.log import get_logger, configure as configure_logging
 from icsforge.reports.network_validation import build_network_validation_report
+from icsforge.scenarios.engine import run_scenario
 from icsforge.state import RunRegistry, default_db_path
-from pathlib import Path
+
+
+log = get_logger(__name__)
 
 
 def cmd_generate(args) -> int:
     res = run_scenario(args.file, args.name, args.outdir, dst_ip=args.dst_ip, src_ip=args.src_ip)
-    print(json.dumps(res, indent=2))
+    log.info("Generate complete:\n%s", json.dumps(res, indent=2))
     return 0
 
 
@@ -58,17 +61,17 @@ def cmd_send(args) -> int:
     except Exception:
         pass
 
-    print("[OK] live send complete")
-    print("  run_id:", res["run_id"])
-    print("  sent:", res["sent"])
-    print("  ground_truth_events:", gt.get("events"))
+    log.info("Live send complete")
+    log.info("  run_id: %s", res["run_id"])
+    log.info("  sent: %s", res["sent"])
+    log.info("  ground_truth_events: %s", gt.get("events"))
     return 0
 
 
 def cmd_net_validate(args) -> int:
     rep = build_network_validation_report(args.events, args.receipts, alerts_jsonl=args.alerts, out_path=args.out)
-    print("[OK] network validation report:", args.out)
-    print(json.dumps(rep, indent=2))
+    log.info("Network validation report: %s", args.out)
+    log.info("Report:\n%s", json.dumps(rep, indent=2))
     return 0
 
 
@@ -87,7 +90,7 @@ def _read_jsonl(path: str):
 def cmd_selftest(args) -> int:
     # Live selftest: start receiver locally, send Modbus + DNP3, verify receipts contain run_id markers.
     if not args.live:
-        print("Selftest currently supports --live only.", file=sys.stderr)
+        log.error("Selftest currently supports --live only.")
         return 2
 
     dst_ip = args.dst_ip
@@ -149,7 +152,7 @@ def cmd_selftest(args) -> int:
 
         # Validate receipts
         if not os.path.exists(receipts_path):
-            print("[FAIL] receipts file not created:", receipts_path, file=sys.stderr)
+            log.error("Receipts file not created: %s", receipts_path)
             return 1
 
         got_run = False
@@ -164,19 +167,19 @@ def cmd_selftest(args) -> int:
                     got_dnp3 = True
 
         if not got_run:
-            print("[FAIL] No receipt matched run_id", res["run_id"], file=sys.stderr)
+            log.error("No receipt matched run_id %s", res["run_id"])
             return 1
         if not got_modbus:
-            print("[FAIL] Modbus receipt missing for run_id", res["run_id"], file=sys.stderr)
+            log.error("Modbus receipt missing for run_id %s", res["run_id"])
             return 1
         if not got_dnp3:
-            print("[FAIL] DNP3 receipt missing for run_id", res["run_id"], file=sys.stderr)
+            log.error("DNP3 receipt missing for run_id %s", res["run_id"])
             return 1
 
-        print("[PASS] Receiver reachable")
-        print("[PASS] Modbus packet received")
-        print("[PASS] DNP3 packet received")
-        print("[PASS] Correlation run_id:", res["run_id"])
+        log.info("[PASS] Receiver reachable")
+        log.info("[PASS] Modbus packet received")
+        log.info("[PASS] DNP3 packet received")
+        log.info("[PASS] Correlation run_id: %s", res["run_id"])
         return 0
 
     finally:
@@ -189,7 +192,10 @@ def cmd_selftest(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="icsforge", description="ICSForge - Safe OT/ICS Telemetry Lab")
+    ap = argparse.ArgumentParser(prog="icsforge", description="ICSForge — OT/ICS Coverage Validation Framework")
+    ap.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
+    ap.add_argument("--log-level", default="INFO", help="Log level (DEBUG, INFO, WARNING, ERROR)")
+    ap.add_argument("--log-file", default=None, help="Log to file in addition to stderr")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     g = sub.add_parser("generate", help="Generate events/pcaps offline from a scenario pack")
@@ -210,7 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--timeout", type=float, default=2.0)
     s.add_argument("--allowlist", help="Comma-separated allowlisted receiver IPs (defaults to dst-ip)")
     s.add_argument("--confirm-live-network", action="store_true", help="REQUIRED: enable live sending")
-    s.add_argument("--also-build-pcap", action="store_true", help="Also build an offline PCAP alongside live sending (requires scapy working on host)")
+    s.add_argument("--also-build-pcap", action="store_true", help="Also build an offline PCAP alongside live sending")
     s.set_defaults(func=cmd_send)
 
     nv = sub.add_parser("net-validate", help="Correlate ground-truth events with receiver receipts and optional alerts")
@@ -235,6 +241,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     ap = build_parser()
     args = ap.parse_args()
+    level = "DEBUG" if args.verbose else args.log_level
+    configure_logging(level=level, log_file=args.log_file)
     rc = args.func(args)
     raise SystemExit(rc)
 
