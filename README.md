@@ -28,8 +28,8 @@
 
 ```
 ┌──────────────────────┐         ┌──────────────────────┐
-│   ICSForge Sender    │  TCP/L2 │  ICSForge Receiver   │
-│                      │────────▶│                      │
+│   ICSForge Sender    │ TCP/L2  │  ICSForge Receiver   │
+│                      │ ─────▶ │                      │
 │ • Scenario engine    │         │ • Traffic sink       │
 │ • 8 protocol builders│         │ • Marker correlation │
 │ • PCAP generation    │         │ • Receipt logging    │
