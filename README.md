@@ -1,16 +1,18 @@
 # ICSForge™
 
-
 [//]: [![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Version](https://img.shields.io/badge/version-0.42.1-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
-**ICSForge™** is an open-source **OT/ICS cybersecurity coverage validation platform** that generates realistic industrial network traffic aligned with **MITRE ATT&CK for ICS (v18)** — without exploiting real systems.
+**ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
-> Most ICS security tools promise coverage — ICSForge lets you **prove it**.
+ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **8 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, PROFINET DCP)** which are aligned with **72 out of 83 unique techniques in MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact - to help asset owners and defenders assessing the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identifying hidden gaps.
 
+ICSForge is developed with a **safe-by-design** approach, operating within a **Sender-Receiver architecture** and interacting only with the designated sender and receiver, without touching other OT devices.
+
+> Most ICS security tools promise coverage - ICSForge lets you **prove it**.
 ---
 
 ## Key Numbers
@@ -28,22 +30,22 @@
 ## Architecture
 
 ```
-┌──────────────────────┐         ┌──────────────────────┐
-│   ICSForge Sender    │ TCP/L2  │  ICSForge Receiver   │
-│                      │ ─────▶ │                      │
-│ • Scenario engine    │         │ • Traffic sink       │
-│ • 8 protocol builders│         │ • Marker correlation │
-│ • PCAP generation    │         │ • Receipt logging    │
-│ • Campaign playbooks │         │ • Coverage matrix    │
-│ • Web UI (:8080)     │         │ • Web UI (:8080)     │
-└──────────────────────┘         └──────────────────────┘
-         │                                  │
-         ▼                                  ▼
-   ┌───────────┐                    ┌──────────────┐
-   │ ATT&CK    │                    │ SOC Mode     │
-   │ Matrix    │                    │ Correlation  │
-   │ Overlay   │                    │ & Gap Report │
-   └───────────┘                    └──────────────┘
+┌──────────────────────┐                  ┌──────────────────────┐
+│   ICSForge Sender    │  TCP/ UDP / L2   │  ICSForge Receiver   │
+│                      │ ─>─>─>─>─>─>─>─> │                      │
+│ • Scenario engine    │                  │ • Traffic sink       │
+│ • 8 protocol builders│                  │ • Marker correlation │
+│ • PCAP generation    │                  │ • Receipt logging    │
+│ • Campaign playbooks │                  │ • Coverage matrix    │
+│ • Web UI (:8080)     │                  │ • Web UI (:8080)     │
+└──────────────────────┘                  └──────────────────────┘
+           │                                          │
+           ▼                                          ▼
+     ┌───────────┐                            ┌──────────────┐
+     │  ATT&CK   │                            │ Correlation  │
+     │  Matrix   │                            │    & Gap     │
+     │  Overlay  │                            │  Visibility  │
+     └───────────┘                            └──────────────┘
 ```
 
 On-wire **correlation markers** (`ICSFORGE_SYNTH|run_id|technique|step`) embedded in every packet enable end-to-end validation: if the receiver sees the marker, the traffic reached the wire. If your IDS fires, your detection works.
@@ -170,17 +172,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 ### ATT&CK for ICS Matrix
 ![ATT&CK Matrix](screenshots/attack_matrix.png)
 
-### SOC Mode – Coverage Validation
+### SOC Mode - Coverage Validation
 ![SOC Mode](screenshots/socmode.png)
 
-### Receiver – Live Traffic View
+### Receiver - Live Traffic View
 ![Receiver Live View](screenshots/receiver.png)
 
 ---
 
 ## License
 
-GPLv3 — see [LICENSE](LICENSE)
+GPLv3 - see [LICENSE](LICENSE)
 
 ---
 
