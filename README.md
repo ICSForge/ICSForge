@@ -22,7 +22,7 @@ ICSForge is developed with a **safe-by-design** approach, operating within a **S
 | **Protocols** | 8 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, PROFINET DCP) |
 | **Runnable Scenarios** | 155 in the main scenario pack |
 | **ATT&CK for ICS Techniques Exercised** | 72 unique ICS technique IDs across runnable scenarios |
-| **ATT&CK for ICS Matrix Coverage** | 83 techniques in support data, 86 in bundled matrix |
+| **ATT&CK for ICS Matrix Coverage** | 87% (72 out of 83 technique) |
 | **Detection Rules** | Auto-generated Suricata + Sigma rules per scenario |
 
 ---
