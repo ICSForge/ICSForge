@@ -1,5 +1,4 @@
-from .generic import validate
-from .suricata import validate_suricata
-from .zeek import validate_zeek
+from .mapping import correlate_run, map_alert_to_techniques
+from .generator import generate_all
 
-__all__ = ["validate", "validate_suricata", "validate_zeek"]
+__all__ = ["correlate_run", "map_alert_to_techniques", "generate_all"]

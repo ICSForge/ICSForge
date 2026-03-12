@@ -1,5 +1,31 @@
 # ICSForge Changelog
 
+## v0.43.0 (2026-03 — Lean Cleanup Release)
+
+### Dead Weight Removed
+- **`icsforge/scenarios/matrix.yml`** (2,457 lines) — auto-generated file with zero Python references. The tool uses `scenarios.yml` exclusively via `MATRIX_SINGLETON_PACK`. Removed.
+- **`docker/docker-compose.receiver.yml`** — old standalone receiver compose, superseded by root `docker-compose.yml`. Removed.
+- **`icsforge/state/plc_state.py`** — `PLCState` class never used by any code outside its own `__init__.py`. Removed.
+- **`icsforge/detection/generic.py`** — `validate()` function never called from anywhere. Removed.
+- **`icsforge/detection/suricata.py`** — `validate_suricata()` never called from anywhere. Removed.
+- **`icsforge/detection/zeek.py`** — `validate_zeek()` never called from anywhere. Removed.
+- **`out/`** empty directory — runtime artifact, should not be in repo. Removed.
+
+### Directory Merge: `detections/` → `detection/`
+- Merged `icsforge/detections/generator.py` into `icsforge/detection/generator.py`
+- Deleted the entire `icsforge/detections/` directory
+- Updated all imports (`icsforge.detections.generator` → `icsforge.detection.generator`) in `web/app.py` and `tests/test_scenarios.py`
+- `icsforge/detection/` is now the single detection package containing `mapping.py` (alert correlation) and `generator.py` (Suricata/Sigma rule generation)
+
+### Stale Version Strings
+- Replaced all `v0.30` references in `campaigns/__init__.py`, `reports/__init__.py`, `reports/coverage.py`, `web/app.py`
+
+### Updated Exports
+- `icsforge/detection/__init__.py` now exports only used functions: `correlate_run`, `map_alert_to_techniques`, `generate_all`
+- `icsforge/state/__init__.py` exports only `RunRegistry` and `default_db_path` (removed unused `PLCState`)
+
+---
+
 ## v0.42.1 (2026-03)
 
 ### Lint Cleanup

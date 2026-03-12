@@ -1638,7 +1638,7 @@ def api_download_pcap(fname):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v0.30 — Campaign Playbook, Coverage Report, Detection Export
+# v0.43 — Campaign Playbook, Coverage Report, Detection Export
 # ═══════════════════════════════════════════════════════════════════════════
 
 import io, zipfile, threading
@@ -1875,7 +1875,7 @@ def api_report_download():
 def api_detections_preview():
     """Return metadata about available detection rules."""
     try:
-        from icsforge.detections.generator import generate_all
+        from icsforge.detection.generator import generate_all
         r = generate_all()
         return jsonify({"count": r["count"], "techniques": r["techniques"]})
     except Exception as e:
@@ -1894,7 +1894,7 @@ def api_detections_download():
     include_marker   = request.args.get("marker", "1") != "0"
 
     try:
-        from icsforge.detections.generator import generate_all
+        from icsforge.detection.generator import generate_all
         r = generate_all(technique_filter=technique_filter,
                          include_marker=include_marker)
     except Exception as e:

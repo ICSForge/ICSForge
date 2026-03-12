@@ -1,5 +1,5 @@
 """
-ICSForge v0.30 Coverage Report Generator
+ICSForge Coverage Report Generator
 """
 from datetime import datetime, timezone
 from pathlib import Path
@@ -245,7 +245,7 @@ code{{font-family:'Courier New',monospace;font-size:11px;color:#f59e0b}}
 </p>
 
 <div class="footer">
-  ICSForge v0.30 · OT/ICS Cybersecurity Coverage Validation Framework · GPLv3<br>
+  ICSForge · OT/ICS Cybersecurity Coverage Validation Framework · GPLv3<br>
   Generated using synthetic traffic. All packets were safe-by-design with no destructive payloads.
 </div>
 </body>

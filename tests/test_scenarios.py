@@ -78,7 +78,7 @@ class TestRunScenario:
 
 class TestDetectionGenerator:
     def test_generate_suricata_rules(self):
-        from icsforge.detections.generator import generate_all
+        from icsforge.detection.generator import generate_all
 
         result = generate_all(technique_filter=["T0855", "T0801"])
         assert "suricata" in result
@@ -87,7 +87,7 @@ class TestDetectionGenerator:
         assert "sid:" in result["suricata"]
 
     def test_generate_sigma_rules(self):
-        from icsforge.detections.generator import generate_all
+        from icsforge.detection.generator import generate_all
 
         result = generate_all(technique_filter=["T0855"])
         assert "sigma" in result
@@ -97,7 +97,7 @@ class TestDetectionGenerator:
             assert "attack.ics" in rule
 
     def test_techniques_covered(self):
-        from icsforge.detections.generator import generate_all
+        from icsforge.detection.generator import generate_all
 
         result = generate_all()
         assert len(result["techniques"]) > 30, "Should cover 30+ techniques"
