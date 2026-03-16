@@ -110,15 +110,16 @@ The receiver automatically notifies the sender when it receives ICSForge traffic
 # Or configure via CLI
 icsforge-receiver --callback-url http://sender-ip:8080/api/receiver/callback
 ```
+ICSForge can be run from **command line interface** as well;
 
-### CLI: Generate a PCAP from CLI (offline)
+### Running from CLI: Generate a PCAP from CLI (offline)
 
 ```bash
 icsforge generate --name T0855__unauth_command__modbus --outdir out/
 # → out/pcaps/offline.pcap + out/events/offline.jsonl
 ```
 
-### CLI: Send live traffic to receiver from CLI
+### Running from CLI: Send live traffic to receiver from CLI
 
 ```bash
 # Terminal 1: start receiver
