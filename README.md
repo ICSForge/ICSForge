@@ -153,7 +153,7 @@ ICSForge is **defender-first**, **safe by design**, and **honest about limitatio
 | OPC UA | 4840 | 16 | T0855, T0861, T0822, T0859, T0879 |
 | EtherNet/IP | 44818 | 15 | T0840, T0888, T0816, T0875, T0882 |
 | BACnet/IP | 47808 (UDP) | 16 | T0840, T0855, T0816, T0813, T0882 |
-| MQTT | 1883 | 17 | T0855, T0801, T0812, T0836, T0843, T0869 |
+| MQTT | 1883 | 17 | T0855, T0801, T0812, T0836, T0843 |
 | PROFINET DCP | L2 | 8 | T0840, T0842, T0849 |
 
 ---
