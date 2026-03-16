@@ -1,5 +1,6 @@
 # ICSForge Modbus/TCP payload builder — upgraded for ATT&CK for ICS realism
-import random, struct
+import random
+import struct
 
 from .common import marker_bytes
 

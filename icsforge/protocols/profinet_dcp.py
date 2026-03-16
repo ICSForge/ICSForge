@@ -1,10 +1,11 @@
 # ICSForge PROFINET DCP payload builder — upgraded for ATT&CK realism
 # PROFINET Discovery and Configuration Protocol (DCP) over Ethernet
-import random, struct
+import random
+import struct
 
-from .common import ether_frame
 from icsforge.core import MARKER
 
+from .common import ether_frame
 
 # DCP Service IDs
 SVC_ID = {
@@ -61,8 +62,7 @@ def _dcp_block(option: int, suboption: int, data: bytes) -> bytes:
 
 def build(src_mac: str | None = None, dst_mac: str | None = None):
     """Legacy interface: build basic DCP identify request."""
-    src_mac = src_mac or "02:00:00:%02x:%02x:%02x" % (
-        random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    src_mac = src_mac or f"02:00:00:{random.randint(0, 255):02x}:{random.randint(0, 255):02x}:{random.randint(0, 255):02x}"
     dst_mac = dst_mac or "01:0e:cf:00:00:00"
     xid     = random.randint(0, 0xFFFFFFFF)
     dcp     = _dcp_pdu(FRAME_ID["dcp_identify_multicast"], SVC_ID["identify"],
@@ -85,7 +85,6 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
       hello              DCP Hello PDU — T0840 device announcement
       factory_reset      DCP Set Control (factory reset) — T0816
     """
-    rnd = random.random
     xid = random.randint(0, 0xFFFFFFFF)
     # Accept both bytes (from build_marker) and str (from marker_bytes/tests)
     if isinstance(run_marker, str):

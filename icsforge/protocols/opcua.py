@@ -1,9 +1,9 @@
 # ICSForge OPC UA payload builder — upgraded for ATT&CK realism
 # Implements real OPC UA Secure Conversation headers with distinct service types
-import struct, random
+import random
+import struct
 
 from .common import marker_bytes
-
 
 # OPC UA Service node IDs (numeric)
 SVC = {

@@ -4,7 +4,6 @@ import os
 import pytest
 
 
-
 @pytest.fixture
 def tmp_outdir(tmp_path):
     """Temporary output directory."""

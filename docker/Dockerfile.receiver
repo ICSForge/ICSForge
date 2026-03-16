@@ -12,10 +12,10 @@ COPY . /app
 
 RUN mkdir -p /app/receiver_out /app/out/pcaps /app/out/events
 
-EXPOSE 502 102 20000 2404 4840 44818 47808 8080
+EXPOSE 502 102 20000 2404 4840 44818 47808 1883 9090
 
 CMD ["python", "-m", "icsforge.receiver.receiver", \
      "--config", "icsforge/receiver/config.yml", \
      "--bind", "0.0.0.0", \
      "--web-host", "0.0.0.0", \
-     "--web-port", "8080"]
+     "--web-port", "9090"]

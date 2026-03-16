@@ -1,15 +1,31 @@
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import List
 import collections
+import io
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
+import threading
 import time
+import zipfile
+from contextlib import suppress
+from datetime import datetime, timezone
+from pathlib import Path
 
-from flask import Blueprint, Flask, jsonify, render_template, request, redirect, url_for, Response, stream_with_context, send_file
+import yaml
+from flask import (
+    Blueprint,
+    Flask,
+    Response,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    stream_with_context,
+    url_for,
+)
 
 from icsforge import __version__
 from icsforge.detection.mapping import correlate_run
@@ -18,7 +34,6 @@ from icsforge.log import get_logger
 from icsforge.reports.network_validation import build_network_validation_report
 from icsforge.scenarios.engine import run_scenario
 from icsforge.state import RunRegistry, default_db_path
-
 
 log = get_logger(__name__)
 
@@ -34,7 +49,6 @@ def _load_matrix() -> dict:
         return {"tactics": [], "x_mitre_version": "?"}
 
 
-import yaml
 
 web = Blueprint("web", __name__, template_folder="templates", static_folder="static")
 
@@ -90,10 +104,7 @@ def _is_safe_private_ip(ip: str) -> bool:
         if a.is_loopback or a.is_private or a.is_link_local:
             return True
         # TEST-NETs
-        for net in ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"]:
-            if a in ipaddress.ip_network(net):
-                return True
-        return False
+        return any(a in ipaddress.ip_network(net) for net in ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"])
     except Exception:
         return False
 def _resolve_pack(pack: str) -> str | None:
@@ -136,11 +147,11 @@ def _default_receipts_path() -> str:
 
 
 def _load_yaml(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
-def _list_packs() -> List[str]:
+def _list_packs() -> list[str]:
     rr = _repo_root()
     # Keep it simple and predictable
     candidates = [
@@ -154,7 +165,7 @@ def _default_pack() -> str | None:
     return _canonical_scenarios_path()
 
 
-def _list_profiles() -> List[str]:
+def _list_profiles() -> list[str]:
     rr = _repo_root()
     pdir = os.path.join(rr, "icsforge", "profiles")
     if not os.path.isdir(pdir):
@@ -162,11 +173,11 @@ def _list_profiles() -> List[str]:
     return sorted([str(Path(pdir, f)) for f in os.listdir(pdir) if f.endswith(".yml")])
 
 
-def _read_jsonl_tail(path: str, limit: int = 250) -> List[dict]:
+def _read_jsonl_tail(path: str, limit: int = 250) -> list[dict]:
     if not os.path.exists(path):
         return []
     items = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -182,7 +193,7 @@ def _read_jsonl_tail(path: str, limit: int = 250) -> List[dict]:
 def _run_index_path() -> str:
     return os.path.join(_repo_root(), "out", "run_index.json")
 
-def _load_run_index() -> List[dict]:
+def _load_run_index() -> list[dict]:
     p = _run_index_path()
     if not os.path.exists(p):
         return []
@@ -206,7 +217,7 @@ def _validation_path(run_id: str) -> str:
 def _export_path(run_id: str) -> str:
     return os.path.join(_repo_root(), "out", "exports", f"{run_id}.html")
 
-def _bin_receipts(items: List[dict], bins: int = 40) -> List[dict]:
+def _bin_receipts(items: list[dict], bins: int = 40) -> list[dict]:
     ts = []
     for r in items:
         t = r.get("@timestamp")
@@ -232,14 +243,17 @@ def _bin_receipts(items: List[dict], bins: int = 40) -> List[dict]:
     return out
 
 
-def _stats_from_receipts(items: List[dict]) -> dict:
+def _stats_from_receipts(items: list[dict]) -> dict:
     runs = set()
     techs = set()
     protos = set()
     for r in items:
-        if r.get("run_id"): runs.add(r["run_id"])
-        if r.get("technique"): techs.add(r["technique"])
-        if r.get("receiver.proto"): protos.add(r["receiver.proto"])
+        if r.get("run_id"):
+            runs.add(r["run_id"])
+        if r.get("technique"):
+            techs.add(r["technique"])
+        if r.get("receiver.proto"):
+            protos.add(r["receiver.proto"])
     return {
         "total": len(items),
         "runs": len(runs),
@@ -359,10 +373,10 @@ def matrix():
     mat = _load_matrix()
     import json as _json
     support = {}
-    try:
-        support = _json.loads(Path(os.path.join(_repo_root(), "icsforge", "data", "technique_support.json")).read_text(encoding="utf-8"))
-    except Exception:
-        pass
+    with suppress(Exception):
+        support = _json.loads(
+            Path(os.path.join(_repo_root(), "icsforge", "data", "technique_support.json")).read_text(encoding="utf-8")
+        )
     covered = set()
     try:
         for pack_path in _list_packs():
@@ -370,7 +384,8 @@ def matrix():
             for sc in (doc.get("scenarios") or {}).values():
                 for step in sc.get("steps", []):
                     tid = step.get("technique")
-                    if tid: covered.add(tid)
+                    if tid:
+                        covered.add(tid)
     except Exception:
         pass
     precursor = set(t for t in covered if support.get(t, {}).get("precursor") and not support.get(t, {}).get("runnable"))
@@ -379,7 +394,8 @@ def matrix():
     for tac in mat.get("tactics", []):
         for tech in tac.get("techniques", []):
             tid = tech.get("id")
-            if not tid: continue
+            if not tid:
+                continue
             status[tid] = {"runnable": tid in runnable, "precursor": tid in precursor}
     supported = sorted(t for t in status if status[t]["runnable"] or status[t]["precursor"])
 
@@ -442,7 +458,7 @@ def api_receiver_overview():
     # Count total lines in the file without loading all into memory
     total = 0
     if os.path.exists(receipts_path):
-        with open(receipts_path, "r", encoding="utf-8") as f:
+        with open(receipts_path, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     total += 1
@@ -484,14 +500,13 @@ def api_receiver_reset():
         return jsonify({"cleared": True, "lines": 0})
     # Count lines before archiving
     lines = 0
-    with open(receipts_path, "r", encoding="utf-8") as f:
+    with open(receipts_path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 lines += 1
     if lines == 0:
         return jsonify({"cleared": True, "lines": 0})
     # Archive with timestamp
-    from datetime import datetime, timezone
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     archive_path = receipts_path.replace("receipts.jsonl", f"receipts_{ts}.jsonl")
     try:
@@ -505,6 +520,154 @@ def api_receiver_reset():
         "archived": os.path.basename(archive_path),
         "lines":    lines,
     })
+
+
+# ── Live Receiver Callback System ─────────────────────────────────────
+_live_receipts = collections.deque(maxlen=500)
+_receiver_ip = None
+_sender_ip = None
+_receiver_port = 9090
+_sender_callback_url = None  # explicit override; if None, derived from request.host
+
+_CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".icsforge", "web_config.json")
+
+
+def _load_persisted_config():
+    """Load network config from disk on startup."""
+    global _receiver_ip, _sender_ip, _receiver_port, _sender_callback_url
+    if not os.path.exists(_CONFIG_PATH):
+        return
+    try:
+        with open(_CONFIG_PATH) as f:
+            cfg = json.load(f)
+        _sender_ip = cfg.get("sender_ip") or None
+        _receiver_ip = cfg.get("receiver_ip") or None
+        _receiver_port = int(cfg.get("receiver_port", 9090))
+        _sender_callback_url = cfg.get("sender_callback_url") or None
+    except Exception:
+        pass
+
+
+def _save_persisted_config():
+    """Persist network config to disk."""
+    os.makedirs(os.path.dirname(_CONFIG_PATH), exist_ok=True)
+    with open(_CONFIG_PATH, "w") as f:
+        json.dump({
+            "sender_ip": _sender_ip or "",
+            "receiver_ip": _receiver_ip or "",
+            "receiver_port": _receiver_port,
+            "sender_callback_url": _sender_callback_url or "",
+        }, f, indent=2)
+
+
+# Load persisted config at module import time
+_load_persisted_config()
+
+
+@web.route("/api/config/network", methods=["GET", "POST"])
+def api_config_network():
+    """Combined network config: get/set sender_ip, receiver_ip, receiver_port, sender_callback_url."""
+    global _receiver_ip, _sender_ip, _receiver_port, _sender_callback_url
+    if request.method == "GET":
+        return jsonify({
+            "sender_ip": _sender_ip or "127.0.0.1",
+            "receiver_ip": _receiver_ip or "",
+            "receiver_port": _receiver_port,
+            "sender_callback_url": _sender_callback_url or "",
+        })
+    data = request.get_json(force=True) or {}
+    if data.get("sender_ip"):
+        _sender_ip = data["sender_ip"].strip()
+    if data.get("receiver_ip"):
+        _receiver_ip = data["receiver_ip"].strip()
+    if data.get("receiver_port"):
+        _receiver_port = int(data["receiver_port"])
+    if data.get("sender_callback_url"):
+        _sender_callback_url = data["sender_callback_url"].strip()
+    _save_persisted_config()
+    return jsonify({
+        "ok": True,
+        "sender_ip": _sender_ip or "127.0.0.1",
+        "receiver_ip": _receiver_ip or "",
+        "receiver_port": _receiver_port,
+    })
+
+@web.route("/api/receiver/callback", methods=["POST"])
+def api_receiver_callback():
+    """Accept live receipt from receiver."""
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get("marker_found"):
+        return jsonify({"ok": True, "stored": False})
+    data["_received_at"] = datetime.now(timezone.utc).isoformat()
+    _live_receipts.append(data)
+    return jsonify({"ok": True, "stored": True})
+
+@web.route("/api/receiver/live")
+def api_receiver_live():
+    """Return buffered live receipts for sender UI."""
+    since = request.args.get("since", "")
+    items = list(_live_receipts)
+    if since:
+        items = [r for r in items if (r.get("_received_at") or "") > since]
+    return jsonify({"receipts": items, "count": len(items), "total_buffered": len(_live_receipts)})
+
+@web.route("/api/receiver/live/clear", methods=["POST"])
+def api_receiver_live_clear():
+    _live_receipts.clear()
+    return jsonify({"ok": True, "cleared": True})
+
+@web.route("/api/config/receiver_ip", methods=["GET", "POST"])
+def api_config_receiver_ip():
+    """Get or set receiver IP. POST also pushes callback URL to receiver."""
+    global _receiver_ip
+    if request.method == "GET":
+        return jsonify({"receiver_ip": _receiver_ip})
+    data = request.get_json(force=True) or {}
+    ip = (data.get("receiver_ip") or "").strip()
+    if not ip:
+        return jsonify({"error": "receiver_ip required"}), 400
+    _receiver_ip = ip
+    _save_persisted_config()
+    # Compute callback URL: explicit override > derived from request.host
+    if _sender_callback_url:
+        callback_url = _sender_callback_url
+    else:
+        sender_host = request.host.split(":")[0]
+        sender_port = request.host.split(":")[-1] if ":" in request.host else "8080"
+        callback_url = f"http://{sender_host}:{sender_port}/api/receiver/callback"
+    configured_callback = False
+    receiver_port = data.get("receiver_port", _receiver_port)
+    try:
+        import urllib.request
+        payload = json.dumps({"callback_url": callback_url}).encode("utf-8")
+        req_obj = urllib.request.Request(
+            f"http://{ip}:{receiver_port}/api/config/set_callback",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req_obj, timeout=3)
+        if resp.status == 200:
+            configured_callback = True
+    except Exception:
+        pass
+    return jsonify({"ok": True, "receiver_ip": _receiver_ip,
+                    "callback_configured": configured_callback, "callback_url": callback_url})
+
+@web.route("/api/config/set_callback", methods=["POST"])
+def api_config_set_callback():
+    """Receiver endpoint: accept callback URL push from sender. Requires auth."""
+    data = request.get_json(force=True) or {}
+    callback_url = (data.get("callback_url") or "").strip()
+    if not callback_url:
+        return jsonify({"error": "callback_url required"}), 400
+    try:
+        from icsforge.receiver.receiver import set_callback_url
+        set_callback_url(callback_url)
+        return jsonify({"ok": True, "callback_url": callback_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @web.route("/api/receipts")
 def api_receipts():
@@ -619,7 +782,7 @@ def api_preview_payload():
     tech = step.get("technique", "")
     marker = f"ICSFORGE:PREVIEW:{name[:20]}:{tech}:"
     try:
-        from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp
+        from icsforge.protocols import dnp3, enip, iec104, modbus, opcua, profinet_dcp, s7comm
         builders = {
             "modbus": modbus.build_payload,
             "dnp3": dnp3.build_payload,
@@ -772,10 +935,8 @@ def api_send():
             "pcap": gt.get("pcap"),
             "ts": datetime.now(timezone.utc).isoformat() + "Z",
         }
-        try:
+        with suppress(Exception):
             _append_run_index(entry)
-        except Exception:
-            pass
 
         return jsonify(
             {
@@ -797,11 +958,14 @@ def create_app() -> Flask:
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.register_blueprint(web)
     app.add_url_rule("/", endpoint="web.index", view_func=index)
+    from icsforge.auth import init_auth
+    init_auth(app)
     return app
 
 
 def main():
     import argparse
+
     from icsforge.log import configure as configure_logging
 
     ap = argparse.ArgumentParser(prog="icsforge-web")
@@ -809,9 +973,12 @@ def main():
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--log-level", default="INFO")
+    ap.add_argument("--no-auth", action="store_true", help="Disable authentication (dev mode)")
     args = ap.parse_args()
 
     configure_logging(level="DEBUG" if args.debug else args.log_level)
+    if hasattr(args, "no_auth") and args.no_auth:
+        os.environ["ICSFORGE_NO_AUTH"] = "1"
 
     app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), "static"),
                 template_folder=os.path.join(os.path.dirname(__file__), "templates"))
@@ -819,6 +986,8 @@ def main():
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.register_blueprint(web)
+    from icsforge.auth import init_auth
+    init_auth(app)
     log.info("ICSForge Web UI v%s starting on %s:%d", __version__, args.host, args.port)
     app.run(host=args.host, port=args.port, debug=args.debug)
 
@@ -1061,7 +1230,7 @@ def api_pcap_replay():
         return jsonify({"error": str(e)}), 500
 
 
-def _save_run_index(items: List[dict]) -> None:
+def _save_run_index(items: list[dict]) -> None:
     os.makedirs(os.path.dirname(_run_index_path()), exist_ok=True)
     Path(_run_index_path()).write_text(json.dumps(items[:200], indent=2), encoding="utf-8")
 
@@ -1233,10 +1402,8 @@ def api_technique_send():
             "pcap": gt.get("pcap"),
             "ts": datetime.now(timezone.utc).isoformat() + "Z",
         }
-        try:
+        with suppress(Exception):
             _append_run_index(entry)
-        except Exception:
-            pass
 
         return jsonify({"ok": True, "run_id": res["run_id"], "sent": res.get("sent"), "events": gt.get("events"), "pcap": gt.get("pcap")})
     except Exception as e:
@@ -1259,10 +1426,8 @@ def api_generate_offline():
     try:
         gt = run_scenario(pack, name, outdir, dst_ip=dst_ip, src_ip=src_ip, run_id=run_id, build_pcap=build_pcap)
         entry = {"run_id": gt.get("run_id") or run_id or "offline", "scenario": name, "pack": pack, "events": gt.get("events"), "pcap": gt.get("pcap"), "ts": datetime.now(timezone.utc).isoformat()+"Z"}
-        try:
+        with suppress(Exception):
             _append_run_index(entry)
-        except Exception:
-            pass
         return jsonify({"ok": True, "run_id": entry["run_id"], "events": gt.get("events"), "pcap": gt.get("pcap")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1376,6 +1541,7 @@ def api_health():
         "receiver_error": receiver_err,
     })
 
+
 @web.route("/health")
 def health_page():
     return render_template("health.html", title="ICSForge Health", subtitle="Diagnostics & Readiness")
@@ -1383,7 +1549,7 @@ def health_page():
 
 def _read_json_lines(path: str):
     rows = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -1488,7 +1654,7 @@ def api_correlate_run():
 
     # load expected techniques from events jsonl
     expected = []
-    with open(events_path, "r", encoding="utf-8") as f:
+    with open(events_path, encoding="utf-8") as f:
         for line in f:
             line=line.strip()
             if not line:
@@ -1496,7 +1662,8 @@ def api_correlate_run():
             try:
                 j=json.loads(line)
                 t=j.get("mitre.ics.technique")
-                if t: expected.append(t)
+                if t:
+                    expected.append(t)
             except Exception:
                 continue
 
@@ -1506,12 +1673,15 @@ def api_correlate_run():
         ap = os.path.realpath(os.path.join(rr, alerts_path.lstrip("/")))
         if not ap.startswith(os.path.realpath(rr)) or not os.path.exists(ap):
             return jsonify({"error": "alerts_path not found or not allowed"}), 400
-        with open(ap, "r", encoding="utf-8") as f:
+        with open(ap, encoding="utf-8") as f:
             for line in f:
                 line=line.strip()
-                if not line: continue
-                try: alerts.append(json.loads(line))
-                except Exception: continue
+                if not line:
+                    continue
+                try:
+                    alerts.append(json.loads(line))
+                except Exception:
+                    continue
 
     rep = correlate_run(expected, alerts)
     # persist report artifact
@@ -1568,13 +1738,16 @@ def api_matrix_status():
             ev_path=None
             for a in run.get("artifacts", []):
                 if a.get("kind")=="events":
-                    ev_path=a.get("path"); break
+                    ev_path = a.get("path")
+                    break
             if ev_path and os.path.exists(ev_path):
-                with open(ev_path,"r",encoding="utf-8") as f:
+                with open(ev_path,encoding="utf-8") as f:
                     for line in f:
                         try:
-                            j=json.loads(line); t=j.get("mitre.ics.technique")
-                            if t: executed.add(t)
+                            j = json.loads(line)
+                            t = j.get("mitre.ics.technique")
+                            if t:
+                                executed.add(t)
                         except Exception:
                             pass
             # if there is a correlation report artifact, use it
@@ -1582,7 +1755,8 @@ def api_matrix_status():
             for a in reversed(run.get("artifacts", [])):
                 if a.get("kind")=="report" and a.get("path","").endswith(".json"):
                     try:
-                        corr=json.loads(Path(a["path"]).read_text(encoding="utf-8")); break
+                        corr = json.loads(Path(a["path"]).read_text(encoding="utf-8"))
+                        break
                     except Exception:
                         pass
             if corr:
@@ -1641,7 +1815,6 @@ def api_download_pcap(fname):
 # v0.43 — Campaign Playbook, Coverage Report, Detection Export
 # ═══════════════════════════════════════════════════════════════════════════
 
-import io, zipfile, threading
 
 _CAMPAIGNS_BUILTIN = os.path.join(os.path.dirname(__file__), "..", "campaigns", "builtin.yml")
 _CAMPAIGN_THREADS: dict = {}   # run_id -> CampaignRunner (for abort)
@@ -1816,7 +1989,7 @@ def api_report_generate():
                     events_path = a.get("path")
                     break
             if events_path and os.path.exists(events_path):
-                with open(events_path, "r", encoding="utf-8") as f:
+                with open(events_path, encoding="utf-8") as f:
                     for line in f:
                         try:
                             j = json.loads(line.strip())

@@ -1,7 +1,7 @@
 # ICSForge v0.4 — Full-Stack Demo
 # Usage: docker compose up
 # Sender UI:   http://localhost:8080
-# Receiver UI: http://localhost:8081
+# Receiver UI: http://localhost:9090
 # Suricata:    reads from shared pcap volume
 
 services:
@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.receiver
     ports:
-      - "8081:8080"
+      - "9090:9090"
       - "502:502"
       - "20000:20000"
       - "102:102"
@@ -35,6 +35,7 @@ services:
       - "4840:4840"
       - "44818:44818"
       - "47808:47808/udp"
+      - "1883:1883"
     environment:
       - ICSFORGE_UI_MODE=receiver
       - ICSFORGE_LOG_LEVEL=INFO
@@ -47,7 +48,7 @@ services:
       python -m icsforge.receiver.receiver
       --bind 0.0.0.0
       --web-host 0.0.0.0
-      --web-port 8080
+      --web-port 9090
 
   suricata:
     image: jasonish/suricata:latest

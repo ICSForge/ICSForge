@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ICSForge — First-Time Setup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:40px;
+  width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,.4)}
+.logo{text-align:center;margin-bottom:8px}
+.logo h1{font-size:24px;color:#f8fafc;letter-spacing:-.5px}
+.logo span{color:#3b82f6}
+.subtitle{text-align:center;color:#94a3b8;font-size:14px;margin-bottom:24px}
+.note{background:#172554;border:1px solid #1e3a5f;color:#93c5fd;padding:12px 14px;
+  border-radius:8px;font-size:13px;margin-bottom:20px;line-height:1.5}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:#94a3b8;margin-bottom:6px;font-weight:500}
+.field input{width:100%;padding:10px 14px;background:#0f172a;border:1px solid #334155;
+  border-radius:8px;color:#f8fafc;font-size:15px;outline:none;transition:border-color .2s}
+.field input:focus{border-color:#3b82f6}
+.btn{width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:8px;
+  font-size:15px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:8px}
+.btn:hover{background:#2563eb}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error{background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;padding:10px 14px;
+  border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+.error.show{display:block}
+.success{background:#14532d;border:1px solid #166534;color:#86efac;padding:10px 14px;
+  border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+.success.show{display:block}
+.pw-req{font-size:12px;color:#64748b;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1><span>ICS</span>Forge</h1>
+  </div>
+  <p class="subtitle">Create your admin account</p>
+  <div class="note">
+    This is a first-time setup. Create an admin account to secure access to the
+    sender and receiver web interfaces. All users on the network will need these
+    credentials to access ICSForge.
+  </div>
+  <div class="error" id="error"></div>
+  <div class="success" id="success"></div>
+  <div class="field">
+    <label for="username">Admin Username</label>
+    <input type="text" id="username" autocomplete="username" autofocus placeholder="admin">
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="new-password" placeholder="min 8 characters">
+    <div class="pw-req">Minimum 8 characters</div>
+  </div>
+  <div class="field">
+    <label for="password2">Confirm Password</label>
+    <input type="password" id="password2" autocomplete="new-password">
+  </div>
+  <button class="btn" id="setupBtn" onclick="doSetup()">Create Account &amp; Continue</button>
+</div>
+<script>
+function doSetup(){
+  const btn=document.getElementById('setupBtn');
+  const err=document.getElementById('error');
+  const suc=document.getElementById('success');
+  btn.disabled=true; err.className='error'; suc.className='success';
+  const u=document.getElementById('username').value.trim();
+  const p1=document.getElementById('password').value;
+  const p2=document.getElementById('password2').value;
+  if(!u){err.textContent='Username required';err.className='error show';btn.disabled=false;return}
+  if(p1.length<8){err.textContent='Password must be at least 8 characters';err.className='error show';btn.disabled=false;return}
+  if(p1!==p2){err.textContent='Passwords do not match';err.className='error show';btn.disabled=false;return}
+  fetch('/api/auth/setup',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,password:p1})})
+  .then(r=>r.json().then(d=>({status:r.status,data:d})))
+  .then(({status,data})=>{
+    if(status===200&&data.ok){
+      suc.textContent='Account created! Redirecting...';suc.className='success show';
+      setTimeout(()=>window.location.href='/',1000);
+    }else{err.textContent=data.error||'Setup failed';err.className='error show';btn.disabled=false;}
+  }).catch(e=>{err.textContent='Connection error';err.className='error show';btn.disabled=false;});
+}
+document.getElementById('password2').addEventListener('keydown',e=>{if(e.key==='Enter')doSetup()});
+</script>
+</body>
+</html>

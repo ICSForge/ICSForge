@@ -1,6 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- ─── Network Settings Bar ─────────────────────────────── -->
+<div class="card" style="margin-bottom:16px" id="network_bar">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0;white-space:nowrap">⚙ Network Settings</h2>
+    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;flex:1;justify-content:flex-end">
+      <div class="field" style="min-width:140px;margin:0">
+        <label style="font-size:11px;margin-bottom:2px">Sender IP (src)</label>
+        <input id="cfg_sender_ip" placeholder="127.0.0.1" value="127.0.0.1" style="padding:6px 10px;font-size:13px">
+      </div>
+      <div class="field" style="min-width:140px;margin:0">
+        <label style="font-size:11px;margin-bottom:2px">Receiver IP (dst)</label>
+        <input id="cfg_receiver_ip" placeholder="e.g. 192.168.1.50" style="padding:6px 10px;font-size:13px">
+      </div>
+      <div class="field" style="min-width:80px;margin:0">
+        <label style="font-size:11px;margin-bottom:2px">Receiver Port</label>
+        <input id="cfg_receiver_port" value="9090" style="padding:6px 10px;font-size:13px;max-width:80px">
+      </div>
+      <button class="btn primary" id="btn_save_net" style="padding:6px 16px;font-size:12px;white-space:nowrap" onclick="saveNetworkConfig()">Save &amp; Connect</button>
+      <span id="net_status" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
+    </div>
+  </div>
+</div>
+
 <!-- ─── Attack Chain Quick-Launch ──────────────────────────── -->
 <div class="card" style="margin-bottom:16px">
   <h2>⛓ Attack Chains — One-Click Named Scenarios</h2>
@@ -27,7 +50,7 @@
       <div class="row" style="gap:10px">
         <div class="field">
           <label>Destination IP</label>
-          <input id="dst_ip" placeholder="198.51.100.42" value="198.51.100.42">
+          <input id="dst_ip" placeholder="Set via Network Settings above" value="">
         </div>
         <div class="field" style="max-width:100px">
           <label>Timeout (s)</label>
@@ -145,7 +168,7 @@ let feedPollTimer = null;
 let prevTotal    = null;
 
 /* ── Protocol colours ───────────────────────────────────────── */
-const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c"};
+const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c",bacnet:"#8b5cf6",mqtt:"#06b6d4"};
 function protoBadge(p){const c=PROTO_C[p]||"#475569";return `<span class="proto-badge" style="background:${c};${c==='#f59e0b'?'color:#000':''}">${p}</span>`;}
 function protoDot(p){const c=PROTO_C[p]||"#888";return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}" title="${p}"></span>`;}
 
@@ -311,7 +334,7 @@ async function doSend(offline=false){
   renderStepPlan(steps, statuses);
   const endpoint = offline ? "/api/generate_offline" : "/api/send";
   const payload = offline
-    ? {name:selectedName, dst_ip:dst_ip||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true}
+    ? {name:selectedName, dst_ip:dst_ip||$("cfg_receiver_ip").value.trim()||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true}
     : {name:selectedName, dst_ip, src_ip:$("src_ip").value.trim(), iface:$("iface").value.trim(),
        timeout:parseFloat($("timeout").value)||2.0, also_build_pcap:$("pcap").checked};
   logln(`[${offline?"OFFLINE":"LIVE"}] ${selectedName} → ${dst_ip||"(offline)"}`, "log-info");
@@ -423,15 +446,78 @@ window.loadHistory    = loadHistory;
 
 /* ── Boot ───────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", async ()=>{
+  // Load saved network config and prefill IP fields
+  await loadNetworkConfig();
   await loadGroups();
   // Auto-select first non-chain scenario
   const first = (allGroups.find(g=>!g.name.includes("Chain"))||allGroups[0]);
   if(first && first.scenarios && first.scenarios[0]) selectScenario(first.scenarios[0].id);
-  // Load history immediately
   loadHistory();
-  // Start feed poll always (receiver may be running)
   startFeedPoll();
 });
+
+/* ── Network Config ────────────────────────────────────────── */
+async function loadNetworkConfig(){
+  try {
+    const data = await API("/api/config/network");
+    if(data.sender_ip){
+      $("cfg_sender_ip").value = data.sender_ip;
+      $("src_ip").value = data.sender_ip;
+    }
+    if(data.receiver_ip){
+      $("cfg_receiver_ip").value = data.receiver_ip;
+      $("dst_ip").value = data.receiver_ip;
+      $("net_status").textContent = "Receiver: " + data.receiver_ip;
+      $("net_status").style.color = "var(--good)";
+    }
+    if(data.receiver_port){
+      $("cfg_receiver_port").value = data.receiver_port;
+    }
+  } catch(e){}
+}
+
+async function saveNetworkConfig(){
+  const sender_ip   = $("cfg_sender_ip").value.trim();
+  const receiver_ip = $("cfg_receiver_ip").value.trim();
+  const receiver_port = parseInt($("cfg_receiver_port").value) || 9090;
+  $("net_status").textContent = "Saving…";
+  $("net_status").style.color = "var(--muted)";
+  try {
+    // Save combined config
+    await API("/api/config/network", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({sender_ip, receiver_ip})
+    });
+    // Prefill scenario fields
+    if(sender_ip)   $("src_ip").value = sender_ip;
+    if(receiver_ip) $("dst_ip").value = receiver_ip;
+    // If receiver IP set, push callback config to receiver
+    if(receiver_ip){
+      const data = await API("/api/config/receiver_ip", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({receiver_ip, receiver_port})
+      });
+      if(data.callback_configured){
+        $("net_status").textContent = "✓ Connected — callback active";
+        $("net_status").style.color = "var(--good)";
+        window.toast("Receiver linked", `${receiver_ip}:${receiver_port} — live callbacks active`, "ok");
+      } else {
+        $("net_status").textContent = "✓ IP saved — receiver unreachable for callback";
+        $("net_status").style.color = "var(--warn, #f59e0b)";
+        window.toast("IP saved", `Receiver at ${receiver_ip} not reachable for callback push`, "warn");
+      }
+    } else {
+      $("net_status").textContent = "Sender IP saved";
+      $("net_status").style.color = "var(--muted)";
+    }
+  } catch(e){
+    $("net_status").textContent = "Error: " + e;
+    $("net_status").style.color = "var(--err, #ef4444)";
+  }
+}
+window.saveNetworkConfig = saveNetworkConfig;
 })();
 </script>
 {% endblock %}

@@ -7,7 +7,6 @@ L2 PROFINET DCP : AF_PACKET raw socket with promiscuous mode (Linux only)
 v0.4: thread-safe receipt writing, structured logging, proper error handling.
 """
 
-from datetime import datetime, timezone
 import fcntl
 import hashlib
 import json
@@ -16,18 +15,33 @@ import socket
 import struct
 import threading
 import time
+from contextlib import suppress
+from datetime import datetime, timezone
 
 import yaml
 
 from icsforge.core import marker_prefix
 from icsforge.log import get_logger
 
-
 log = get_logger(__name__)
 
-# ── Thread-safe receipt writer ────────────────────────────────────────
+# ── Thread-safe receipt writer + sender callback ──────────────────────
 
 _receipt_lock = threading.Lock()
+_callback_url = ""       # set by config, CLI, or sender push
+_callback_timeout = 2
+
+
+def set_callback_url(url: str):
+    """Set the sender callback URL (called from config, CLI, or API)."""
+    global _callback_url
+    _callback_url = (url or "").strip()
+    if _callback_url:
+        log.info("Sender callback URL set: %s", _callback_url)
+
+
+def get_callback_url() -> str:
+    return _callback_url
 
 
 def _now():
@@ -47,14 +61,34 @@ def _parse_marker(payload: bytes) -> dict:
     return {"marker_found": True, "run_id": run_id, "technique": tech, "step": step}
 
 
+def _send_callback(ev: dict):
+    """Fire-and-forget HTTP POST to sender callback URL."""
+    url = _callback_url
+    if not url:
+        return
+    try:
+        import urllib.request
+        data = json.dumps(ev, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=_callback_timeout)
+    except Exception as e:
+        log.debug("Callback to %s failed: %s", url, e)
+
+
 def _write_receipt(path: str, ev: dict):
-    """Thread-safe append of a receipt event to JSONL file."""
+    """Thread-safe append of a receipt event to JSONL file, plus sender callback."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     line = json.dumps(ev, ensure_ascii=False) + "\n"
-    with _receipt_lock:
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(line)
-            f.flush()
+    with _receipt_lock, open(path, "a", encoding="utf-8") as f:
+        f.write(line)
+        f.flush()
+    # Send callback to sender (non-blocking via thread)
+    if _callback_url and ev.get("marker_found"):
+        threading.Thread(target=_send_callback, args=(ev,), daemon=True).start()
 
 
 # ── TCP listener (Modbus/DNP3/S7comm/IEC-104/OPC-UA/EtherNet-IP) ─────
@@ -82,10 +116,8 @@ def _handle_tcp(conn, addr, proto, port, receipts_path, max_payload):
     except Exception as e:
         log.debug("TCP handler error (%s:%d): %s", proto, port, e)
     finally:
-        try:
+        with suppress(Exception):
             conn.close()
-        except Exception:
-            pass
 
 
 def _tcp_server(bind_ip, port, proto, receipts_path, max_payload):
@@ -243,12 +275,13 @@ def _l2_profinet_listener(iface, receipts_path, max_payload):
 
 def main():
     import argparse
+
     from icsforge.log import configure as configure_logging
 
     ap = argparse.ArgumentParser(prog="icsforge-receiver")
     ap.add_argument("--web", action="store_true", default=True)
     ap.add_argument("--web-host", default="0.0.0.0")
-    ap.add_argument("--web-port", type=int, default=8080)
+    ap.add_argument("--web-port", type=int, default=9090)
     ap.add_argument("--host", dest="web_host", help="Alias for --web-host")
     ap.add_argument("--port", dest="web_port", type=int, help="Alias for --web-port")
     ap.add_argument("--no-web", action="store_true")
@@ -257,6 +290,7 @@ def main():
     ap.add_argument("--l2-iface", default="", help="Interface for PROFINET DCP L2 capture")
     ap.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
     ap.add_argument("--log-file", default=None, help="Log to file in addition to stderr")
+    ap.add_argument("--callback-url", default="", help="Sender callback URL for live receipt forwarding")
     args = ap.parse_args()
 
     configure_logging(level=args.log_level, log_file=args.log_file)
@@ -264,13 +298,21 @@ def main():
     if getattr(args, "web_host", None) and args.bind == "0.0.0.0":
         args.bind = args.web_host
 
-    with open(args.config, "r", encoding="utf-8") as f:
+    with open(args.config, encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
     listen = cfg.get("listen") or {}
     udp_listen = cfg.get("udp_listen") or {}
     l2_listen = cfg.get("l2_listen") or {}
     receipts_path = (cfg.get("log") or {}).get("receipts", "./receiver_out/receipts.jsonl")
     max_payload = int((cfg.get("safety") or {}).get("max_payload", 8192))
+
+    # Sender callback URL — CLI overrides config
+    global _callback_url, _callback_timeout
+    cb_cfg = cfg.get("callback") or {}
+    cb_url = (args.callback_url or "").strip() or (cb_cfg.get("url") or "").strip()
+    _callback_timeout = int(cb_cfg.get("timeout", 2))
+    if cb_url:
+        set_callback_url(cb_url)
 
     # TCP listeners
     for proto, port in listen.items():

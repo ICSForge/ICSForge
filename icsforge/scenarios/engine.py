@@ -1,15 +1,14 @@
 
-from typing import Any, Dict, List, Optional
 import json
 import os
 import time
+from typing import Any
 
 import yaml
 
-from icsforge.core import event_base, parse_interval, write_pcap, build_marker
-from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp, bacnet
-from icsforge.protocols.common import tcp_packet, udp_packet, ether_frame
-
+from icsforge.core import build_marker, event_base, parse_interval, write_pcap
+from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm
+from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet
 
 # TCP payload builders (return bytes) + default destination ports
 PROTO_PAYLOADS = {
@@ -19,6 +18,7 @@ PROTO_PAYLOADS = {
     "iec104": (2404, iec104.build_payload),
     "opcua": (4840, opcua.build_payload),
     "enip": (44818, enip.build_payload),
+    "mqtt": (1883, mqtt.build_payload),
 }
 
 # UDP payload builders + default destination ports
@@ -26,8 +26,8 @@ UDP_PAYLOADS = {
     "bacnet": (47808, bacnet.build_payload),
 }
 
-def load_scenarios(scenario_path: str) -> Dict[str, Any]:
-    with open(scenario_path, "r", encoding="utf-8") as f:
+def load_scenarios(scenario_path: str) -> dict[str, Any]:
+    with open(scenario_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 def run_scenario(
@@ -36,9 +36,9 @@ def run_scenario(
     outdir: str = "out",
     dst_ip: str = "127.0.0.1",
     src_ip: str = "127.0.0.1",
-    run_id: Optional[str] = None,
+    run_id: str | None = None,
     build_pcap: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Offline scenario runner.
 
     Produces:
@@ -68,7 +68,7 @@ def run_scenario(
     events_path = os.path.join(events_dir, f"{rid}.jsonl")
     pcap_path = os.path.join(pcaps_dir, f"{rid}.pcap")
 
-    packets: List[Any] = []
+    packets: list[Any] = []
 
     with open(events_path, "w", encoding="utf-8") as ef:
         for idx, step in enumerate((sc.get("steps") or []), start=1):

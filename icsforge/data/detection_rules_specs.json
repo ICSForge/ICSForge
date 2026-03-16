@@ -2676,5 +2676,387 @@
     "all_protos": [
       "s7comm"
     ]
+  },
+  "T0822__external_remote__mqtt_connect": {
+    "id": "T0822__external_remote__mqtt_connect",
+    "title": "T0822 – MQTT connect (External Remote Services)",
+    "technique": "T0822",
+    "tech_name": "External Remote Services",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "connect"
+    ],
+    "header_hex": "10",
+    "all_techniques": [
+      "T0822"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0859__valid_accounts__mqtt_creds": {
+    "id": "T0859__valid_accounts__mqtt_creds",
+    "title": "T0859 – MQTT connect creds (Valid Accounts)",
+    "technique": "T0859",
+    "tech_name": "Valid Accounts",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "connect_creds"
+    ],
+    "header_hex": "10",
+    "all_techniques": [
+      "T0859"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0831__manipulation_control__mqtt_setpoint": {
+    "id": "T0831__manipulation_control__mqtt_setpoint",
+    "title": "T0831 – MQTT publish setpoint (Manipulation of Control)",
+    "technique": "T0831",
+    "tech_name": "Manipulation of Control",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_setpoint"
+    ],
+    "header_hex": "33",
+    "all_techniques": [
+      "T0831"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0843__program_download__mqtt_firmware": {
+    "id": "T0843__program_download__mqtt_firmware",
+    "title": "T0843 – MQTT publish firmware (Program Download)",
+    "technique": "T0843",
+    "tech_name": "Program Download",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_firmware"
+    ],
+    "header_hex": "34",
+    "all_techniques": [
+      "T0843"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0836__modify_parameter__mqtt_config": {
+    "id": "T0836__modify_parameter__mqtt_config",
+    "title": "T0836 – MQTT publish config (Modify Parameter)",
+    "technique": "T0836",
+    "tech_name": "Modify Parameter",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_config"
+    ],
+    "header_hex": "33",
+    "all_techniques": [
+      "T0836"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0802__automated_collection__mqtt_wildcard": {
+    "id": "T0802__automated_collection__mqtt_wildcard",
+    "title": "T0802 – MQTT subscribe all (Automated Collection)",
+    "technique": "T0802",
+    "tech_name": "Automated Collection",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "subscribe_all"
+    ],
+    "header_hex": "82",
+    "all_techniques": [
+      "T0802"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0841__service_scan__mqtt_ping": {
+    "id": "T0841__service_scan__mqtt_ping",
+    "title": "T0841 – MQTT pingreq (Network Service Scanning)",
+    "technique": "T0841",
+    "tech_name": "Network Service Scanning",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "pingreq"
+    ],
+    "header_hex": "c0",
+    "all_techniques": [
+      "T0841"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0826__loss_availability__mqtt_disconnect": {
+    "id": "T0826__loss_availability__mqtt_disconnect",
+    "title": "T0826 – MQTT connect (Loss of Availability)",
+    "technique": "T0826",
+    "tech_name": "Loss of Availability",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "connect",
+      "disconnect"
+    ],
+    "header_hex": "10",
+    "all_techniques": [
+      "T0826"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0812__default_creds__mqtt_anonymous": {
+    "id": "T0812__default_creds__mqtt_anonymous",
+    "title": "T0812 – MQTT connect anonymous (Default Credentials)",
+    "technique": "T0812",
+    "tech_name": "Default Credentials",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "connect_anonymous"
+    ],
+    "header_hex": "10",
+    "all_techniques": [
+      "T0812"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0855__unauth_command__mqtt_publish": {
+    "id": "T0855__unauth_command__mqtt_publish",
+    "title": "T0855 – MQTT publish command (Unauthorized Command Message)",
+    "technique": "T0855",
+    "tech_name": "Unauthorized Command Message",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_command"
+    ],
+    "header_hex": "32",
+    "all_techniques": [
+      "T0855"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0801__monitor_process__mqtt_subscribe": {
+    "id": "T0801__monitor_process__mqtt_subscribe",
+    "title": "T0801 – MQTT subscribe telemetry (Monitor Process State)",
+    "technique": "T0801",
+    "tech_name": "Monitor Process State",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "subscribe_telemetry",
+      "publish_telemetry"
+    ],
+    "header_hex": "82",
+    "all_techniques": [
+      "T0801"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0869__c2_protocol__mqtt_connect": {
+    "id": "T0869__c2_protocol__mqtt_connect",
+    "title": "T0869 – MQTT connect (Standard Application Layer Protocol)",
+    "technique": "T0869",
+    "tech_name": "Standard Application Layer Protocol",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "connect"
+    ],
+    "header_hex": "10",
+    "all_techniques": [
+      "T0869"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0840__network_enum__mqtt_subscribe_commands": {
+    "id": "T0840__network_enum__mqtt_subscribe_commands",
+    "title": "T0840 – MQTT subscribe commands (Network Connection Enumeration)",
+    "technique": "T0840",
+    "tech_name": "Network Connection Enumeration",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "subscribe_commands"
+    ],
+    "header_hex": "82",
+    "all_techniques": [
+      "T0840"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0836__modify_parameter__mqtt_setpoint": {
+    "id": "T0836__modify_parameter__mqtt_setpoint",
+    "title": "T0836 – MQTT publish setpoint (Modify Parameter)",
+    "technique": "T0836",
+    "tech_name": "Modify Parameter",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_setpoint"
+    ],
+    "header_hex": "33",
+    "all_techniques": [
+      "T0836"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0838__modify_alarm__mqtt_suppress": {
+    "id": "T0838__modify_alarm__mqtt_suppress",
+    "title": "T0838 – MQTT publish alarm (Modify Alarm Settings)",
+    "technique": "T0838",
+    "tech_name": "Modify Alarm Settings",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_alarm"
+    ],
+    "header_hex": "32",
+    "all_techniques": [
+      "T0838"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0889__modify_program__mqtt_config": {
+    "id": "T0889__modify_program__mqtt_config",
+    "title": "T0889 – MQTT publish config (Modify Program)",
+    "technique": "T0889",
+    "tech_name": "Modify Program",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_config"
+    ],
+    "header_hex": "33",
+    "all_techniques": [
+      "T0889"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0815__denial_of_view__mqtt_unsubscribe": {
+    "id": "T0815__denial_of_view__mqtt_unsubscribe",
+    "title": "T0815 – MQTT unsubscribe (Denial of View)",
+    "technique": "T0815",
+    "tech_name": "Denial of View",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "unsubscribe"
+    ],
+    "header_hex": "a2",
+    "all_techniques": [
+      "T0815"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0813__denial_of_control__mqtt_disconnect": {
+    "id": "T0813__denial_of_control__mqtt_disconnect",
+    "title": "T0813 – MQTT disconnect (Denial of Control)",
+    "technique": "T0813",
+    "tech_name": "Denial of Control",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "disconnect"
+    ],
+    "header_hex": "e0",
+    "all_techniques": [
+      "T0813"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0814__dos__mqtt_flood": {
+    "id": "T0814__dos__mqtt_flood",
+    "title": "T0814 – MQTT publish dos (Denial of Service)",
+    "technique": "T0814",
+    "tech_name": "Denial of Service",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "publish_dos"
+    ],
+    "header_hex": "30",
+    "all_techniques": [
+      "T0814"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
+  },
+  "T0856__spoof_reporting__mqtt_will": {
+    "id": "T0856__spoof_reporting__mqtt_will",
+    "title": "T0856 – MQTT will message (Spoof Reporting Message)",
+    "technique": "T0856",
+    "tech_name": "Spoof Reporting Message",
+    "proto": "mqtt",
+    "proto_label": "MQTT 3.1.1",
+    "port": 1883,
+    "styles": [
+      "will_message"
+    ],
+    "header_hex": "10",
+    "all_techniques": [
+      "T0856"
+    ],
+    "all_protos": [
+      "mqtt"
+    ]
   }
 }

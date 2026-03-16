@@ -17,11 +17,14 @@ Campaign YAML format:
       - scenario: T0889__modify_program__s7comm_upload_dl
         delay: 60s
 """
+import json
+import os
+import threading
+import time
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Callable
-import json, os, time, threading
 
-from icsforge.core import parse_interval, generate_run_id
+from icsforge.core import generate_run_id, parse_interval
 
 
 def _now() -> str:

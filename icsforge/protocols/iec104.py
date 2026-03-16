@@ -1,8 +1,8 @@
 # ICSForge IEC-60870-5-104 payload builder — upgraded for ATT&CK realism
-import struct, random
+import random
+import struct
 
 from .common import marker_bytes
-
 
 # IEC-104 ASDU Type IDs
 TYPE = {
@@ -106,7 +106,6 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
     rnd  = random.Random(kwargs.get("seed"))
     ca   = int(kwargs.get("ca",  rnd.randint(1, 10))) & 0xFFFF
     ioa  = int(kwargs.get("ioa", rnd.randint(1, 100)))
-    cot_val = COT.get(kwargs.get("cot", "activation"), COT["activation"])
     mb   = marker_bytes(marker)
 
     if style == "startdt":

@@ -5,16 +5,15 @@ Maps IDS/SIEM alert signatures to MITRE ATT&CK for ICS technique IDs.
 Patterns cover:
   - Suricata ET ICS/SCADA rule naming conventions
   - Snort ICS rule patterns
-  - Protocol-specific indicators (Modbus, DNP3, S7comm, IEC-104, OPC UA, ENIP, BACnet, PROFINET)
+  - Protocol-specific indicators (Modbus, DNP3, S7comm, IEC-104, OPC UA, ENIP, BACnet, PROFINET, MQTT)
   - Generic OT/ICS alert patterns from common NSM/IDS platforms
   - MITRE ATT&CK for ICS technique names appearing in alert metadata
 
 v0.41: Expanded from 13 to 70+ rules covering all 8 protocols.
 """
 
-from typing import Any, Dict, List, Set
 import re
-
+from typing import Any
 
 # ── Pattern → Technique mapping rules ────────────────────────────────
 # Each tuple: (compiled_regex, technique_id)
@@ -169,12 +168,25 @@ RULES = [
     # ── T0872 Indicator Removal on Host ───────────────────────────────
     (re.compile(r"(clear|delete|purge).*(log|event|diagnostic|audit)", re.I), "T0872"),
 
+    # ── MQTT-specific ICS rules ──────────────────────────────────────
+    (re.compile(r"MQTT.*(connect|CONNECT|unauthorized.?client)", re.I), "T0822"),
+    (re.compile(r"MQTT.*(publish|PUBLISH).*(command|actuator|write|setpoint)", re.I), "T0855"),
+    (re.compile(r"MQTT.*(publish|PUBLISH).*(config|parameter|tuning|pid)", re.I), "T0836"),
+    (re.compile(r"MQTT.*(publish|PUBLISH).*(firmware|update|flash)", re.I), "T0843"),
+    (re.compile(r"MQTT.*(publish|PUBLISH).*(alarm|safety|trip|suppress)", re.I), "T0838"),
+    (re.compile(r"MQTT.*(subscribe|SUBSCRIBE).*(wildcard|#|\+)", re.I), "T0802"),
+    (re.compile(r"MQTT.*(subscribe|SUBSCRIBE).*(sensor|telemetry|monitor)", re.I), "T0801"),
+    (re.compile(r"MQTT.*(disconnect|flood|dos|oversize)", re.I), "T0814"),
+    (re.compile(r"MQTT.*(brute|credential|default|anonymous)", re.I), "T0812"),
+    (re.compile(r"MQTT.*(will|testament|last.?will)", re.I), "T0856"),
+    (re.compile(r"MQTT.*(retain|persistent.?message)", re.I), "T0831"),
+
     # ── Generic ICSForge marker detection ─────────────────────────────
     (re.compile(r"ICSFORGE", re.I), "T0855"),  # ICSForge marker in traffic = synthetic test
 ]
 
 
-def map_alert_to_techniques(alert: Dict[str, Any]) -> Set[str]:
+def map_alert_to_techniques(alert: dict[str, Any]) -> set[str]:
     """Map an alert dict to a set of MITRE ATT&CK for ICS technique IDs.
 
     Checks the ``signature``, ``msg``, or ``message`` field against all rules.
@@ -197,7 +209,7 @@ def map_alert_to_techniques(alert: Dict[str, Any]) -> Set[str]:
 
     sig = " ".join(c for c in candidates if c)
 
-    techs: Set[str] = set()
+    techs: set[str] = set()
     if not sig:
         return techs
     for rx, tid in RULES:
@@ -207,15 +219,15 @@ def map_alert_to_techniques(alert: Dict[str, Any]) -> Set[str]:
 
 
 def correlate_run(
-    expected_techniques: List[str],
-    alerts: List[Dict[str, Any]],
-) -> Dict[str, Any]:
+    expected_techniques: list[str],
+    alerts: list[dict[str, Any]],
+) -> dict[str, Any]:
     """Correlate expected techniques against observed alerts.
 
     Returns a dict with expected/observed/gaps/coverage_ratio/evidence.
     """
-    observed: Set[str] = set()
-    evidence: Dict[str, List[Dict[str, Any]]] = {}
+    observed: set[str] = set()
+    evidence: dict[str, list[dict[str, Any]]] = {}
     for a in alerts:
         techs = map_alert_to_techniques(a)
         for t in techs:

@@ -6,11 +6,17 @@ replay_pcap()  : sends TCP payloads from PCAP via raw sockets (scapy optional)
 build_marker() : on-wire correlation marker bytes
 """
 
+import ipaddress
+import json
+import os
+import random
+import socket
+import struct
+import time
+from contextlib import suppress
 from datetime import datetime, timezone
-import json, os, time, socket, ipaddress, random, struct
 
 from icsforge.log import get_logger as _get_logger
-
 
 _log = _get_logger(__name__)
 
@@ -84,7 +90,7 @@ def _send_file(path: str, event: dict, fh_cache: dict):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     fh = fh_cache.get(path)
     if fh is None:
-        fh = open(path, "a", encoding="utf-8")
+        fh = open(path, "a", encoding="utf-8")  # noqa: SIM115
         fh_cache[path] = fh
     fh.write(json.dumps(event, separators=(",", ":"), ensure_ascii=False) + "\n")
     fh.flush()
@@ -122,12 +128,18 @@ def _send_kafka(bootstrap: str, topic: str, event: dict):
     prod.flush(2)
 
 def dispatch_send(kind, target, event, fh_cache):
-    if kind == "stdout":        _send_stdout(event)
-    elif kind == "file":        _send_file(target, event, fh_cache)
-    elif kind == "http":        _send_http(target, event)
-    elif kind == "syslog":      _send_syslog(*target, event)
-    elif kind == "kafka":       _send_kafka(*target, event)
-    else:                       raise ValueError(f"Unknown output kind '{kind}'")
+    if kind == "stdout":
+        _send_stdout(event)
+    elif kind == "file":
+        _send_file(target, event, fh_cache)
+    elif kind == "http":
+        _send_http(target, event)
+    elif kind == "syslog":
+        _send_syslog(*target, event)
+    elif kind == "kafka":
+        _send_kafka(*target, event)
+    else:
+        raise ValueError(f"Unknown output kind '{kind}'")
 
 # ── Event model ───────────────────────────────────────────────────────
 def event_base(technique: str | None, source: str, **fields) -> dict:
@@ -156,7 +168,7 @@ def write_pcap(packets: list, out_path: str, base_interval_ms: float = 50.0) -> 
     current_ts = base_ts
     with open(out_path, "wb") as f:
         f.write(_PCAP_GLOBAL_HDR)
-        for i, pkt in enumerate(packets):
+        for _i, pkt in enumerate(packets):
             raw = bytes(pkt) if not isinstance(pkt, bytes) else pkt
             ts_sec = int(current_ts)
             ts_usec = int((current_ts - ts_sec) * 1_000_000)
@@ -220,8 +232,8 @@ def replay_pcap(pcap_path: str, dst_ip: str, interval: float = 0.05) -> int:
                 try:
                     s.sendall(payload)
                 finally:
-                    try: s.shutdown(socket.SHUT_RDWR)
-                    except Exception: pass
+                    with suppress(Exception):
+                        s.shutdown(socket.SHUT_RDWR)
                     s.close()
                 sent += 1
             except Exception:

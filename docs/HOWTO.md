@@ -52,7 +52,7 @@ After the run finishes, the Sender UI shows **Download PCAP** (when a PCAP was c
 ## 3) Start Receiver (Appliance UI)
 
 ```bash
-sudo ./icsforge.sh receiver --host 0.0.0.0 --port 8080
+sudo ./icsforge.sh receiver --host 0.0.0.0 --port 9090
 ```
 
 Receiver mode navigation is intentionally minimal:

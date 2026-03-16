@@ -7,7 +7,6 @@ import pytest
 from icsforge.scenarios.engine import load_scenarios, run_scenario
 
 
-
 class TestLoadScenarios:
     def test_load_bundled_scenarios(self, scenarios_path):
         doc = load_scenarios(scenarios_path)
@@ -53,7 +52,7 @@ class TestRunScenario:
         assert os.path.exists(result["events"])
 
         # Verify events JSONL content
-        with open(result["events"], "r") as f:
+        with open(result["events"]) as f:
             lines = [json.loads(ln) for ln in f if ln.strip()]
         assert len(lines) > 0
         assert all(ev.get("mitre.ics.technique") for ev in lines)
@@ -92,7 +91,7 @@ class TestDetectionGenerator:
         result = generate_all(technique_filter=["T0855"])
         assert "sigma" in result
         assert len(result["sigma"]) > 0
-        for sc_id, rule in result["sigma"].items():
+        for _sc_id, rule in result["sigma"].items():
             assert "title:" in rule
             assert "attack.ics" in rule
 

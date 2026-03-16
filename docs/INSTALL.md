@@ -33,7 +33,6 @@ It creates and uses `.venv` automatically.
 ## Docker (receiver appliance, optional)
 A receiver container example is under `docker/`:
 - `docker/Dockerfile.receiver`
-- `docker/docker-compose.receiver.yml`
 
 ## Verify installation
 

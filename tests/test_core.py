@@ -5,19 +5,17 @@ import struct
 import pytest
 
 from icsforge.core import (
-
+    build_marker,
+    event_base,
+    generate_run_id,
     is_allowed_dest,
+    is_legacy_run_id,
+    marker_prefix,
     now_iso,
     parse_interval,
     write_pcap,
-    build_marker,
-    marker_prefix,
-    generate_run_id,
-    is_legacy_run_id,
-    event_base,
 )
 from icsforge.protocols.common import tcp_packet
-
 
 # ── IP allowlisting ──────────────────────────────────────────────────
 

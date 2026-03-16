@@ -6,7 +6,6 @@ import struct
 
 from .common import marker_bytes
 
-
 # ── BVLC (BACnet Virtual Link Control) ───────────────────────────────
 # Type 0x81 = BACnet/IP (Annex J)
 BVLC_TYPE = 0x81

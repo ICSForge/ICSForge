@@ -1,8 +1,8 @@
 # ICSForge EtherNet/IP (CIP over ENIP encapsulation) — upgraded for ATT&CK realism
-import struct, random
+import random
+import struct
 
 from .common import marker_bytes
-
 
 # ENIP encapsulation commands
 CMD = {
@@ -302,7 +302,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         value    = struct.pack("<f", float(kwargs.get("value", rnd.uniform(0.0, 100.0))))
         # CIP write tag service: service 0x4D + ANSI symbol segment
         symbol   = b"\x91" + bytes([len(tag_name)]) + tag_name
-        if len(symbol) % 2: symbol += b"\x00"
+        if len(symbol) % 2:
+            symbol += b"\x00"
         word_cnt = len(symbol) // 2
         path     = bytes([word_cnt]) + symbol
         cip_req  = bytes([CIP_SVC["write_tag"]]) + path + struct.pack("<HH", 0xCA, 1) + value + mb

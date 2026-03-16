@@ -5,8 +5,9 @@ tcp_packet()  → complete Ethernet+IP+TCP frame as raw bytes
 ether_frame() → complete Ethernet II frame as raw bytes
 marker_bytes()→ marker embedding helper
 """
-import random, socket, struct
-
+import random
+import socket
+import struct
 
 __all__ = ["marker_bytes", "tcp_packet", "udp_packet", "ether_frame"]
 

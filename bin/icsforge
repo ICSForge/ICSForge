@@ -4,12 +4,21 @@
 Usage:
   ./bin/icsforge install
   ./bin/icsforge web [--host 0.0.0.0 --port 8080] [--unprivileged]
-  ./bin/icsforge receiver [--host 0.0.0.0 --port 8080]
+  ./bin/icsforge receiver [--host 0.0.0.0 --port 9090]
   ./bin/icsforge selftest
   ./bin/icsforge doctor
+
+Ports:
+  Sender   web UI defaults to :8080
+  Receiver web UI defaults to :9090  (safe for single-host testing)
 """
 
-import os, sys, subprocess, shutil, venv, json
+import json
+import os
+import shutil
+import subprocess
+import sys
+import venv
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -17,6 +26,7 @@ VENV_DIR = REPO / ".venv"
 PY = VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 PIP = VENV_DIR / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
 REQ = REPO / "requirements.txt"
+
 
 def _ensure_venv():
     if not PY.exists():
@@ -26,6 +36,7 @@ def _ensure_venv():
         print("[*] Installing requirements")
         subprocess.check_call([str(PIP), "install", "-r", str(REQ)])
 
+
 def _need_root():
     try:
         import socket
@@ -34,6 +45,7 @@ def _need_root():
         return False
     except Exception:
         return True
+
 
 def _rerun_with_sudo():
     if os.name == "nt":
@@ -46,9 +58,11 @@ def _rerun_with_sudo():
     print("[*] Elevating with sudo for raw-socket capability (live traffic).")
     os.execvp(sudo, [sudo, "-E", str(PY)] + sys.argv[1:])
 
+
 def cmd_install(args):
     _ensure_venv()
     print("[+] Done. Use: ./bin/icsforge web  (or receiver/selftest/doctor)")
+
 
 def cmd_web(args):
     _ensure_venv()
@@ -58,76 +72,85 @@ def cmd_web(args):
     host = "0.0.0.0"
     port = "8080"
     if "--host" in args:
-        host = args[args.index("--host")+1]
+        host = args[args.index("--host") + 1]
     if "--port" in args:
-        port = args[args.index("--port")+1]
+        port = args[args.index("--port") + 1]
     env = os.environ.copy()
-    env['ICSFORGE_UI_MODE'] = 'sender'
-    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
+    env["ICSFORGE_UI_MODE"] = "sender"
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
     cmd = [str(PY), "-m", "icsforge.web", "--host", host, "--port", port]
     subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
 
 def cmd_receiver(args):
     _ensure_venv()
     host = "0.0.0.0"
-    port = "8080"
+    port = "9090"
     if "--host" in args:
-        host = args[args.index("--host")+1]
+        host = args[args.index("--host") + 1]
     if "--port" in args:
-        port = args[args.index("--port")+1]
+        port = args[args.index("--port") + 1]
     env = os.environ.copy()
-    env['ICSFORGE_UI_MODE'] = 'receiver'
-    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
+    env["ICSFORGE_UI_MODE"] = "receiver"
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
     cmd = [str(PY), "-m", "icsforge.receiver", "--host", host, "--port", port]
-    # Forward any extra args (e.g. --l2-iface eth0, --no-web, --bind) directly
+    # Forward any extra args (e.g. --l2-iface eth0, --no-web, --bind)
     skip_next = False
-    for i, arg in enumerate(args):
+    for arg in args:
         if skip_next:
             skip_next = False
             continue
         if arg in ("--host", "--port"):
-            skip_next = True   # already handled above
+            skip_next = True
             continue
         cmd.append(arg)
     subprocess.check_call(cmd, cwd=str(REPO), env=env)
 
+
 def cmd_selftest(args):
     _ensure_venv()
     env = os.environ.copy()
-    env['ICSFORGE_UI_MODE'] = 'receiver'
-    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH","")
-    cmd = [str(PY), "-m", "icsforge.cli", "selftest"]
+    env["ICSFORGE_UI_MODE"] = "receiver"
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+    cmd = [str(PY), "-m", "icsforge.cli", "selftest", "--live"]
     subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
 
 def cmd_doctor(args):
     _ensure_venv()
-    info = {"repo": str(REPO), "venv": str(VENV_DIR), "raw_socket_needed_for_live_send": _need_root()}
+    info = {
+        "repo": str(REPO),
+        "venv": str(VENV_DIR),
+        "raw_socket_needed_for_live_send": _need_root(),
+    }
     print(json.dumps(info, indent=2))
     print("\nTips:")
-    print("- Live traffic send requires raw sockets (run via ./bin/icsforge web, which will sudo -E when needed).")
+    print("- Live traffic send requires raw sockets (launcher will sudo -E).")
     print("- PCAP generation does not require sudo.")
-    print("- On Kali, always use this launcher (venv) instead of system pip.")
+    print("- Sender: :8080   Receiver: :9090")
+
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] in ("-h","--help","help"):
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help", "help"):
         print(__doc__)
         sys.exit(0)
     cmd = sys.argv[1]
     args = sys.argv[2:]
-    if cmd == "install":
-        cmd_install(args)
-    elif cmd == "web":
-        cmd_web(args)
-    elif cmd == "receiver":
-        cmd_receiver(args)
-    elif cmd == "selftest":
-        cmd_selftest(args)
-    elif cmd == "doctor":
-        cmd_doctor(args)
+    dispatch = {
+        "install": cmd_install,
+        "web": cmd_web,
+        "receiver": cmd_receiver,
+        "selftest": cmd_selftest,
+        "doctor": cmd_doctor,
+    }
+    fn = dispatch.get(cmd)
+    if fn:
+        fn(args)
     else:
         print(f"Unknown command: {cmd}")
         print(__doc__)
         sys.exit(2)
+
 
 if __name__ == "__main__":
     main()

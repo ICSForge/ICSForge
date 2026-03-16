@@ -8,11 +8,9 @@ Usage:
     log.info("Receiver started", extra={"port": 502, "proto": "modbus"})
 """
 
-from typing import Optional
 import logging
 import os
 import sys
-
 
 _CONFIGURED = False
 
@@ -22,8 +20,8 @@ LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def configure(
-    level: Optional[str] = None,
-    log_file: Optional[str] = None,
+    level: str | None = None,
+    log_file: str | None = None,
     force: bool = False,
 ) -> None:
     """Configure ICSForge logging.

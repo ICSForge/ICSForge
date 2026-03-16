@@ -8,13 +8,10 @@ Covers:
   - Route audit: verify README-documented endpoints exist
   - Verify all @web.route decorators resolve without import errors
 """
-import json
 import os
 import sys
-import tempfile
 
 import pytest
-
 
 # Ensure the project root is on the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

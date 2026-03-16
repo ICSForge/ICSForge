@@ -5,15 +5,16 @@ TCP protocols: standard socket.create_connection()
 UDP protocols: standard socket.SOCK_DGRAM (BACnet/IP)
 PROFINET DCP:  AF_PACKET raw socket (Linux only; requires root/CAP_NET_RAW)
 """
-from typing import List
-import socket, struct, time
+import socket
+import struct
+import time
+from contextlib import suppress
 
 import yaml
 
-from icsforge.core import build_marker, parse_interval, generate_run_id
+from icsforge.core import build_marker, generate_run_id, parse_interval
 from icsforge.log import get_logger
-from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp, bacnet
-
+from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm
 
 log = get_logger(__name__)
 
@@ -24,6 +25,7 @@ TCP_PROTOS = {
     "iec104":       (2404,  iec104.build_payload),
     "opcua":        (4840,  opcua.build_payload),
     "enip":         (44818, enip.build_payload),
+    "mqtt":         (1883,  mqtt.build_payload),
 }
 
 UDP_PROTOS = {
@@ -42,8 +44,8 @@ def _tcp_send(dst_ip: str, port: int, payload: bytes, timeout: float):
     try:
         s.sendall(payload)
     finally:
-        try: s.shutdown(socket.SHUT_RDWR)
-        except Exception: pass
+        with suppress(Exception):
+            s.shutdown(socket.SHUT_RDWR)
         s.close()
 
 
@@ -94,7 +96,7 @@ def _send_profinet_dcp(iface: str, dcp_payload: bytes):
 
 
 def load_scenarios(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
@@ -104,7 +106,7 @@ def send_scenario_live(
     dst_ip: str,
     iface: str | None = None,
     confirm_live_network: bool = False,
-    receiver_allowlist: List[str] | None = None,
+    receiver_allowlist: list[str] | None = None,
     timeout: float = 2.0,
 ) -> dict:
     if not confirm_live_network:

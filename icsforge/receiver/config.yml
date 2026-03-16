@@ -8,6 +8,7 @@ listen:
   iec104:  2404
   opcua:   4840
   enip:    44818
+  mqtt:    1883
 
 # UDP listeners — protocols using datagram transport
 udp_listen:
@@ -22,6 +23,13 @@ l2_listen:
 
 log:
   receipts: ./receiver_out/receipts.jsonl
+
+# Sender callback — when set, receiver HTTP POSTs each receipt to sender for live UI updates.
+# Set via config or CLI: --callback-url http://sender-ip:8080/api/receiver/callback
+# The sender's /api/config/receiver_ip endpoint can push this URL to the receiver at runtime.
+callback:
+  url: ""          # e.g. "http://10.0.0.10:8080/api/receiver/callback"
+  timeout: 2       # seconds
 
 safety:
   max_payload: 8192

@@ -1,11 +1,10 @@
 """
 ICSForge Coverage Report Generator
 """
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import json
-
 
 _MATRIX_PATH = Path(__file__).parent.parent / "data" / "ics_attack_matrix.json"
 
@@ -44,9 +43,12 @@ def generate_report(
     gap_set      = set(gap_techniques)
 
     def tech_status(tid: str) -> str:
-        if tid in detected_set: return "detected"
-        if tid in gap_set:      return "gap"
-        if tid in executed_set: return "executed"
+        if tid in detected_set:
+            return "detected"
+        if tid in gap_set:
+            return "gap"
+        if tid in executed_set:
+            return "executed"
         return "none"
 
     total_matrix = sum(len(t["techniques"]) for t in mat["tactics"])
@@ -84,7 +86,8 @@ def generate_report(
         for tech in tac["techniques"]:
             tid = tech["id"]
             st  = tech_status(tid)
-            if st == "none": continue
+            if st == "none":
+                continue
             color, st_label = STATUS_COLORS[st]
             rows += (
                 f'<tr>'

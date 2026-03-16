@@ -11,10 +11,8 @@ import struct
 
 import pytest
 
-from icsforge.protocols import modbus, dnp3, s7comm, iec104, opcua, enip, profinet_dcp, bacnet
-from icsforge.protocols.common import tcp_packet, udp_packet, ether_frame, marker_bytes
-
-
+from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, opcua, profinet_dcp, s7comm
+from icsforge.protocols.common import ether_frame, marker_bytes, tcp_packet, udp_packet
 
 # ── Modbus ────────────────────────────────────────────────────────────
 

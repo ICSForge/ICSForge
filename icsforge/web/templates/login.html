@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ICSForge — Login</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:40px;
+  width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,.4)}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{font-size:24px;color:#f8fafc;letter-spacing:-.5px}
+.logo span{color:#3b82f6}
+.logo p{color:#64748b;font-size:13px;margin-top:4px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:#94a3b8;margin-bottom:6px;font-weight:500}
+.field input{width:100%;padding:10px 14px;background:#0f172a;border:1px solid #334155;
+  border-radius:8px;color:#f8fafc;font-size:15px;outline:none;transition:border-color .2s}
+.field input:focus{border-color:#3b82f6}
+.btn{width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:8px;
+  font-size:15px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:8px}
+.btn:hover{background:#2563eb}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error{background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;padding:10px 14px;
+  border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+.error.show{display:block}
+.mode{text-align:center;margin-top:16px;font-size:12px;color:#475569}
+.mode span{color:#3b82f6;text-transform:uppercase;font-weight:600}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1><span>ICS</span>Forge</h1>
+    <p>OT/ICS Security Coverage Validation</p>
+  </div>
+  <div class="error" id="error"></div>
+  <div class="field">
+    <label for="username">Username</label>
+    <input type="text" id="username" autocomplete="username" autofocus>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password">
+  </div>
+  <button class="btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+  <div class="mode">Mode: <span>{{ ui_mode }}</span></div>
+</div>
+<script>
+function doLogin(){
+  const btn=document.getElementById('loginBtn');
+  const err=document.getElementById('error');
+  btn.disabled=true; err.className='error';
+  const u=document.getElementById('username').value.trim();
+  const p=document.getElementById('password').value;
+  if(!u||!p){err.textContent='Enter username and password';err.className='error show';btn.disabled=false;return}
+  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,password:p})})
+  .then(r=>r.json().then(d=>({status:r.status,data:d})))
+  .then(({status,data})=>{
+    if(status===200&&data.ok){window.location.href='/';}
+    else{err.textContent=data.error||'Login failed';err.className='error show';btn.disabled=false;}
+  }).catch(e=>{err.textContent='Connection error';err.className='error show';btn.disabled=false;});
+}
+document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('username').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('password').focus()});
+</script>
+</body>
+</html>

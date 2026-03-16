@@ -1,10 +1,10 @@
 # ICSForge DNP3 payload builder — upgraded for ATT&CK for ICS realism
 # Implements real DNP3/TCP link+transport+application layer framing
 # CRC-16/DNP computed per IEEE 1815 / IEC 62351-5
-import random, struct
+import random
+import struct
 
 from .common import marker_bytes
-
 
 # ── DNP3 CRC-16 lookup table (polynomial 0x3D65, bit-reversed) ───────
 # Ref: IEEE 1815-2012 Annex E, identical to IEC 62351-5

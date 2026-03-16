@@ -8,11 +8,11 @@ Rules are based on:
   3. ICSForge marker prefix (ICSFORGE_SYNTH|) for precise lab validation
   4. ATT&CK technique ID embedded in rule metadata
 """
+import json
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any
-import json, re
-
 
 _SPECS_PATH = Path(__file__).parent.parent / "data" / "detection_rules_specs.json"
 
@@ -22,7 +22,7 @@ _MARKER_PREFIX_HEX = "494353464f5247455f53594e54487c"   # ICSFORGE_SYNTH|
 _SURICATA_PROTO = {
     "modbus": "tcp", "dnp3": "tcp", "s7comm": "tcp",
     "iec104": "tcp", "opcua": "tcp", "enip":   "tcp",
-    "profinet_dcp": "tcp",
+    "profinet_dcp": "tcp", "mqtt": "tcp", "bacnet": "udp",
 }
 
 _SID_BASE = 9_800_000

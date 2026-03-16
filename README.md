@@ -1,5 +1,6 @@
 
 [//]: [![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
+[![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -7,7 +8,7 @@
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
-ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **8 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, PROFINET DCP)** which are aligned with **72 out of 83 unique techniques in MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact - to help asset owners and defenders assessing the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identifying hidden gaps.
+ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **9 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, PROFINET DCP)** which are aligned with **72 out of 83 unique techniques in MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact - to help asset owners and defenders assessing the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identifying hidden gaps.
 
 ICSForge is developed with a **safe-by-design** approach, operating within a **Sender-Receiver architecture** and interacting only with the designated sender and receiver, without touching other OT devices.
 
@@ -18,8 +19,8 @@ ICSForge is developed with a **safe-by-design** approach, operating within a **S
 
 | Metric | Value |
 |---|---|
-| **Protocols** | 8 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, PROFINET DCP) |
-| **Runnable Scenarios** | 155 in the main scenario pack |
+| **Protocols** | 9 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, PROFINET DCP) |
+| **Runnable Scenarios** | 175 in the main scenario pack |
 | **ATT&CK for ICS Techniques Exercised** | 72 unique ICS technique IDs across runnable scenarios |
 | **ATT&CK for ICS Matrix Coverage** | 87% (72 out of 83 technique) |
 | **Detection Rules** | Auto-generated Suricata + Sigma rules per scenario |
@@ -33,10 +34,10 @@ ICSForge is developed with a **safe-by-design** approach, operating within a **S
 │   ICSForge Sender    │  TCP/ UDP / L2   │  ICSForge Receiver   │
 │                      │ ─>─>─>─>─>─>─>─> │                      │
 │ • Scenario engine    │                  │ • Traffic sink       │
-│ • 8 protocol builders│                  │ • Marker correlation │
+│ • 9 protocol builders│                  │ • Marker correlation │
 │ • PCAP generation    │                  │ • Receipt logging    │
 │ • Campaign playbooks │                  │ • Coverage matrix    │
-│ • Web UI (:8080)     │                  │ • Web UI (:8080)     │
+│ • Web UI (:8080)     │                  │ • Web UI (:9090)     │
 └──────────────────────┘                  └──────────────────────┘
            │                                          │
            ▼                                          ▼
@@ -70,7 +71,7 @@ chmod +x icsforge.sh
 ```bash
 docker compose up
 # Sender UI:   http://localhost:8080
-# Receiver UI: http://localhost:8081
+# Receiver UI: http://localhost:9090
 ```
 
 ### Generate a PCAP (offline)
@@ -95,8 +96,37 @@ icsforge send --name T0855__unauth_command__modbus \
 
 ```bash
 sudo ./icsforge.sh web        				# Sender dashboard on :8080
-sudo ./icsforge.sh receiver   				# Receiver dashboard on :8080
+sudo ./icsforge.sh receiver   				# Receiver dashboard on :9090
 sudo ./icsforge.sh receiver --l2-iface eth0 # Receiver with Profinet Listener
+```
+
+### Authentication
+
+On first launch, ICSForge prompts you to create an admin account. All subsequent access requires login.
+
+```bash
+# Disable auth for local development
+icsforge-web --no-auth
+
+# Or via environment variable
+ICSFORGE_NO_AUTH=1 icsforge-web
+```
+
+Credentials are stored in `~/.icsforge/credentials.json` (SHA-256 + salt, file mode 0600).
+The following endpoints are exempt from auth: `/api/health` (monitoring), `/api/receiver/callback` (receiver→sender), `/api/config/set_callback` (sender→receiver).
+
+### Live Receiver Callback
+
+The receiver automatically notifies the sender when it receives ICSForge traffic, closing the loop in real time without manual file inspection.
+
+1. In the sender UI, set the **Receiver IP** (or via API: `POST /api/config/receiver_ip`)
+2. The sender pushes its callback URL to the receiver
+3. When the receiver parses a marker, it POSTs the receipt back to the sender
+4. The sender UI shows live receipt confirmations as they arrive
+
+```bash
+# Or configure via CLI
+icsforge-receiver --callback-url http://sender-ip:8080/api/receiver/callback
 ```
 
 ---
@@ -123,6 +153,7 @@ ICSForge is **defender-first**, **safe by design**, and **honest about limitatio
 | OPC UA | 4840 | 16 | T0855, T0861, T0822, T0859, T0879 |
 | EtherNet/IP | 44818 | 15 | T0840, T0888, T0816, T0875, T0882 |
 | BACnet/IP | 47808 (UDP) | 16 | T0840, T0855, T0816, T0813, T0882 |
+| MQTT | 1883 | 17 | T0855, T0801, T0812, T0836, T0843, T0869 |
 | PROFINET DCP | L2 | 8 | T0840, T0842, T0849 |
 
 ---

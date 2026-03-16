@@ -1,6 +1,4 @@
 
-from pathlib import Path
-from typing import List
 import argparse
 import json
 import os
@@ -9,13 +7,14 @@ import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 from icsforge.live.sender import send_scenario_live
-from icsforge.log import get_logger, configure as configure_logging
+from icsforge.log import configure as configure_logging
+from icsforge.log import get_logger
 from icsforge.reports.network_validation import build_network_validation_report
 from icsforge.scenarios.engine import run_scenario
 from icsforge.state import RunRegistry, default_db_path
-
 
 log = get_logger(__name__)
 
@@ -27,7 +26,7 @@ def cmd_generate(args) -> int:
 
 
 def cmd_send(args) -> int:
-    allowlist: List[str] = [x.strip() for x in (args.allowlist.split(",") if args.allowlist else []) if x.strip()] or [args.dst_ip]
+    allowlist: list[str] = [x.strip() for x in (args.allowlist.split(",") if args.allowlist else []) if x.strip()] or [args.dst_ip]
 
     res = send_scenario_live(
         scenario_file=args.file,
@@ -76,7 +75,7 @@ def cmd_net_validate(args) -> int:
 
 
 def _read_jsonl(path: str):
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -117,7 +116,7 @@ def cmd_selftest(args) -> int:
         time.sleep(1.5)
 
         # Build a temp scenario file (pcap steps = live send steps)
-        scenario = f"""scenarios:
+        scenario = """scenarios:
   selftest_live:
     steps:
       - type: pcap
@@ -131,11 +130,10 @@ def cmd_selftest(args) -> int:
         count: 1
         interval: 0s
 """
-        tf = tempfile.NamedTemporaryFile("w", delete=False, suffix=".yml", dir=args.cwd)
-        tf.write(scenario)
-        tf.flush()
-        tf.close()
-        scenario_file = os.path.basename(tf.name)
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".yml", dir=args.cwd) as tf:
+            tf.write(scenario)
+            tf.flush()
+            scenario_file = os.path.basename(tf.name)
 
         res = send_scenario_live(
             scenario_file=os.path.join(args.cwd, scenario_file),

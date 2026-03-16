@@ -13,10 +13,10 @@ ICSForge is a safe OT/ICS telemetry lab that can:
 - **Sender vs Receiver UI separation**
   - Sender web (`./icsforge.sh web`) shows Sender/SOC/Matrix/Tools
   - Receiver web (`./icsforge.sh receiver`) shows Receiver/Matrix/Tools
-- **8 industrial protocols**
+- **9 industrial protocols**
   - Modbus/TCP (502), DNP3 (20000), S7comm (102), IEC-104 (2404), OPC UA (4840), EtherNet/IP (44818), BACnet/IP (47808/UDP), PROFINET DCP (L2)
 - **Scenario catalog**
-  - 155 runnable scenarios covering 72 ATT&CK for ICS technique IDs
+  - 175 runnable scenarios covering 72 ATT&CK for ICS technique IDs
   - Consistent naming: `T08XX__technique__protocol__variant`
   - Technique variants supported (protocol alternatives where applicable)
   - 11 multi-step CHAIN scenarios (Industroyer2, Triton, Stuxnet patterns)

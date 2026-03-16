@@ -1,6 +1,9 @@
+import hashlib
+import json
+import os
+import sqlite3
+import zipfile
 from datetime import datetime, timezone
-from typing import Tuple
-import os, json, sqlite3, hashlib, zipfile
 
 
 def default_db_path(repo_root: str) -> str:
@@ -35,7 +38,7 @@ CREATE TABLE IF NOT EXISTS artifacts(
 );
 """
 
-def _sha256_file(path: str) -> Tuple[str,int]:
+def _sha256_file(path: str) -> tuple[str,int]:
     h=hashlib.sha256()
     n=0
     with open(path,"rb") as f:
