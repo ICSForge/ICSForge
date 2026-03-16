@@ -64,8 +64,8 @@
           <div class="small">{{ p.count }} scenarios · {{ p.protocols|length }} protocols · {{ p.techniques|length }} techniques</div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
-          {% for pr in p.protocols[:5] %}<span class="badge">{{ pr }}</span>{% endfor %}
-          {% if p.protocols|length > 5 %}<span class="badge">+{{ p.protocols|length - 5 }}</span>{% endif %}
+          {% for pr in p.protocols[:10] %}<span class="badge">{{ pr }}</span>{% endfor %}
+          {% if p.protocols|length > 10 %}<span class="badge">+{{ p.protocols|length - 1 }}</span>{% endif %}
         </div>
       </div>
     {% endfor %}
