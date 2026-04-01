@@ -1,15 +1,41 @@
 """ICSForge Authentication — setup, login, session-based access control."""
 
+import collections as _collections
 import hashlib
 import json
 import os
 import secrets
+import time as _time
 
-from flask import current_app, jsonify, redirect, request, session
+from flask import jsonify, redirect, request, session
 
 from icsforge.log import get_logger
 
 log = get_logger(__name__)
+
+
+# ── Simple in-memory rate limiter (per IP, for auth endpoints) ─────────
+_LOGIN_ATTEMPTS: dict = _collections.defaultdict(list)  # ip -> [timestamps]
+_MAX_ATTEMPTS = 5
+_WINDOW_SECONDS = 60
+_LOCKOUT_SECONDS = 300
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Return True if the IP is allowed to attempt login, False if locked out."""
+    now = _time.time()
+    attempts = _LOGIN_ATTEMPTS[ip]
+    # Drop attempts outside the window
+    _LOGIN_ATTEMPTS[ip] = [t for t in attempts if now - t < _LOCKOUT_SECONDS]
+    recent = [t for t in _LOGIN_ATTEMPTS[ip] if now - t < _WINDOW_SECONDS]
+    return len(recent) < _MAX_ATTEMPTS
+
+
+def _record_failed_attempt(ip: str) -> int:
+    """Record a failed login attempt. Returns remaining attempts before lockout."""
+    _LOGIN_ATTEMPTS[ip].append(_time.time())
+    recent = [t for t in _LOGIN_ATTEMPTS[ip] if _time.time() - t < _WINDOW_SECONDS]
+    return max(0, _MAX_ATTEMPTS - len(recent))
 
 _CRED_FILE = None
 
@@ -17,14 +43,20 @@ PUBLIC_PATHS = {
     "/login", "/setup", "/health",
     "/api/auth/login", "/api/auth/setup", "/api/health",
     "/api/receiver/callback",
+    "/api/config/set_callback",
 }
 PUBLIC_PREFIXES = ("/static/",)
 
 
 def _cred_path():
-    return _CRED_FILE or os.path.join(
-        os.path.expanduser("~"), ".icsforge", "credentials.json"
-    )
+    if _CRED_FILE:
+        return _CRED_FILE
+    # Store inside the project's out/ directory — not in the user home.
+    # This means credentials reset when the project directory is replaced,
+    # which is the expected behaviour for version upgrades and clean reinstalls.
+    here = os.path.dirname(os.path.abspath(__file__))          # icsforge/
+    project_root = os.path.dirname(here)                        # project root
+    return os.path.join(project_root, "out", ".credentials.json")
 
 
 def _hash_password(pw):
@@ -64,6 +96,17 @@ def create_credentials(username, password):
     os.chmod(p, 0o600)
     log.info("Credentials created for user %s", username)
     return {"ok": True, "username": username}
+
+
+
+def _reset_rate_limit(ip: str | None = None) -> None:
+    """Reset rate limit counters. Pass ip to reset one address, or None to clear all.
+    Intended for testing only — called from test fixtures to prevent state leakage.
+    """
+    if ip is None:
+        _LOGIN_ATTEMPTS.clear()
+    else:
+        _LOGIN_ATTEMPTS.pop(ip, None)
 
 
 def verify_login(username, password):
@@ -110,7 +153,7 @@ button:hover{background:rgba(240,165,0,.25)}
 </style></head>
 <body><div class=card>
 <h1>ICSForge Setup</h1>
-<p>Create admin credentials for the web interface.</p>
+<p>Create admin credentials for the web interface.<br><span style="font-size:11px;color:#566882">Credentials stored in <code style="color:#8499b5">out/.credentials.json</code> inside the project directory.</span></p>
 <div class=err id=err></div>
 <form id=f>
   <label>Username</label><input id=u required>
@@ -184,7 +227,11 @@ document.getElementById('f').onsubmit=async e=>{
 def init_auth(app):
     """Wire authentication into a Flask app."""
     global _CRED_FILE
-    _CRED_FILE = os.environ.get("ICSFORGE_CRED_FILE") or _cred_path()
+    # Allow env override; otherwise use project-local path (set via _cred_path())
+    env_override = os.environ.get("ICSFORGE_CRED_FILE", "").strip()
+    if env_override:
+        _CRED_FILE = env_override
+    # If no override, _cred_path() already resolves to out/.credentials.json
 
     if os.environ.get("ICSFORGE_NO_AUTH", "").strip().lower() in ("1", "true", "yes"):
         log.warning("Authentication DISABLED via ICSFORGE_NO_AUTH")
@@ -192,8 +239,6 @@ def init_auth(app):
 
     @app.before_request
     def _check_auth():
-        if current_app.testing:
-            return None
         path = request.path
         # Public paths — no auth needed
         if path in PUBLIC_PATHS:
@@ -244,14 +289,25 @@ def init_auth(app):
 
     @app.route("/api/auth/login", methods=["POST"])
     def api_auth_login():
+        ip = request.remote_addr or "unknown"
+        if not _check_rate_limit(ip):
+            return jsonify({"error": "Too many failed attempts. Try again later."}), 429
         data = request.get_json(force=True) or {}
         un = (data.get("username") or "").strip()
         pw = data.get("password") or ""
         if verify_login(un, pw):
             session["authenticated"] = True
             session["username"] = un
+            # Reset failed attempts on success
+            _LOGIN_ATTEMPTS.pop(ip, None)
             return jsonify({"ok": True, "username": un})
-        return jsonify({"error": "Invalid credentials"}), 401
+        remaining = _record_failed_attempt(ip)
+        msg = "Invalid credentials"
+        if remaining == 0:
+            msg = f"Too many failed attempts. Locked out for {_LOCKOUT_SECONDS // 60} minutes."
+        elif remaining <= 2:
+            msg = f"Invalid credentials ({remaining} attempt{'s' if remaining != 1 else ''} remaining)"
+        return jsonify({"error": msg}), 401
 
     @app.route("/api/auth/logout", methods=["POST"])
     def api_auth_logout():

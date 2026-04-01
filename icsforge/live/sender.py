@@ -14,23 +14,12 @@ import yaml
 
 from icsforge.core import build_marker, generate_run_id, parse_interval
 from icsforge.log import get_logger
-from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm
+from icsforge.protocols import (
+    bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm,
+    TCP_PROTOS, UDP_PROTOS,
+)
 
 log = get_logger(__name__)
-
-TCP_PROTOS = {
-    "modbus":       (502,   modbus.build_payload),
-    "dnp3":         (20000, dnp3.build_payload),
-    "s7comm":       (102,   s7comm.build_payload),
-    "iec104":       (2404,  iec104.build_payload),
-    "opcua":        (4840,  opcua.build_payload),
-    "enip":         (44818, enip.build_payload),
-    "mqtt":         (1883,  mqtt.build_payload),
-}
-
-UDP_PROTOS = {
-    "bacnet":       (47808, bacnet.build_payload),
-}
 
 # PROFINET DCP multicast MAC (DCP Identify / Hello target)
 _PN_DST_MAC   = b"\x01\x0e\xcf\x00\x00\x00"
@@ -108,7 +97,9 @@ def send_scenario_live(
     confirm_live_network: bool = False,
     receiver_allowlist: list[str] | None = None,
     timeout: float = 2.0,
+    step_options: dict | None = None,
 ) -> dict:
+    """Send a scenario live. step_options: {proto: {key: value}} overrides per-step."""
     if not confirm_live_network:
         raise ValueError("Live send blocked: pass confirm_live_network=True to enable.")
 
@@ -157,7 +148,8 @@ def send_scenario_live(
                 port, builder = TCP_PROTOS[proto]
                 for _ in range(count):
                     marker  = build_marker(run_id, tech, step_id)
-                    payload = builder(marker, style=style)
+                    opts = (step_options or {}).get(proto, {})
+                    payload = builder(marker, style=style, **opts)
                     try:
                         _tcp_send(dst_ip, port, payload, timeout)
                         sent += 1
@@ -169,7 +161,8 @@ def send_scenario_live(
                 port, builder = UDP_PROTOS[proto]
                 for _ in range(count):
                     marker  = build_marker(run_id, tech, step_id)
-                    payload = builder(marker, style=style)
+                    opts = (step_options or {}).get(proto, {})
+                    payload = builder(marker, style=style, **opts)
                     try:
                         _udp_send(dst_ip, port, payload, timeout)
                         sent += 1

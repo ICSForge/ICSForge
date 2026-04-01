@@ -14,10 +14,15 @@
     <!-- Run ID -->
     <div class="card">
       <h3 style="margin-bottom:10px">Run Reference</h3>
-      <label>Run ID (auto-fills executed techniques)</label>
+      <label>Select a previous run</label>
       <div style="display:flex;gap:6px;margin-bottom:8px">
-        <input id="run_id" placeholder="e.g. abc123def456" style="flex:1">
+        <select id="run_id_select" style="flex:1;padding:7px 10px;font-size:13px" onchange="onRunSelect()">
+          <option value="">— select a run —</option>
+        </select>
         <button class="btn" onclick="loadRun()">Load</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input id="run_id" placeholder="or paste run ID manually" style="flex:1;font-size:12px">
       </div>
       <div id="run_loaded" class="small muted" style="display:none"></div>
     </div>
@@ -84,18 +89,39 @@
 </div>
 
 <style>
-.proto-row { display:flex;gap:6px;align-items:center; }
-.proto-row input { flex:1; }
-.proto-row select { min-width:120px; }
-.proto-row button { flex-shrink:0; }
+.proto-row { display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px; }
+.proto-row-top { display:flex;gap:6px;align-items:center; }
+.proto-row-top select { flex:1;min-width:0; }
+.proto-row-top button { flex-shrink:0; }
+.proto-row input { width:100%;box-sizing:border-box; }
 </style>
 
 <script>
 // Pre-fill date to today
 document.getElementById('assess_date').value = new Date().toISOString().slice(0,10);
 
-// Pre-fill from sessionStorage if coming from campaigns page
+// Populate runs dropdown from /api/runs
 window.addEventListener('DOMContentLoaded', () => {
+  fetch('/api/runs').then(r=>r.json()).then(d=>{
+    const sel = document.getElementById('run_id_select');
+    const runs = d.runs||[];
+    if(runs.length > 1){
+      const allOpt = document.createElement('option');
+      allOpt.value = '__ALL__';
+      allOpt.textContent = '★  All runs combined (' + runs.length + ' runs)';
+      sel.appendChild(allOpt);
+    }
+    runs.forEach(r=>{
+      const opt = document.createElement('option');
+      opt.value = r.run_id;
+      const ts = (r.ts||'').replace('T',' ').slice(0,16);
+      const sc = (r.scenario||r.run_id||'').replace(/__/g,' / ').slice(0,40);
+      opt.textContent = ts + '  –  ' + sc;
+      sel.appendChild(opt);
+    });
+  }).catch(()=>{});
+
+  // Pre-fill from sessionStorage if coming from campaigns page
   const rid = sessionStorage.getItem('report_run_id');
   if (rid) {
     document.getElementById('run_id').value = rid;
@@ -104,11 +130,38 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+function onRunSelect() {
+  const v = document.getElementById('run_id_select').value;
+  if (v) { document.getElementById('run_id').value = v; }
+}
+
 function loadRun() {
-  const rid = document.getElementById('run_id').value.trim();
+  const selVal = document.getElementById('run_id_select').value;
+  const rid = selVal || document.getElementById('run_id').value.trim();
   if (!rid) return;
   const info = document.getElementById('run_loaded');
   info.style.display = '';
+
+  if (rid === '__ALL__') {
+    info.textContent = 'Loading all runs…';
+    fetch('/api/runs').then(r=>r.json()).then(d=>{
+      const runs = d.runs||[];
+      const fetchAll = runs.map(r=>
+        fetch('/api/run_full?run_id='+encodeURIComponent(r.run_id))
+          .then(res=>res.json()).catch(()=>({techniques:[]}))
+      );
+      Promise.all(fetchAll).then(results=>{
+        const all = new Set();
+        results.forEach(d=>(d.techniques||[]).forEach(t=>all.add(t)));
+        const techs = [...all].sort();
+        document.getElementById('executed').value = techs.join('\n');
+        document.getElementById('run_id').value = '';
+        info.textContent = `Loaded ${techs.length} unique technique(s) across ${runs.length} runs`;
+      });
+    }).catch(()=>{ info.textContent = 'Could not load runs.'; });
+    return;
+  }
+
   info.textContent = 'Loading…';
   fetch('/api/run_full?run_id=' + encodeURIComponent(rid))
     .then(r=>r.json())
@@ -137,10 +190,12 @@ function addProtoGap() {
   row.className = 'proto-row';
   row.id = id;
   row.innerHTML =
-    `<select class="pg-proto" style="min-width:170px">${PROTOCOLS.map(p=>`<option>${p}</option>`).join('')}</select>` +
-    `<select class="pg-type"  style="min-width:150px">${GAP_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>` +
-    `<input  class="pg-note"  placeholder="Note (optional)" style="min-width:100px">` +
-    `<button class="btn" style="padding:4px 8px;font-size:11px" onclick="this.closest('.proto-row').remove()">✕</button>`;
+    `<div class="proto-row-top">` +
+    `<select class="pg-proto">${PROTOCOLS.map(p=>`<option>${p}</option>`).join('')}</select>` +
+    `<select class="pg-type">${GAP_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>` +
+    `<button class="btn" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="this.closest('.proto-row').remove()">✕</button>` +
+    `</div>` +
+    `<input class="pg-note" placeholder="Note (optional — e.g. DMZ rule exception, no IDS parser)">`;
   document.getElementById('proto_gaps').appendChild(row);
 }
 

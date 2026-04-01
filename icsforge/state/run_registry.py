@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS artifacts(
   created_ts TEXT,
   FOREIGN KEY(run_id) REFERENCES runs(run_id)
 );
+CREATE INDEX IF NOT EXISTS idx_runs_ts ON runs(created_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_artifacts_run ON artifacts(run_id);
 """
 
 def _sha256_file(path: str) -> tuple[str,int]:
@@ -54,11 +56,27 @@ class RunRegistry:
         self._init()
 
     def _conn(self):
-        return sqlite3.connect(self.db_path)
+        """Return a context manager that commits/rolls back AND closes the connection."""
+        import contextlib
+
+        @contextlib.contextmanager
+        def _managed():
+            conn = sqlite3.connect(self.db_path)
+            try:
+                yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
+
+        return _managed()
 
     def _init(self):
         with self._conn() as c:
             c.executescript(SCHEMA_SQL)
+            c.execute("ANALYZE")
 
     def upsert_run(self, run_id: str, **fields):
         created_ts = fields.pop("created_ts", None) or datetime.now(timezone.utc).isoformat()+"Z"

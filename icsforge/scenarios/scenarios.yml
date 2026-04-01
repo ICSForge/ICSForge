@@ -1,8 +1,7 @@
 scenarios:
   T0840__network_enum__enip_sweep:
     title: T0840 – EtherNet/IP identity sweep (Network Connection Enumeration)
-    description: 'Attacker sends ENIP ListIdentity and ListServices to discover all connected Allen-Bradley / Rockwell devices.
-      Classic Nmap/Redpoint scanner pattern. Maps directly to T0840.
+    description: 'Attacker sends ENIP ListIdentity and ListServices to discover all connected Allen-Bradley / Rockwell devices. Classic Nmap/Redpoint scanner pattern. Maps directly to T0840.
 
       '
     tactic: Discovery
@@ -28,8 +27,8 @@ scenarios:
       interval: 0.07s
   T0840__network_enum__profinet_identify:
     title: T0840 – PROFINET DCP multicast identify (Network Connection Enumeration)
-    description: 'DCP multicast Identify-All request: the canonical PROFINET device discovery packet. Every PROFINET device
-      on the segment responds with its station name and IP. Seen in every Siemens-environment reconnaissance.
+    description: 'DCP multicast Identify-All request: the canonical PROFINET device discovery packet. Every PROFINET device on the segment responds with its station name and IP. Seen in every Siemens-environment
+      reconnaissance.
 
       '
     tactic: Discovery
@@ -43,8 +42,7 @@ scenarios:
       interval: 0.1s
   T0888__remote_sys_info__enip_identity:
     title: T0888 – EtherNet/IP device fingerprint (Remote System Information Discovery)
-    description: 'After session registration, attacker reads full Identity object (CIP GetAttributeAll) to extract vendor,
-      product code, revision, and serial number. Required precursor to targeted exploitation.
+    description: 'After session registration, attacker reads full Identity object (CIP GetAttributeAll) to extract vendor, product code, revision, and serial number. Required precursor to targeted exploitation.
 
       '
     tactic: Discovery
@@ -70,8 +68,7 @@ scenarios:
       interval: 0.1s
   T0888__remote_sys_info__opcua_discovery:
     title: T0888 – OPC UA server discovery and endpoint enumeration
-    description: 'FindServers + GetEndpoints requests to the OPC UA discovery server. Reveals server capabilities, security
-      policies, and available endpoints. Equivalent of Shodan banner grabbing in OT.
+    description: 'FindServers + GetEndpoints requests to the OPC UA discovery server. Reveals server capabilities, security policies, and available endpoints. Equivalent of Shodan banner grabbing in OT.
 
       '
     tactic: Discovery
@@ -97,9 +94,8 @@ scenarios:
       interval: 0.1s
   T0888__remote_sys_info__s7comm_szl:
     title: T0888 – S7comm SZL/SSL read (System Status List)
-    description: 'S7comm ROSCTR_USERDATA SZL read: attacker queries System Status Lists (0x0011 hardware config, 0x001C CPU
-      components) to enumerate Siemens PLC hardware, firmware version, and module slots. This is what Stuxnet-era reconnaissance
-      looked like.
+    description: 'S7comm ROSCTR_USERDATA SZL read: attacker queries System Status Lists (0x0011 hardware config, 0x001C CPU components) to enumerate Siemens PLC hardware, firmware version, and module slots.
+      This is what Stuxnet-era reconnaissance looked like.
 
       '
     tactic: Discovery
@@ -119,8 +115,8 @@ scenarios:
       interval: 0.12s
   T0861__point_tag_id__opcua_browse:
     title: T0861 – OPC UA Browse tree traversal (Point & Tag Identification)
-    description: 'Attacker enumerates the entire OPC UA address space starting from the Objects folder. BrowseRequest → BrowseNextRequest
-      chains reveal every tag name, NodeId, and data type in the server. Seen in pre-attack reconnaissance against ICS historians.
+    description: 'Attacker enumerates the entire OPC UA address space starting from the Objects folder. BrowseRequest → BrowseNextRequest chains reveal every tag name, NodeId, and data type in the server.
+      Seen in pre-attack reconnaissance against ICS historians.
 
       '
     tactic: Collection
@@ -152,8 +148,8 @@ scenarios:
       interval: 0.08s
   T0861__point_tag_id__modbus_register_sweep:
     title: T0861 – Modbus register address sweep (Point & Tag Identification)
-    description: 'Systematic FC03 read of all holding register addresses from 0 to 9999. Each exception response reveals valid
-      address boundaries. This is how attackers map a PLC''s data model before writing to it.
+    description: 'Systematic FC03 read of all holding register addresses from 0 to 9999. Each exception response reveals valid address boundaries. This is how attackers map a PLC''s data model before writing
+      to it.
 
       '
     tactic: Collection
@@ -191,9 +187,8 @@ scenarios:
       interval: 0.08s
   T0841__network_scanning__multi:
     title: T0841 – OT protocol port sweep (Network Service Scanning)
-    description: 'Connection attempts on all standard OT service ports across protocols. Models automated scanner behaviour
-      (Nmap, Redpoint, Claroty passive emulation). Each probe uses the correct protocol handshake to elicit a valid response
-      that reveals service presence.
+    description: 'Connection attempts on all standard OT service ports across protocols. Models automated scanner behaviour (Nmap, Redpoint, Claroty passive emulation). Each probe uses the correct protocol
+      handshake to elicit a valid response that reveals service presence.
 
       '
     tactic: Discovery
@@ -237,9 +232,8 @@ scenarios:
       interval: 0.07s
   T0842__network_sniffing__profinet_passive:
     title: T0842 – PROFINET DCP Hello observation (Network Sniffing)
-    description: 'Attacker sends DCP Hello and DCP Get to passively harvest device names and IP assignments. In real attacks
-      this is passive listening, but the DCP Get pattern proves the attacker is already on the segment observing traffic (T0842
-      network-observable precursor).
+    description: 'Attacker sends DCP Hello and DCP Get to passively harvest device names and IP assignments. In real attacks this is passive listening, but the DCP Get pattern proves the attacker is already
+      on the segment observing traffic (T0842 network-observable precursor).
 
       '
     tactic: Discovery
@@ -265,8 +259,8 @@ scenarios:
       interval: 0.12s
   T0846__remote_sys_discovery__dnp3_probe:
     title: T0846 – DNP3 device probing (Remote System Discovery)
-    description: 'Attacker sends DNP3 DelayMeasure and AssignClass requests to identify which outstation addresses respond.
-      Timing data reveals network topology. AssignClass sweeps help discover all device IDs.
+    description: 'Attacker sends DNP3 DelayMeasure and AssignClass requests to identify which outstation addresses respond. Timing data reveals network topology. AssignClass sweeps help discover all device
+      IDs.
 
       '
     tactic: Discovery
@@ -292,9 +286,8 @@ scenarios:
       interval: 0.1s
   T0801__monitor_process__modbus_poll:
     title: T0801 – Modbus sustained process state polling (Monitor Process State)
-    description: 'Periodic FC03 holding register reads at realistic polling cadence (500ms–2s intervals). This is legitimate
-      SCADA behaviour but from an unexpected source — the key indicator of T0801. Models an attacker establishing a continuous
-      view of process values before crafting a manipulation payload.
+    description: 'Periodic FC03 holding register reads at realistic polling cadence (500ms–2s intervals). This is legitimate SCADA behaviour but from an unexpected source — the key indicator of T0801. Models
+      an attacker establishing a continuous view of process values before crafting a manipulation payload.
 
       '
     tactic: Collection
@@ -320,9 +313,8 @@ scenarios:
       interval: 0.5s
   T0801__monitor_process__iec104_subscribe:
     title: T0801 – IEC-104 STARTDT + interrogation (Monitor Process State)
-    description: 'IEC-104 session establishment (STARTDT U-frame) followed by global interrogation (C_IC_NA_1). This initiates
-      spontaneous reporting of all process values — an attacker''s first step to understand live process state in a substation
-      environment.
+    description: 'IEC-104 session establishment (STARTDT U-frame) followed by global interrogation (C_IC_NA_1). This initiates spontaneous reporting of all process values — an attacker''s first step to
+      understand live process state in a substation environment.
 
       '
     tactic: Collection
@@ -354,9 +346,8 @@ scenarios:
       interval: 0.3s
   T0801__monitor_process__opcua_subscription:
     title: T0801 – OPC UA subscription polling (Monitor Process State)
-    description: 'CreateSubscription + recurring Publish requests. An attacker who has gained access to the OPC UA server
-      creates a subscription to continuously receive value changes for critical tags. This is how modern ICS malware (e.g.
-      PIPEDREAM components) monitor process state before initiating disruption.
+    description: 'CreateSubscription + recurring Publish requests. An attacker who has gained access to the OPC UA server creates a subscription to continuously receive value changes for critical tags.
+      This is how modern ICS malware (e.g. PIPEDREAM components) monitor process state before initiating disruption.
 
       '
     tactic: Collection
@@ -382,8 +373,8 @@ scenarios:
       interval: 0.5s
   T0802__automated_collection__modbus_burst:
     title: T0802 – Modbus rapid systematic register dump (Automated Collection)
-    description: 'High-cadence FC03 reads sweeping the full address space at maximum speed. Distinguishable from T0801 by
-      rate and systematic address increment. Models scripted data harvesting for offline analysis or replay-attack preparation.
+    description: 'High-cadence FC03 reads sweeping the full address space at maximum speed. Distinguishable from T0801 by rate and systematic address increment. Models scripted data harvesting for offline
+      analysis or replay-attack preparation.
 
       '
     tactic: Collection
@@ -421,9 +412,8 @@ scenarios:
       interval: 0.05s
   T0882__theft_operational_info__opcua_history:
     title: T0882 – OPC UA HistoryRead data exfil (Theft of Operational Information)
-    description: 'OPC UA HistoryReadRequest to extract historical process data. Attackers targeting historian servers (Wonderware,
-      OSIsoft PI) use this to exfiltrate operational data for competitive intelligence or attack preparation. Distinct from
-      T0801 by the HistoryRead service type rather than real-time Read.
+    description: 'OPC UA HistoryReadRequest to extract historical process data. Attackers targeting historian servers (Wonderware, OSIsoft PI) use this to exfiltrate operational data for competitive intelligence
+      or attack preparation. Distinct from T0801 by the HistoryRead service type rather than real-time Read.
 
       '
     tactic: Collection
@@ -443,8 +433,8 @@ scenarios:
       interval: 0.1s
   T0882__theft_operational_info__s7comm_db_extract:
     title: T0882 – S7comm systematic DB read (Theft of Operational Information)
-    description: 'Sequential ReadVar requests targeting multiple Data Blocks (DB1, DB2, ...). In Siemens environments, DBs
-      contain recipes, setpoints, and production data. Attackers use this to exfiltrate production intelligence.
+    description: 'Sequential ReadVar requests targeting multiple Data Blocks (DB1, DB2, ...). In Siemens environments, DBs contain recipes, setpoints, and production data. Attackers use this to exfiltrate
+      production intelligence.
 
       '
     tactic: Collection
@@ -470,8 +460,7 @@ scenarios:
       interval: 0.1s
   T0883__internet_accessible__multi:
     title: T0883 – Exposed OT service probe (Internet Accessible Device)
-    description: 'Attacker probing OT services from an unexpected network segment (DMZ breach, direct internet exposure).
-      Each protocol sends its standard discovery request to reveal service presence.
+    description: 'Attacker probing OT services from an unexpected network segment (DMZ breach, direct internet exposure). Each protocol sends its standard discovery request to reveal service presence.
 
       '
     tactic: Initial Access
@@ -503,9 +492,8 @@ scenarios:
       interval: 0.2s
   T0822__external_remote_services__opcua:
     title: T0822 – OPC UA anonymous session establishment (External Remote Services)
-    description: 'Full OPC UA session handshake: CreateSession → ActivateSession with anonymous identity token. Many OPC UA
-      servers accept anonymous connections by default (misconfiguration). This is how attackers gain read/write access via
-      OPC UA without credentials.
+    description: 'Full OPC UA session handshake: CreateSession → ActivateSession with anonymous identity token. Many OPC UA servers accept anonymous connections by default (misconfiguration). This is how
+      attackers gain read/write access via OPC UA without credentials.
 
       '
     tactic: Initial Access
@@ -537,8 +525,8 @@ scenarios:
       interval: 0.1s
   T0859__valid_accounts__opcua_cred:
     title: T0859 – OPC UA credential-based session (Valid Accounts)
-    description: 'CreateSession + ActivateSession with username/password token. Models use of captured or default credentials
-      (admin/admin, guest/guest). Distinguished from T0822 by the credential presentation in the ActivateSession token structure.
+    description: 'CreateSession + ActivateSession with username/password token. Models use of captured or default credentials (admin/admin, guest/guest). Distinguished from T0822 by the credential presentation
+      in the ActivateSession token structure.
 
       '
     tactic: Initial Access
@@ -564,8 +552,8 @@ scenarios:
       interval: 0.2s
   T0848__rogue_master__modbus:
     title: T0848 – Modbus rogue master (Rogue Master)
-    description: 'Attacker device acts as an unexpected Modbus TCP master: it begins issuing read and write commands from
-      an IP not in the engineering workstation whitelist. The key observable is a new source IP communicating on port 502.
+    description: 'Attacker device acts as an unexpected Modbus TCP master: it begins issuing read and write commands from an IP not in the engineering workstation whitelist. The key observable is a new
+      source IP communicating on port 502.
 
       '
     tactic: Lateral Movement
@@ -597,8 +585,8 @@ scenarios:
       interval: 0.2s
   T0848__rogue_master__dnp3:
     title: T0848 – DNP3 rogue master select-before-operate (Rogue Master)
-    description: 'Unexpected master issues DNP3 Select-then-Operate sequence to an outstation that does not recognise its
-      source address. The key observable is control traffic from an unauthorised master address (src attribute).
+    description: 'Unexpected master issues DNP3 Select-then-Operate sequence to an outstation that does not recognise its source address. The key observable is control traffic from an unauthorised master
+      address (src attribute).
 
       '
     tactic: Lateral Movement
@@ -624,8 +612,8 @@ scenarios:
       interval: 0.15s
   T0848__rogue_master__iec104:
     title: T0848 – IEC-104 rogue master STARTDT + commands (Rogue Master)
-    description: 'An unauthorised IEC-104 controlling station establishes a connection (STARTDT) to an RTU and issues control
-      commands. RTU receives commands from an unexpected IP. Common in substation attacks.
+    description: 'An unauthorised IEC-104 controlling station establishes a connection (STARTDT) to an RTU and issues control commands. RTU receives commands from an unexpected IP. Common in substation
+      attacks.
 
       '
     tactic: Lateral Movement
@@ -657,8 +645,8 @@ scenarios:
       interval: 0.25s
   T0855__unauth_command__modbus:
     title: T0855 – Modbus unauthorized write burst (Unauthorized Command Message)
-    description: 'Write commands from an unexpected host with no prior read baseline. FC06 single register writes followed
-      by FC16 multi-register burst. Pattern seen in Industroyer2, BlackEnergy, and other ICS malware.
+    description: 'Write commands from an unexpected host with no prior read baseline. FC06 single register writes followed by FC16 multi-register burst. Pattern seen in Industroyer2, BlackEnergy, and other
+      ICS malware.
 
       '
     tactic: Impair Process Control
@@ -690,8 +678,8 @@ scenarios:
       interval: 0.08s
   T0855__unauth_command__dnp3_direct_operate:
     title: T0855 – DNP3 direct operate without select (Unauthorized Command Message)
-    description: 'DNP3 DirectOperate (FC05) bypasses the normal Select-before-Operate interlocking. In Industroyer-style attacks
-      this was used to directly trip circuit breakers. FC06 DirectOperateNoAck is also sent to avoid waiting for confirmation.
+    description: 'DNP3 DirectOperate (FC05) bypasses the normal Select-before-Operate interlocking. In Industroyer-style attacks this was used to directly trip circuit breakers. FC06 DirectOperateNoAck
+      is also sent to avoid waiting for confirmation.
 
       '
     tactic: Impair Process Control
@@ -711,8 +699,8 @@ scenarios:
       interval: 0.08s
   T0855__unauth_command__iec104:
     title: T0855 – IEC-104 mass control command sequence (Unauthorized Command Message)
-    description: 'Burst of C_SC_NA_1 single commands followed by C_DC_NA_1 double commands and C_SE_NC_1 float setpoints.
-      This is the Industroyer IEC-104 module pattern: rapid fire commands to open multiple breakers simultaneously.
+    description: 'Burst of C_SC_NA_1 single commands followed by C_DC_NA_1 double commands and C_SE_NC_1 float setpoints. This is the Industroyer IEC-104 module pattern: rapid fire commands to open multiple
+      breakers simultaneously.
 
       '
     tactic: Impair Process Control
@@ -744,9 +732,8 @@ scenarios:
       interval: 0.08s
   T0855__unauth_command__s7comm:
     title: T0855 – S7comm write outputs from unexpected host (Unauthorized Command Message)
-    description: 'S7comm WriteVar targeting AREA_OUTPUTS: an unexpected engineering workstation IP issues write commands directly
-      to PLC output area. The traffic pattern (setup → read → write) is identical to a legitimate workstation but comes from
-      an attacker machine.
+    description: 'S7comm WriteVar targeting AREA_OUTPUTS: an unexpected engineering workstation IP issues write commands directly to PLC output area. The traffic pattern (setup → read → write) is identical
+      to a legitimate workstation but comes from an attacker machine.
 
       '
     tactic: Impair Process Control
@@ -778,9 +765,8 @@ scenarios:
       interval: 0.08s
   T0831__manipulation_control__modbus_setpoint:
     title: T0831 – Modbus setpoint drift manipulation (Manipulation of Control)
-    description: 'Read-modify-write cycle: attacker reads current register, writes a slightly altered value (setpoint drift),
-      reads back to confirm. Unlike T0855 (raw write), T0831 involves incremental manipulation to stay below alarm thresholds.
-      Uses FC22 mask-write for bit-level precision.
+    description: 'Read-modify-write cycle: attacker reads current register, writes a slightly altered value (setpoint drift), reads back to confirm. Unlike T0855 (raw write), T0831 involves incremental
+      manipulation to stay below alarm thresholds. Uses FC22 mask-write for bit-level precision.
 
       '
     tactic: Impair Process Control
@@ -812,8 +798,8 @@ scenarios:
       interval: 0.3s
   T0831__manipulation_control__dnp3_sbo:
     title: T0831 – DNP3 repeated Select-Before-Operate (Manipulation of Control)
-    description: 'Unlike T0855 (no-check operate), T0831 uses the proper SBO sequence repeatedly to change a control output.
-      The repeated cycling pattern (Select→Operate→Select→Operate) is the distinguishing characteristic.
+    description: 'Unlike T0855 (no-check operate), T0831 uses the proper SBO sequence repeatedly to change a control output. The repeated cycling pattern (Select→Operate→Select→Operate) is the distinguishing
+      characteristic.
 
       '
     tactic: Impair Process Control
@@ -845,9 +831,8 @@ scenarios:
       interval: 0.15s
   T0831__manipulation_control__iec104_setpoint:
     title: T0831 – IEC-104 float setpoint ramping (Manipulation of Control)
-    description: 'C_SE_NC_1 float setpoint commands incrementally changing a process value (temperature, pressure, flow rate).
-      Each setpoint is slightly different — the ramping pattern indicates deliberate manipulation rather than a single write
-      command.
+    description: 'C_SE_NC_1 float setpoint commands incrementally changing a process value (temperature, pressure, flow rate). Each setpoint is slightly different — the ramping pattern indicates deliberate
+      manipulation rather than a single write command.
 
       '
     tactic: Impair Process Control
@@ -873,8 +858,8 @@ scenarios:
       interval: 0.25s
   T0831__manipulation_control__opcua_write:
     title: T0831 – OPC UA node value write (Manipulation of Control)
-    description: 'OPC UA WriteRequest to control-related nodes after session establishment. The attacker modifies setpoint/command
-      nodes to influence the physical process. Used by PIPEDREAM/INCONTROLLER OPC UA module.
+    description: 'OPC UA WriteRequest to control-related nodes after session establishment. The attacker modifies setpoint/command nodes to influence the physical process. Used by PIPEDREAM/INCONTROLLER
+      OPC UA module.
 
       '
     tactic: Impair Process Control
@@ -900,9 +885,8 @@ scenarios:
       interval: 0.15s
   T0836__modify_parameter__modbus:
     title: T0836 – Modbus parameter register writes (Modify Parameter)
-    description: 'Writes to holding registers that correspond to PID setpoints, alarm limits, or process parameters. Uses
-      FC22 mask-write for individual bit manipulation and FC16 for multi-register parameter blocks. Distinct from T0831 by
-      targeting known parameter address ranges rather than control outputs.
+    description: 'Writes to holding registers that correspond to PID setpoints, alarm limits, or process parameters. Uses FC22 mask-write for individual bit manipulation and FC16 for multi-register parameter
+      blocks. Distinct from T0831 by targeting known parameter address ranges rather than control outputs.
 
       '
     tactic: Impair Process Control
@@ -928,8 +912,8 @@ scenarios:
       interval: 0.2s
   T0836__modify_parameter__s7comm_db:
     title: T0836 – S7comm Data Block parameter modification (Modify Parameter)
-    description: 'Reads from and writes to specific Siemens Data Blocks (DBs) known to contain process parameters (e.g. DB10
-      = recipe, DB20 = PID tuning). Attacker uses ReadVar to learn current value then WriteVar to change it.
+    description: 'Reads from and writes to specific Siemens Data Blocks (DBs) known to contain process parameters (e.g. DB10 = recipe, DB20 = PID tuning). Attacker uses ReadVar to learn current value then
+      WriteVar to change it.
 
       '
     tactic: Impair Process Control
@@ -955,9 +939,8 @@ scenarios:
       interval: 0.1s
   T0836__modify_parameter__enip_parameter:
     title: T0836 – ENIP/CIP parameter object write (Modify Parameter)
-    description: 'CIP GetAttributeSingle/SetAttributeSingle on Parameter object class. Allen-Bradley drives and controllers
-      expose PID gains, speed limits, and torque limits via the Parameter object (class 0x0F). Attacker reads then overwrites
-      these to cause process deviation.
+    description: 'CIP GetAttributeSingle/SetAttributeSingle on Parameter object class. Allen-Bradley drives and controllers expose PID gains, speed limits, and torque limits via the Parameter object (class
+      0x0F). Attacker reads then overwrites these to cause process deviation.
 
       '
     tactic: Impair Process Control
@@ -983,9 +966,8 @@ scenarios:
       interval: 0.12s
   T0806__brute_force_io__modbus:
     title: T0806 – Modbus sequential address write sweep (Brute Force I/O)
-    description: 'High-speed FC16 writes to sequentially incrementing addresses with random values. Models an attacker trying
-      to force physical outputs by overwriting every possible address. Distinguishable by the rapid address progression and
-      lack of any prior read-back.
+    description: 'High-speed FC16 writes to sequentially incrementing addresses with random values. Models an attacker trying to force physical outputs by overwriting every possible address. Distinguishable
+      by the rapid address progression and lack of any prior read-back.
 
       '
     tactic: Impair Process Control
@@ -1005,9 +987,8 @@ scenarios:
       interval: 0.04s
   T0813__denial_of_control__s7comm_stop:
     title: T0813 – S7comm CPU STOP (Denial of Control)
-    description: 'S7comm PLC Stop command (ROSCTR=Job, FC=0x29). This is the canonical Stuxnet and CRASHOVERRIDE payload against
-      Siemens S7 PLCs. Puts the CPU in STOP mode, disabling all outputs. IDS rules specifically detect this function code
-      from non-authorised sources.
+    description: 'S7comm PLC Stop command (ROSCTR=Job, FC=0x29). This is the canonical Stuxnet and CRASHOVERRIDE payload against Siemens S7 PLCs. Puts the CPU in STOP mode, disabling all outputs. IDS rules
+      specifically detect this function code from non-authorised sources.
 
       '
     tactic: Inhibit Response Function
@@ -1027,8 +1008,8 @@ scenarios:
       interval: 0.3s
   T0813__denial_of_control__modbus_coils_off:
     title: T0813 – Modbus all coils de-energise (Denial of Control)
-    description: 'FC05 writes setting all coils to OFF (0x0000), followed by FC15 multi-coil write clearing all outputs. Models
-      an attacker forcing every digital output to its de-energised state — pump off, valve closed, motor stopped.
+    description: 'FC05 writes setting all coils to OFF (0x0000), followed by FC15 multi-coil write clearing all outputs. Models an attacker forcing every digital output to its de-energised state — pump
+      off, valve closed, motor stopped.
 
       '
     tactic: Inhibit Response Function
@@ -1048,9 +1029,8 @@ scenarios:
       interval: 0.06s
   T0815__denial_of_view__iec104_stopdt:
     title: T0815 – IEC-104 STOPDT disruption (Denial of View)
-    description: 'STOPDT U-frame terminates data transfer on an IEC-104 session. If sent from attacker position between RTU
-      and SCADA, it causes the SCADA to lose all spontaneous telemetry from that RTU — operator has no visibility of the field
-      device.
+    description: 'STOPDT U-frame terminates data transfer on an IEC-104 session. If sent from attacker position between RTU and SCADA, it causes the SCADA to lose all spontaneous telemetry from that RTU
+      — operator has no visibility of the field device.
 
       '
     tactic: Inhibit Response Function
@@ -1076,9 +1056,8 @@ scenarios:
       interval: 0.2s
   T0815__denial_of_view__dnp3_disable_unsol:
     title: T0815 – DNP3 disable unsolicited reporting (Denial of View)
-    description: 'DNP3 DisableUnsolicited (FC21) command sent to an outstation. This turns off all spontaneous event reporting
-      — the SCADA system continues polling but receives no exception-based data. Used in CRASHOVERRIDE to blind operators
-      while attackers executed commands.
+    description: 'DNP3 DisableUnsolicited (FC21) command sent to an outstation. This turns off all spontaneous event reporting — the SCADA system continues polling but receives no exception-based data.
+      Used in CRASHOVERRIDE to blind operators while attackers executed commands.
 
       '
     tactic: Inhibit Response Function
@@ -1092,9 +1071,8 @@ scenarios:
       interval: 0.2s
   T0815__denial_of_view__opcua_delete_sub:
     title: T0815 – OPC UA delete subscriptions (Denial of View)
-    description: 'DeleteSubscriptions request removes all active subscriptions for a client. If an attacker can reach the
-      OPC UA server and delete the SCADA client''s subscriptions, the operator loses all real-time data. The client must re-subscribe
-      to recover.
+    description: 'DeleteSubscriptions request removes all active subscriptions for a client. If an attacker can reach the OPC UA server and delete the SCADA client''s subscriptions, the operator loses all
+      real-time data. The client must re-subscribe to recover.
 
       '
     tactic: Inhibit Response Function
@@ -1114,9 +1092,8 @@ scenarios:
       interval: 0.2s
   T0878__alarm_suppression__iec104_inhibit:
     title: T0878 – IEC-104 parameter activation inhibit (Alarm Suppression)
-    description: 'P_AC_NA_1 (Parameter Activation) with COT=Deactivation sent to an RTU disables spontaneous transmission
-      of alarms. The RTU continues to detect alarm conditions but suppresses their reporting. This is how attackers blind
-      operators before a physical impact step.
+    description: 'P_AC_NA_1 (Parameter Activation) with COT=Deactivation sent to an RTU disables spontaneous transmission of alarms. The RTU continues to detect alarm conditions but suppresses their reporting.
+      This is how attackers blind operators before a physical impact step.
 
       '
     tactic: Inhibit Response Function
@@ -1136,8 +1113,8 @@ scenarios:
       interval: 0.2s
   T0829__loss_of_protection__modbus_safety:
     title: T0829 – Modbus safety register zero-out (Loss of Protection)
-    description: 'FC16 writes to high-numbered registers (60000+) conventionally used for safety setpoints and Safety Instrumented
-      System (SIS) parameters. Zeroing these registers disables protection trips. This is the Triton/TRISIS attack pattern.
+    description: 'FC16 writes to high-numbered registers (60000+) conventionally used for safety setpoints and Safety Instrumented System (SIS) parameters. Zeroing these registers disables protection trips.
+      This is the Triton/TRISIS attack pattern.
 
       '
     tactic: Impact
@@ -1157,8 +1134,8 @@ scenarios:
       interval: 0.1s
   T0876__loss_of_safety__s7comm_outputs:
     title: T0876 – S7comm process output zeroing (Loss of Safety)
-    description: 'S7comm write to AREA_OUTPUTS zeroing all output bytes. In a Siemens environment this de-energises every
-      PLC output: motors, pumps, valves — equivalent to a hard safety shutdown but without the controlled shutdown sequence.
+    description: 'S7comm write to AREA_OUTPUTS zeroing all output bytes. In a Siemens environment this de-energises every PLC output: motors, pumps, valves — equivalent to a hard safety shutdown but without
+      the controlled shutdown sequence.
 
       '
     tactic: Impact
@@ -1178,9 +1155,8 @@ scenarios:
       interval: 0.05s
   T0814__denial_of_service__modbus_flood:
     title: T0814 – Modbus max-register read flood (Denial of Service)
-    description: 'High-rate FC03 requests for 125 registers (maximum per spec). At high frequency this exhausts the PLC''s
-      TCP connection table and request processing capacity, causing legitimate SCADA polls to time out. Seen in attacks targeting
-      legacy PLCs with low connection limits.
+    description: 'High-rate FC03 requests for 125 registers (maximum per spec). At high frequency this exhausts the PLC''s TCP connection table and request processing capacity, causing legitimate SCADA
+      polls to time out. Seen in attacks targeting legacy PLCs with low connection limits.
 
       '
     tactic: Impact
@@ -1194,8 +1170,7 @@ scenarios:
       interval: 0.01s
   T0814__denial_of_service__dnp3_flood:
     title: T0814 – DNP3 read flood (Denial of Service)
-    description: 'High-rate DNP3 ReadClass0 requests from unexpected source. Saturates the outstation''s application layer
-      processing.
+    description: 'High-rate DNP3 ReadClass0 requests from unexpected source. Saturates the outstation''s application layer processing.
 
       '
     tactic: Impact
@@ -1209,8 +1184,8 @@ scenarios:
       interval: 0.01s
   T0814__denial_of_service__iec104_flood:
     title: T0814 – IEC-104 connection flood (Denial of Service)
-    description: 'Rapid IEC-104 STARTDT activations. Each STARTDT consumes a connection slot on the RTU. When the RTU''s maximum
-      connections (typically 3) are exhausted, legitimate SCADA connections are rejected.
+    description: 'Rapid IEC-104 STARTDT activations. Each STARTDT consumes a connection slot on the RTU. When the RTU''s maximum connections (typically 3) are exhausted, legitimate SCADA connections are
+      rejected.
 
       '
     tactic: Impact
@@ -1224,8 +1199,8 @@ scenarios:
       interval: 0.01s
   T0816__device_restart__s7comm:
     title: T0816 – S7comm CPU STOP/START cycle (Device Restart/Shutdown)
-    description: 'S7comm CPU STOP followed by Warm Start. This reboots the PLC, clearing any in-memory data and reloading
-      program from flash. Models CRASHOVERRIDE and Industroyer payload behaviour against Siemens devices.
+    description: 'S7comm CPU STOP followed by Warm Start. This reboots the PLC, clearing any in-memory data and reloading program from flash. Models CRASHOVERRIDE and Industroyer payload behaviour against
+      Siemens devices.
 
       '
     tactic: Impact
@@ -1251,8 +1226,7 @@ scenarios:
       interval: 1.0s
   T0816__device_restart__enip_reset:
     title: T0816 – EtherNet/IP CIP Reset (Device Restart/Shutdown)
-    description: 'CIP Reset service (0x05) on the Identity object of an Allen-Bradley controller. Type 0x00 = power-cycle
-      equivalent. ENIP reset is faster and simpler than S7comm stop for Rockwell targets.
+    description: 'CIP Reset service (0x05) on the Identity object of an Allen-Bradley controller. Type 0x00 = power-cycle equivalent. ENIP reset is faster and simpler than S7comm stop for Rockwell targets.
 
       '
     tactic: Impact
@@ -1272,8 +1246,7 @@ scenarios:
       interval: 0.5s
   T0881__service_stop__s7comm:
     title: T0881 – S7comm persistent CPU STOP (Service Stop)
-    description: 'Multiple CPU STOP commands to ensure the PLC enters STOP mode and does not auto-restart. Distinct from T0816
-      (restart) in that no Start command follows — the intent is permanent shutdown.
+    description: 'Multiple CPU STOP commands to ensure the PLC enters STOP mode and does not auto-restart. Distinct from T0816 (restart) in that no Start command follows — the intent is permanent shutdown.
 
       '
     tactic: Impact
@@ -1293,8 +1266,7 @@ scenarios:
       interval: 0.2s
   T0881__service_stop__enip_stop:
     title: T0881 – EtherNet/IP CIP Stop (Service Stop)
-    description: 'CIP Stop service on a drive or motion controller. Causes the device to stop execution and remain in stopped
-      state.
+    description: 'CIP Stop service on a drive or motion controller. Causes the device to stop execution and remain in stopped state.
 
       '
     tactic: Impact
@@ -1314,8 +1286,8 @@ scenarios:
       interval: 0.2s
   T0827__loss_of_control__multi:
     title: T0827 – Loss of control chain (Loss of Control)
-    description: 'Combined attack: S7comm STOP removes PLC control → Modbus writes to coils force all outputs off → IEC-104
-      STOPDT blinds SCADA. The system loses control of the physical process simultaneously across all protocol layers.
+    description: 'Combined attack: S7comm STOP removes PLC control → Modbus writes to coils force all outputs off → IEC-104 STOPDT blinds SCADA. The system loses control of the physical process simultaneously
+      across all protocol layers.
 
       '
     tactic: Impact
@@ -1341,9 +1313,8 @@ scenarios:
       interval: 0.2s
   T0832__manipulation_of_view__modbus_spoof:
     title: T0832 – Modbus read-write pattern hiding real values (Manipulation of View)
-    description: 'FC23 read-write-multiple: attacker simultaneously reads current process value and writes an altered value
-      to a reporting register. The SCADA system receives modified data while the physical process is at a different state.
-      Distinct from T0831 by targeting view (reporting registers) not control outputs.
+    description: 'FC23 read-write-multiple: attacker simultaneously reads current process value and writes an altered value to a reporting register. The SCADA system receives modified data while the physical
+      process is at a different state. Distinct from T0831 by targeting view (reporting registers) not control outputs.
 
       '
     tactic: Evasion
@@ -1357,9 +1328,8 @@ scenarios:
       interval: 0.2s
   T0832__manipulation_of_view__opcua_write_sensor:
     title: T0832 – OPC UA sensor value injection (Manipulation of View)
-    description: 'Write to sensor/measurement nodes in OPC UA (temperature sensors, pressure transducers) while leaving control
-      nodes untouched. SCADA displays false healthy values while the physical process is degraded. PIPEDREAM/INCONTROLLER
-      used this approach.
+    description: 'Write to sensor/measurement nodes in OPC UA (temperature sensors, pressure transducers) while leaving control nodes untouched. SCADA displays false healthy values while the physical process
+      is degraded. PIPEDREAM/INCONTROLLER used this approach.
 
       '
     tactic: Evasion
@@ -1379,9 +1349,8 @@ scenarios:
       interval: 0.2s
   T0820__exploitation_evasion__modbus_exception:
     title: T0820 – Modbus exception-inducing probes (Exploitation for Evasion)
-    description: 'FC08 diagnostic (return query) followed by out-of-range FC03 requests. Exception probes fingerprint the
-      PLC model by its exception response code patterns. Different PLC models return different exception codes for the same
-      illegal request — a zero-interaction fingerprint.
+    description: 'FC08 diagnostic (return query) followed by out-of-range FC03 requests. Exception probes fingerprint the PLC model by its exception response code patterns. Different PLC models return different
+      exception codes for the same illegal request — a zero-interaction fingerprint.
 
       '
     tactic: Evasion
@@ -1401,9 +1370,8 @@ scenarios:
       interval: 0.12s
   T0849__masquerading__profinet_set_name:
     title: T0849 – PROFINET DCP device rename (Masquerading)
-    description: 'DCP Set NameOfStation to an existing device''s name. In PROFINET, devices are addressed by name — if an
-      attacker renames their device to match a legitimate PLC, it can receive traffic intended for the real device. This is
-      the PROFINET-specific masquerade attack.
+    description: 'DCP Set NameOfStation to an existing device''s name. In PROFINET, devices are addressed by name — if an attacker renames their device to match a legitimate PLC, it can receive traffic
+      intended for the real device. This is the PROFINET-specific masquerade attack.
 
       '
     tactic: Evasion
@@ -1429,9 +1397,8 @@ scenarios:
       interval: 0.15s
   T0849__masquerading__iec104_clock_inject:
     title: T0849 – IEC-104 clock synchronisation injection (Masquerading)
-    description: 'C_CS_NA_1 clock sync with forged timestamp. Injecting incorrect time into an RTU corrupts event timestamps,
-      making forensic analysis impossible and causing event correlation failures in SCADA. Models time-based masquerade in
-      substation attacks.
+    description: 'C_CS_NA_1 clock sync with forged timestamp. Injecting incorrect time into an RTU corrupts event timestamps, making forensic analysis impossible and causing event correlation failures in
+      SCADA. Models time-based masquerade in substation attacks.
 
       '
     tactic: Evasion
@@ -1451,8 +1418,8 @@ scenarios:
       interval: 0.5s
   T0821__modify_controller_tasking__s7comm:
     title: T0821 – S7comm program download (Modify Controller Tasking)
-    description: 'S7comm Request Download → Download Block → End Download sequence. This is how a new/modified PLC program
-      is loaded. Stuxnet used this exact sequence to replace the centrifuge OB with a modified version containing its payload.
+    description: 'S7comm Request Download → Download Block → End Download sequence. This is how a new/modified PLC program is loaded. Stuxnet used this exact sequence to replace the centrifuge OB with a
+      modified version containing its payload.
 
       '
     tactic: Execution
@@ -1484,8 +1451,8 @@ scenarios:
       interval: 0.2s
   T0843__program_download__s7comm:
     title: T0843 – S7comm full program download (Program Download)
-    description: 'Extended download: multiple Download Block chunks of realistic size (64-240 bytes each). Models a full OB1
-      replacement (typically a few KB). Distinct from T0821 by the larger number of chunks and the full start-to-end sequence.
+    description: 'Extended download: multiple Download Block chunks of realistic size (64-240 bytes each). Models a full OB1 replacement (typically a few KB). Distinct from T0821 by the larger number of
+      chunks and the full start-to-end sequence.
 
       '
     tactic: Execution
@@ -1523,9 +1490,8 @@ scenarios:
       interval: 0.5s
   T0845__program_upload__s7comm:
     title: T0845 – S7comm program upload (Program Upload)
-    description: 'Request Upload → Upload Block → End Upload sequence to extract the current PLC program from flash. Attackers
-      upload the program to analyse it for vulnerabilities, understand the process logic, or create a modified version for
-      re-download.
+    description: 'Request Upload → Upload Block → End Upload sequence to extract the current PLC program from flash. Attackers upload the program to analyse it for vulnerabilities, understand the process
+      logic, or create a modified version for re-download.
 
       '
     tactic: Collection
@@ -1557,8 +1523,8 @@ scenarios:
       interval: 0.2s
   T0875__change_program_state__s7comm:
     title: T0875 – S7comm PLC state transitions (Change Program State)
-    description: 'PLC control commands cycling through STOP → Cold Start → Warm Start. Used when an attacker needs the PLC
-      in a specific state for program manipulation. Also forces watchdog resets and clears retain data.
+    description: 'PLC control commands cycling through STOP → Cold Start → Warm Start. Used when an attacker needs the PLC in a specific state for program manipulation. Also forces watchdog resets and clears
+      retain data.
 
       '
     tactic: Execution
@@ -1584,9 +1550,8 @@ scenarios:
       interval: 1.0s
   T0871__execution_through_api__opcua_call:
     title: T0871 – OPC UA Method call (Execution through API)
-    description: 'OPC UA CallRequest targeting a server-side Method node. Many OPC UA servers expose methods to execute commands
-      (e.g. Start/Stop production, change recipe). This is distinct from WriteRequest: it triggers server-side logic rather
-      than directly changing a variable.
+    description: 'OPC UA CallRequest targeting a server-side Method node. Many OPC UA servers expose methods to execute commands (e.g. Start/Stop production, change recipe). This is distinct from WriteRequest:
+      it triggers server-side logic rather than directly changing a variable.
 
       '
     tactic: Execution
@@ -1606,8 +1571,8 @@ scenarios:
       interval: 0.3s
   T0868__detect_operating_mode__enip:
     title: T0868 – EtherNet/IP CIP GetAttribute operating mode (Detect Operating Mode)
-    description: 'GetAttributeSingle on the device type attribute of the Identity object reveals whether the controller is
-      in Program, Run, or Test mode. An attacker needs this before issuing control commands or program downloads.
+    description: 'GetAttributeSingle on the device type attribute of the Identity object reveals whether the controller is in Program, Run, or Test mode. An attacker needs this before issuing control commands
+      or program downloads.
 
       '
     tactic: Discovery
@@ -1627,9 +1592,8 @@ scenarios:
       interval: 0.1s
   CHAIN__industroyer2__power_grid:
     title: CHAIN – Industroyer2 / Ukraine 2022 power grid (IEC-104 + S7comm)
-    description: 'Reproduces the Industroyer2 attack sequence observed in the 2022 Ukraine power grid attack: IEC-104 STARTDT
-      reconnaissance → mass single/double commands to open breakers → S7comm STOP on relay protection devices. Covers T0888
-      + T0848 + T0855 + T0815 + T0813.
+    description: 'Reproduces the Industroyer2 attack sequence observed in the 2022 Ukraine power grid attack: IEC-104 STARTDT reconnaissance → mass single/double commands to open breakers → S7comm STOP
+      on relay protection devices. Covers T0888 + T0848 + T0855 + T0815 + T0813.
 
       '
     tactic: Multi-Stage
@@ -1685,9 +1649,8 @@ scenarios:
       interval: 0.2s
   CHAIN__triton__safety_system:
     title: CHAIN – Triton/TRISIS safety system attack (SIS targeting)
-    description: 'Models the Triton attack against a Schneider Triconex Safety Controller: ENIP/CIP device discovery → S7comm
-      SZL recon → Modbus safety register read → safety write to disable trips → OPC UA alarm suppression to hide changes.
-      Covers T0888 + T0882 + T0829 + T0878 + T0832.
+    description: 'Models the Triton attack against a Schneider Triconex Safety Controller: ENIP/CIP device discovery → S7comm SZL recon → Modbus safety register read → safety write to disable trips → OPC
+      UA alarm suppression to hide changes. Covers T0888 + T0882 + T0829 + T0878 + T0832.
 
       '
     tactic: Multi-Stage
@@ -1731,8 +1694,8 @@ scenarios:
       interval: 0.15s
   CHAIN__stuxnet__siemens_plc:
     title: CHAIN – Stuxnet-style Siemens PLC attack
-    description: 'Reconstructs the Stuxnet sequence: PROFINET DCP discovery → S7comm SZL fingerprint → program upload (read
-      logic) → modified program download → PLC state cycle. Covers T0840 + T0888 + T0845 + T0843 + T0875.
+    description: 'Reconstructs the Stuxnet sequence: PROFINET DCP discovery → S7comm SZL fingerprint → program upload (read logic) → modified program download → PLC state cycle. Covers T0840 + T0888 + T0845
+      + T0843 + T0875.
 
       '
     tactic: Multi-Stage
@@ -1788,8 +1751,8 @@ scenarios:
       interval: 1.0s
   CHAIN__water_treatment_tampering:
     title: CHAIN – Water treatment setpoint and chemical tampering
-    description: 'Models the 2021 Oldsmar (Florida) water treatment attack: Modbus recon → setpoint manipulation of chemical
-      dosing registers → safety system bypass → alarm suppression. Covers T0861 + T0831 + T0806 + T0829 + T0878.
+    description: 'Models the 2021 Oldsmar (Florida) water treatment attack: Modbus recon → setpoint manipulation of chemical dosing registers → safety system bypass → alarm suppression. Covers T0861 + T0831
+      + T0806 + T0829 + T0878.
 
       '
     tactic: Multi-Stage
@@ -1839,8 +1802,8 @@ scenarios:
       interval: 0.2s
   CHAIN__industrial_espionage__opcua:
     title: CHAIN – Industrial espionage via OPC UA (data exfil)
-    description: 'OPC UA-based silent data collection: session → browse all tags → systematic read → history read → close.
-      No writes — pure intelligence gathering. Models nation-state pre-positioning (T0822 + T0861 + T0801 + T0882 + T0879).
+    description: 'OPC UA-based silent data collection: session → browse all tags → systematic read → history read → close. No writes — pure intelligence gathering. Models nation-state pre-positioning (T0822
+      + T0861 + T0801 + T0882 + T0879).
 
       '
     tactic: Multi-Stage
@@ -1878,8 +1841,8 @@ scenarios:
       interval: 0.2s
   CHAIN__enip_manufacturing_attack:
     title: CHAIN – EtherNet/IP manufacturing line attack
-    description: 'Allen-Bradley/Rockwell attack chain: ENIP device scan → CIP identity harvest → operating mode detection
-      → parameter modification → stop command. Covers T0840 + T0888 + T0868 + T0836 + T0881.
+    description: 'Allen-Bradley/Rockwell attack chain: ENIP device scan → CIP identity harvest → operating mode detection → parameter modification → stop command. Covers T0840 + T0888 + T0868 + T0836 +
+      T0881.
 
       '
     tactic: Multi-Stage
@@ -1922,7 +1885,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0800__fw_update_mode__s7comm:
-    title: Firmware Update Mode — S7comm CPU stop + module flash (T0800)
+    title: T0800 – Firmware Update Mode — S7comm CPU stop + module flash
     description: Activates firmware update mode on a Siemens S7 PLC by stopping the CPU then sending module and full firmware
     technique: T0800 blocks. Network-observable as TPKT streams to port 102 with download function codes.
     steps:
@@ -1951,7 +1914,7 @@ scenarios:
       count: 3
       interval: 1.0s
   T0800__fw_update_mode__enip:
-    title: Firmware Update Mode — EtherNet/IP CIP services (T0800)
+    title: T0800 – Firmware Update Mode — EtherNet/IP CIP services
     description: Activates firmware update mode on Allen-Bradley PLCs via EtherNet/IP firmware_update and boot_firmware CIP
     technique: T0800 services. Observable as CIP sequences on port 44818.
     steps:
@@ -1980,7 +1943,7 @@ scenarios:
       count: 3
       interval: 1.0s
   T0803__block_command__dnp3_broadcast:
-    title: Block Command Message — DNP3 broadcast operate flood (T0803)
+    title: T0803 – Block Command Message — DNP3 broadcast operate flood
     description: Floods the channel with DNP3 direct-operate frames addressed to the broadcast address (0xFFFF), saturating
     technique: T0803 outstation command queues and blocking legitimate master commands.
     steps:
@@ -1991,7 +1954,7 @@ scenarios:
       count: 20
       interval: 0.05s
   T0803__block_command__modbus_channel_flood:
-    title: Block Command Message — Modbus channel saturation (T0803)
+    title: T0803 – Block Command Message — Modbus channel saturation
     description: Saturates the Modbus/TCP channel with maximum-length FC03 reads, blocking command traffic from reaching the
     technique: T0803 PLC and starving legitimate master access.
     steps:
@@ -2002,7 +1965,7 @@ scenarios:
       count: 60
       interval: 0.03s
   T0804__block_reporting__modbus_listen_only:
-    title: Block Reporting Message — Modbus Force Listen-Only Mode (T0804)
+    title: T0804 – Block Reporting Message — Modbus Force Listen-Only Mode
     description: Sends Modbus FC08 subfunction 04 (Force Listen Only Mode) to put the PLC in a mode where it stops responding
     technique: T0804 to SCADA polling, effectively silencing all outbound telemetry.
     steps:
@@ -2013,7 +1976,7 @@ scenarios:
       count: 8
       interval: 0.3s
   T0804__block_reporting__dnp3_disable_unsolicited:
-    title: Block Reporting Message — DNP3 Disable Unsolicited + clear events (T0804)
+    title: T0804 – Block Reporting Message — DNP3 Disable Unsolicited + clear events
     description: Sends DNP3 FC15 Disable Unsolicited Reporting then clears the event buffer, cutting off all spontaneous event
     technique: T0804 messages from the outstation to the control centre.
     steps:
@@ -2030,7 +1993,7 @@ scenarios:
       count: 3
       interval: 0.3s
   T0805__block_serial_com__modbus_gateway_flood:
-    title: Block Serial COM — Modbus gateway serial saturation (T0805 precursor)
+    title: T0805 – Block Serial COM — Modbus gateway serial saturation
     description: Floods the Modbus/TCP-to-serial gateway with max-rate traffic, saturating the serial COM port bandwidth and
     technique: T0805 preventing legitimate traffic passing to downstream serial field devices.
     steps:
@@ -2041,7 +2004,7 @@ scenarios:
       count: 100
       interval: 0.02s
   T0807__cmdline_dnp3_file_transfer__dnp3:
-    title: Command-Line Interface — DNP3 file push to outstation (T0807 precursor)
+    title: T0807 – Command-Line Interface — DNP3 file push to outstation
     description: Uses DNP3 file transfer (FC19 Open File) to push payload files to the outstation filesystem. The outstation
     technique: T0807 may auto-execute scripts on receipt — network-observable on port 20000.
     steps:
@@ -2052,7 +2015,7 @@ scenarios:
       count: 5
       interval: 0.5s
   T0809__data_destruction__modbus_zero_regs:
-    title: Data Destruction — Modbus zero-fill holding registers (T0809)
+    title: T0809 – Data Destruction — Modbus zero-fill holding registers
     description: Reads the current register map then overwrites the full holding register space with zeros via FC16 Write
     technique: T0809 Multiple Registers. Destroys configuration, setpoints, and process data in PLC memory.
     steps:
@@ -2069,7 +2032,7 @@ scenarios:
       count: 15
       interval: 0.08s
   T0809__data_destruction__s7comm_zero_db:
-    title: Data Destruction — S7comm zero-fill all data blocks (T0809)
+    title: T0809 – Data Destruction — S7comm zero-fill all data blocks
     description: Enumerates data blocks via SZL read then zeros all DBs in the PLC, destroying process state, recipes, and
     technique: T0809 configuration. Followed by SZL clear to erase system data.
     steps:
@@ -2092,7 +2055,7 @@ scenarios:
       count: 1
       interval: 0.5s
   T0811__data_repositories__opcua_historian:
-    title: Data from Information Repositories — OPC UA historian bulk exfil (T0811)
+    title: T0811 – Data from Information Repositories — OPC UA historian bulk exfil
     description: Browses the OPC UA address space to locate historian nodes then bulk-reads historical process data via ReadHistory
     technique: T0811 and HistoryRead services. Extracts operational IP without directly touching PLCs.
     steps:
@@ -2127,7 +2090,7 @@ scenarios:
       count: 1
       interval: 0.2s
   T0811__data_repositories__s7comm_db_dump:
-    title: Data from Information Repositories — S7comm DB bulk dump (T0811)
+    title: T0811 – Data from Information Repositories — S7comm DB bulk dump
     description: Enumerates all data blocks via SZL then reads every DB to extract recipes, alarm history, and process configuration
     technique: T0811 stored in PLC memory. Targets engineering data blocks.
     steps:
@@ -2150,7 +2113,7 @@ scenarios:
       count: 8
       interval: 0.2s
   T0812__default_creds__s7comm_blank_auth:
-    title: Default Credentials — S7comm blank/default password (T0812)
+    title: T0812 – Default Credentials — S7comm blank/default password
     description: Attempts S7comm access using documented default/blank credentials. Many S7-300/400/1200 devices ship with
     technique: T0812 no password. Observable as S7comm setup frames to port 102 followed by read access.
     steps:
@@ -2167,7 +2130,7 @@ scenarios:
       count: 3
       interval: 0.4s
   T0812__default_creds__opcua_anonymous:
-    title: Default Credentials — OPC UA anonymous/default session (T0812)
+    title: T0812 – Default Credentials — OPC UA anonymous/default session
     description: Connects to OPC UA server using the Anonymous security policy or documented default username/password. Many
     technique: T0812 process historians and OPC UA gateways allow anonymous access by factory default.
     steps:
@@ -2190,7 +2153,7 @@ scenarios:
       count: 3
       interval: 0.3s
   T0812__default_creds__modbus_device_id:
-    title: Default Credentials — Modbus FC43 device ID probe + open write (T0812)
+    title: T0812 – Default Credentials — Modbus FC43 device ID probe + open write
     description: Sends Modbus FC43 Read Device Identification then follows with FC16 writes using the default unit ID, probing
     technique: T0812 for open write access characteristic of default-configured PLC field devices.
     steps:
@@ -2207,7 +2170,7 @@ scenarios:
       count: 3
       interval: 0.3s
   T0812__default_creds__enip_default_auth:
-    title: Default Credentials — EtherNet/IP CIP default authentication (T0812)
+    title: T0812 – Default Credentials — EtherNet/IP CIP default authentication
     description: Attempts EtherNet/IP access using CIP default authentication on Allen-Bradley devices. Many ControlLogix
     technique: T0812 and MicroLogix PLCs have no per-connection authentication enabled by default.
     steps:
@@ -2230,7 +2193,7 @@ scenarios:
       count: 3
       interval: 0.3s
   T0819__exploit_public_app__s7comm_malformed:
-    title: Exploit Public-Facing Application — S7comm malformed PDU exploit (T0819)
+    title: T0819 – Exploit Public-Facing Application — S7comm malformed PDU exploit
     description: Sends malformed S7comm parameter blocks to a public-facing Siemens PLC. Exploits insufficient input validation
     technique: T0819 in the S7comm stack. Models CVE-class vulnerabilities on internet-exposed S7-1200/1500.
     steps:
@@ -2247,7 +2210,7 @@ scenarios:
       count: 12
       interval: 0.2s
   T0819__exploit_public_app__opcua_malformed:
-    title: Exploit Public-Facing Application — OPC UA malformed Browse exploit (T0819)
+    title: T0819 – Exploit Public-Facing Application — OPC UA malformed Browse exploit
     description: Sends malformed OPC UA Browse requests with invalid NodeIds and continuation points to exploit OPC UA stack
     technique: T0819 vulnerabilities in internet-accessible gateways and SCADA historian endpoints.
     steps:
@@ -2264,7 +2227,7 @@ scenarios:
       count: 12
       interval: 0.2s
   T0819__exploit_public_app__enip_ucmm_crash:
-    title: Exploit Public-Facing Application — EtherNet/IP malformed UCMM exploit (T0819)
+    title: T0819 – Exploit Public-Facing Application — EtherNet/IP malformed UCMM exploit
     description: Sends malformed UCMM frames to internet-exposed Allen-Bradley PLCs. Targets buffer handling bugs in CIP stack
     technique: T0819 implementations on port 44818.
     steps:
@@ -2281,7 +2244,7 @@ scenarios:
       count: 12
       interval: 0.2s
   T0826__loss_availability__multi_protocol_dos:
-    title: Loss of Availability — Multi-protocol concurrent DoS (T0826)
+    title: T0826 – Loss of Availability — Multi-protocol concurrent DoS
     description: Simultaneously floods Modbus/TCP, DNP3, and IEC-104 channels at maximum rate, causing loss of availability
     technique: T0826 across all primary OT communication paths.
     steps:
@@ -2310,7 +2273,7 @@ scenarios:
       count: 50
       interval: 0.02s
   T0826__loss_availability__s7comm_read_flood:
-    title: Loss of Availability — S7comm DB read flood (T0826)
+    title: T0826 – Loss of Availability — S7comm DB read flood
     description: Floods the S7comm port with continuous DB read requests, exhausting PLC communication stack buffers and causing
     technique: T0826 loss of availability to all other masters (HMI, SCADA).
     steps:
@@ -2321,7 +2284,7 @@ scenarios:
       count: 60
       interval: 0.02s
   T0828__loss_productivity__modbus_setpoint_chaos:
-    title: Loss of Productivity and Revenue — Modbus setpoint chaos (T0828)
+    title: T0828 – Loss of Productivity and Revenue — Modbus setpoint chaos
     description: Reads production setpoints then writes random values to holding registers and masks bits, causing erratic
     technique: T0828 process behaviour, quality failures, and unplanned shutdowns resulting in lost productivity and revenue.
     steps:
@@ -2350,7 +2313,7 @@ scenarios:
       count: 20
       interval: 0.1s
   T0828__loss_productivity__iec104_setpoint_spam:
-    title: Loss of Productivity and Revenue — IEC-104 setpoint/regulating spam (T0828)
+    title: T0828 – Loss of Productivity and Revenue — IEC-104 setpoint/regulating spam
     description: Sends rapid IEC-104 setpoint and regulating-step commands to RTUs controlling physical processes, causing
     technique: T0828 output oscillation and triggering protective interlocks that halt production.
     steps:
@@ -2379,7 +2342,7 @@ scenarios:
       count: 15
       interval: 0.1s
   T0830__aitm__opcua_relay_session:
-    title: Adversary-in-the-Middle — OPC UA session relay (T0830)
+    title: T0830 – Adversary-in-the-Middle — OPC UA session relay
     description: Establishes an OPC UA session and uses relay_session to proxy and modify traffic between client and server,
     technique: T0830 enabling man-in-the-middle manipulation of process data without breaking the legitimate session.
     steps:
@@ -2402,7 +2365,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0830__aitm__dnp3_spoof_response:
-    title: Adversary-in-the-Middle — DNP3 unsolicited response injection (T0830)
+    title: T0830 – Adversary-in-the-Middle — DNP3 unsolicited response injection
     description: Injects forged DNP3 unsolicited response frames with manipulated measurement values between outstation and
     technique: T0830 master, causing false process readings while actual field values remain unchanged.
     steps:
@@ -2419,7 +2382,7 @@ scenarios:
       count: 15
       interval: 0.2s
   T0834__native_api__s7comm_cotp_raw:
-    title: Native API — Raw COTP/S7 API call (T0834 precursor)
+    title: T0834 – Native API — Raw COTP/S7 API call
     description: Issues raw COTP connection establishment and native S7comm job requests without engineering software. Represents
     technique: T0834 adversary tooling that calls the S7 communication API directly, bypassing TIA Portal/STEP7.
     steps:
@@ -2436,7 +2399,7 @@ scenarios:
       count: 3
       interval: 0.3s
   T0835__manipulate_io_image__modbus_input_write:
-    title: Manipulate I/O Image — Modbus input register poisoning (T0835)
+    title: T0835 – Manipulate I/O Image — Modbus input register poisoning
     description: Attempts to write values to Modbus input register address space via FC16, poisoning the PLC's input image
     technique: T0835 to cause false sensor readings in control logic. Used in Triton/TRISIS-style SIS attacks.
     steps:
@@ -2453,7 +2416,7 @@ scenarios:
       count: 12
       interval: 0.15s
   T0835__manipulate_io_image__s7comm_io_override:
-    title: Manipulate I/O Image — S7comm direct process image write (T0835)
+    title: T0835 – Manipulate I/O Image — S7comm direct process image write
     description: Uses S7comm write_inputs and write_outputs to overwrite the PLC I/O process image area directly, forcing
     technique: T0835 the CPU to see false input states and send false output states independent of field wiring.
     steps:
@@ -2476,7 +2439,7 @@ scenarios:
       count: 8
       interval: 0.2s
   T0837__loss_protection__modbus_relay_thresholds:
-    title: Loss of Protection — Modbus protection relay threshold raise (T0837)
+    title: T0837 – Loss of Protection — Modbus protection relay threshold raise
     description: Writes maximum values to protection relay parameter registers (overcurrent pickup, overvoltage limit, differential
     technique: T0837 trip threshold) via FC16, raising all trip thresholds to prevent protective relay operation.
     steps:
@@ -2493,7 +2456,7 @@ scenarios:
       count: 10
       interval: 0.3s
   T0838__alarm_settings__modbus_threshold:
-    title: Modify Alarm Settings — Modbus alarm register overwrite (T0838)
+    title: T0838 – Modify Alarm Settings — Modbus alarm register overwrite
     description: Writes extreme values to alarm setpoint holding registers via FC16, preventing alarms from triggering even
     technique: T0838 at abnormal process values. Suppresses operator awareness of ongoing attacks.
     steps:
@@ -2510,7 +2473,7 @@ scenarios:
       count: 10
       interval: 0.3s
   T0838__alarm_settings__opcua_write_limit_node:
-    title: Modify Alarm Settings — OPC UA alarm limit node write (T0838)
+    title: T0838 – Modify Alarm Settings — OPC UA alarm limit node write
     description: Browses OPC UA address space for alarm condition nodes then writes modified high/low limits and deadbands
     technique: T0838 to suppress or falsify alarm conditions at SCADA historian level.
     steps:
@@ -2533,7 +2496,7 @@ scenarios:
       count: 8
       interval: 0.3s
   T0838__alarm_settings__iec104_param_threshold:
-    title: Modify Alarm Settings — IEC-104 parameter threshold modification (T0838)
+    title: T0838 – Modify Alarm Settings — IEC-104 parameter threshold modification
     description: Uses IEC-104 parameter activation (P_ME_* ASDUs) to modify measurement deadbands and transmission thresholds
     technique: T0838 at the RTU, suppressing spontaneous data transmission for out-of-range values.
     steps:
@@ -2556,7 +2519,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0839__module_firmware__s7comm_module_flash:
-    title: Module Firmware — S7comm CP module firmware flash (T0839)
+    title: T0839 – Module Firmware — S7comm CP module firmware flash
     description: Stops the PLC CPU then sends module firmware download blocks to a Siemens CP/IM communication module. Enables
     technique: T0839 persistent implant in module firmware that survives CPU replacement.
     steps:
@@ -2579,7 +2542,7 @@ scenarios:
       count: 6
       interval: 0.5s
   T0839__module_firmware__enip_io_module:
-    title: Module Firmware — EtherNet/IP I/O module firmware flash (T0839)
+    title: T0839 – Module Firmware — EtherNet/IP I/O module firmware flash
     description: Uses EtherNet/IP CIP services to trigger a firmware update on a remote I/O adapter module (e.g. 1734 POINT
     technique: T0839 I/O). Module-level implant persists across PLC firmware upgrades.
     steps:
@@ -2602,7 +2565,7 @@ scenarios:
       count: 6
       interval: 0.5s
   T0853__scripting_dnp3_file_push__dnp3:
-    title: Scripting — DNP3 file transfer script push (T0853 precursor)
+    title: T0853 – Scripting — DNP3 file transfer script push
     description: Uses DNP3 file transfer service (FC19 Open File) to push script payloads to the outstation filesystem. Network-observable
     technique: T0853 as DNP3 file service frames on port 20000.
     steps:
@@ -2613,7 +2576,7 @@ scenarios:
       count: 6
       interval: 0.4s
   T0856__spoof_reporting__iec104_meas_inject:
-    title: Spoof Reporting Message — IEC-104 false measurement injection (T0856)
+    title: T0856 – Spoof Reporting Message — IEC-104 false measurement injection
     description: Injects IEC-104 measurement values with falsified process data (M_ME_* ASDUs), causing SCADA to display incorrect
     technique: T0856 readings. Used in Industroyer2 and similar attacks to mask physical damage from operators.
     steps:
@@ -2636,7 +2599,7 @@ scenarios:
       count: 10
       interval: 0.2s
   T0856__spoof_reporting__opcua_write_sensor:
-    title: Spoof Reporting Message — OPC UA sensor value write (T0856)
+    title: T0856 – Spoof Reporting Message — OPC UA sensor value write
     description: Authenticates to OPC UA server and writes false values to sensor/measurement nodes. SCADA clients reading
     technique: T0856 these nodes via subscriptions receive falsified process data without indication of tampering.
     steps:
@@ -2659,7 +2622,7 @@ scenarios:
       count: 8
       interval: 0.2s
   T0856__spoof_reporting__dnp3_unsolicited:
-    title: Spoof Reporting Message — DNP3 unsolicited response injection (T0856)
+    title: T0856 – Spoof Reporting Message — DNP3 unsolicited response injection
     description: Injects DNP3 unsolicited response frames (FC82) with falsified analog input values, making the master station
     technique: T0856 display false process readings without triggering any protocol-level alarm.
     steps:
@@ -2676,7 +2639,7 @@ scenarios:
       count: 20
       interval: 0.15s
   T0857__system_firmware__s7comm_full_flash:
-    title: System Firmware — S7comm full CPU firmware replacement (T0857)
+    title: T0857 – System Firmware — S7comm full CPU firmware replacement
     description: Performs full CPU firmware replacement via S7comm firmware download, preceded by SZL clear. Allows persistent
     technique: T0857 access via modified firmware that survives configuration wipes and factory resets.
     steps:
@@ -2705,7 +2668,7 @@ scenarios:
       count: 1
       interval: 1.0s
   T0857__system_firmware__enip_plc_reimage:
-    title: System Firmware — EtherNet/IP PLC full firmware re-image (T0857)
+    title: T0857 – System Firmware — EtherNet/IP PLC full firmware re-image
     description: Uses EtherNet/IP CIP firmware update and boot_firmware services to replace PLC operating system firmware.
     technique: T0857 Observable as large CIP data transfers followed by boot sequence on port 44818.
     steps:
@@ -2728,10 +2691,9 @@ scenarios:
       count: 4
       interval: 1.0s
   T0858__change_opmode__s7comm_mode_cycle:
-    title: Change Operating Mode — S7comm PLC mode cycle (T0858)
+    title: T0858 – Change Operating Mode — S7comm PLC mode cycle
     technique: T0858
-    description: 'Cycles PLC operating mode: RUN → PROGRAM → STOP → RUN, disrupting process control. Enables modified logic
-      technique: T0858 download between mode transitions.'
+    description: 'Cycles PLC operating mode: RUN → PROGRAM → STOP → RUN, disrupting process control. Enables modified logic technique: T0858 download between mode transitions.'
     steps:
     - type: pcap
       proto: s7comm
@@ -2752,7 +2714,7 @@ scenarios:
       count: 1
       interval: 1.0s
   T0858__change_opmode__dnp3_restart:
-    title: Change Operating Mode — DNP3 warm/cold restart (T0858)
+    title: T0858 – Change Operating Mode — DNP3 warm/cold restart
     description: Issues DNP3 warm restart (FC14) and cold restart (FC13) commands to force outstation mode transitions, interrupting
     technique: T0858 normal operation and causing re-initialisation in a different state.
     steps:
@@ -2769,7 +2731,7 @@ scenarios:
       count: 2
       interval: 0.5s
   T0864__transient_asset__profinet_new_device:
-    title: Transient Cyber Asset — PROFINET device announcement (T0864 precursor)
+    title: T0864 – Transient Cyber Asset — PROFINET device announcement
     description: Simulates a transient cyber asset (attacker laptop, temporary device) connecting to the OT network by broadcasting
     technique: T0864 PROFINET DCP Hello and Identify frames, announcing its presence on the industrial network segment.
     steps:
@@ -2792,7 +2754,7 @@ scenarios:
       count: 3
       interval: 0.5s
   T0866__exploit_remote_services__s7comm_malformed:
-    title: Exploitation of Remote Services — S7comm malformed parameter exploit (T0866)
+    title: T0866 – Exploitation of Remote Services — S7comm malformed parameter exploit
     description: Exploits insufficient input validation in S7comm remote service handlers by sending malformed parameter blocks.
     technique: T0866 Models CVE-class vulnerabilities against S7-1200/1500 series remote services.
     steps:
@@ -2809,7 +2771,7 @@ scenarios:
       count: 12
       interval: 0.2s
   T0866__exploit_remote_services__enip_ucmm:
-    title: Exploitation of Remote Services — EtherNet/IP UCMM exploit (T0866)
+    title: T0866 – Exploitation of Remote Services — EtherNet/IP UCMM exploit
     description: Sends malformed CIP UCMM frames to exploit buffer overflow conditions in EtherNet/IP remote service handlers.
     technique: T0866 Targets PLC message routing components exposed on port 44818.
     steps:
@@ -2826,7 +2788,7 @@ scenarios:
       count: 12
       interval: 0.2s
   T0867__lateral_tool__s7comm_db_transfer:
-    title: Lateral Tool Transfer — S7comm DB as payload staging area (T0867)
+    title: T0867 – Lateral Tool Transfer — S7comm DB as payload staging area
     description: Uses S7comm data block write to stage attacker tooling in PLC memory. The PLC DB acts as a staging server
     technique: T0867 — other OT devices read it via S7comm to receive payloads and lateral-movement tools.
     steps:
@@ -2843,7 +2805,7 @@ scenarios:
       count: 10
       interval: 0.3s
   T0867__lateral_tool__enip_cip_transfer:
-    title: Lateral Tool Transfer — EtherNet/IP CIP file object transfer (T0867)
+    title: T0867 – Lateral Tool Transfer — EtherNet/IP CIP file object transfer
     description: Uses EtherNet/IP CIP File Object services to transfer attacker tools between PLCs on the same network, leveraging
     technique: T0867 trusted PLC-to-PLC communication paths for lateral movement.
     steps:
@@ -2860,7 +2822,7 @@ scenarios:
       count: 10
       interval: 0.3s
   T0869__c2_protocol__modbus_register_beacon:
-    title: C2 via Standard Application Layer — Modbus register beacon port 502 (T0869)
+    title: T0869 – C2 via Standard Application Layer — Modbus register beacon port 502
     description: Encodes C2 beacon data in Modbus FC06 Single Register Write messages on port 502. Blends into legitimate
     technique: T0869 Modbus polling traffic while passing firewall rules that permit OT protocol traffic.
     steps:
@@ -2871,7 +2833,7 @@ scenarios:
       count: 25
       interval: 0.5s
   T0869__c2_protocol__enip_cip_beacon:
-    title: C2 via Standard Application Layer — EtherNet/IP CIP tag write beacon (T0869)
+    title: T0869 – C2 via Standard Application Layer — EtherNet/IP CIP tag write beacon
     description: Encodes C2 beacon traffic in EtherNet/IP Write Tag service messages to port 44818. EtherNet/IP is permitted
     technique: T0869 in most OT DMZ policies, making port 44818 a reliable covert C2 channel.
     steps:
@@ -2882,7 +2844,7 @@ scenarios:
       count: 25
       interval: 0.5s
   T0869__c2_protocol__opcua_write_custom_node:
-    title: C2 via Standard Application Layer — OPC UA node write beacon (T0869)
+    title: T0869 – C2 via Standard Application Layer — OPC UA node write beacon
     description: Uses OPC UA Write service to custom nodes as a covert C2 channel. Encoded commands in NodeId writes are retrieved
     technique: T0869 by implanted software, blending into normal SCADA-historian communication.
     steps:
@@ -2899,7 +2861,7 @@ scenarios:
       count: 25
       interval: 0.5s
   T0872__indicator_removal__dnp3_clear_events:
-    title: Indicator Removal — DNP3 event buffer clear (T0872 precursor)
+    title: T0872 – Indicator Removal — DNP3 event buffer clear
     description: Sends DNP3 FC02 Write to class event objects to clear the outstation event buffer, erasing logs of prior
     technique: T0872 commands and measurements. Removes network-observable evidence of earlier attacker operations.
     steps:
@@ -2910,10 +2872,9 @@ scenarios:
       count: 6
       interval: 0.5s
   T0877__io_image__s7comm_full_read:
-    title: I/O Image — S7comm full process image read (T0877)
+    title: T0877 – I/O Image — S7comm full process image read
     technique: T0877
-    description: 'Reads the complete S7 I/O process image: input bytes, output bytes, and data blocks to reconstruct full
-      technique: T0877 process state for reconnaissance before manipulation.'
+    description: 'Reads the complete S7 I/O process image: input bytes, output bytes, and data blocks to reconstruct full technique: T0877 process state for reconnaissance before manipulation.'
     steps:
     - type: pcap
       proto: s7comm
@@ -2934,7 +2895,7 @@ scenarios:
       count: 8
       interval: 0.2s
   T0877__io_image__enip_assembly_read:
-    title: I/O Image — EtherNet/IP assembly object full I/O read (T0877)
+    title: T0877 – I/O Image — EtherNet/IP assembly object full I/O read
     description: Uses EtherNet/IP Assembly Object reads to collect the complete I/O image from Allen-Bradley PLCs — both input
     technique: T0877 and output assemblies — reconstructing full physical I/O state.
     steps:
@@ -2957,7 +2918,7 @@ scenarios:
       count: 8
       interval: 0.2s
   T0877__io_image__modbus_full_scan:
-    title: I/O Image — Modbus full coil + register I/O scan (T0877)
+    title: T0877 – I/O Image — Modbus full coil + register I/O scan
     description: Reads all Modbus I/O areas (FC01 coils, FC02 discrete inputs, FC03 holding registers, FC04 input registers)
     technique: T0877 to reconstruct the complete PLC I/O image for process state intelligence.
     steps:
@@ -2986,7 +2947,7 @@ scenarios:
       count: 5
       interval: 0.2s
   T0880__loss_safety__modbus_sis_disable:
-    title: Loss of Safety — Modbus SIS inhibit/bypass write (T0880)
+    title: T0880 – Loss of Safety — Modbus SIS inhibit/bypass write
     description: Writes inhibit/bypass patterns to Safety Instrumented System trip registers via Modbus FC16, disabling safety
     technique: T0880 functions. Simulates the Triton/TRISIS technique targeting SIS controllers.
     steps:
@@ -3003,7 +2964,7 @@ scenarios:
       count: 12
       interval: 0.2s
   T0880__loss_safety__s7comm_failsafe_zero:
-    title: Loss of Safety — S7comm F-CPU failsafe zero-write (T0880)
+    title: T0880 – Loss of Safety — S7comm F-CPU failsafe zero-write
     description: Writes zeros to S7 F-CPU (failsafe CPU) safety data blocks, zeroing safety program inputs and disabling all
     technique: T0880 safety functions. Targets Siemens S7-300F/400F/1500F safety controllers.
     steps:
@@ -3020,7 +2981,7 @@ scenarios:
       count: 10
       interval: 0.3s
   T0884__connection_proxy__opcua_relay_session:
-    title: Connection Proxy — OPC UA session relay proxy (T0884)
+    title: T0884 – Connection Proxy — OPC UA session relay proxy
     description: Uses OPC UA relay_session to proxy connections through a compromised OT host, routing attacker traffic via
     technique: T0884 a trusted intermediate node to reach deeper network segments behind strict ACLs.
     steps:
@@ -3043,7 +3004,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0885__commonly_used_port__modbus_c2_502:
-    title: Commonly Used Port — C2 over Modbus port 502 (T0885)
+    title: T0885 – Commonly Used Port — C2 over Modbus port 502
     description: Encodes C2 beacon data in Modbus FC06 register writes to port 502. Firewall rules permitting Modbus traffic
     technique: T0885 allow attacker C2 to blend in with legitimate PLC polling on the commonly-allowed port.
     steps:
@@ -3054,7 +3015,7 @@ scenarios:
       count: 25
       interval: 0.5s
   T0885__commonly_used_port__enip_c2_44818:
-    title: Commonly Used Port — C2 over EtherNet/IP port 44818 (T0885)
+    title: T0885 – Commonly Used Port — C2 over EtherNet/IP port 44818
     description: Encodes C2 beacon traffic in EtherNet/IP Write Tag messages to port 44818. EtherNet/IP is permitted in most
     technique: T0885 OT DMZ policies, making 44818 a reliable channel that evades standard firewall rules.
     steps:
@@ -3065,10 +3026,10 @@ scenarios:
       count: 25
       interval: 0.5s
   T0886__remote_services__opcua_session_pivot:
-    title: Remote Services — OPC UA session-based lateral access (T0886)
+    title: T0886 – Remote Services — OPC UA session-based lateral access
     technique: T0886
-    description: 'Models adversary lateral movement via legitimate OPC UA remote services: endpoint discovery → session open
-      technique: T0886 → session activate → browse → read. Uses authenticated sessions to reach remote OT devices.'
+    description: 'Models adversary lateral movement via legitimate OPC UA remote services: endpoint discovery → session open technique: T0886 → session activate → browse → read. Uses authenticated sessions
+      to reach remote OT devices.'
     steps:
     - type: pcap
       proto: opcua
@@ -3101,7 +3062,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0886__remote_services__s7comm_lateral_pivot:
-    title: Remote Services — S7comm lateral pivot to secondary PLC (T0886)
+    title: T0886 – Remote Services — S7comm lateral pivot to secondary PLC
     description: Pivots from one compromised PLC to another via the S7 routing table, leveraging PLC-to-PLC communication
     technique: T0886 as a lateral movement path to reach targets deeper in the OT network.
     steps:
@@ -3124,7 +3085,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0889__modify_program__s7comm_upload_dl:
-    title: Modify Program — S7comm upload → modify OB1 → re-download (T0889)
+    title: T0889 – Modify Program — S7comm upload → modify OB1 → re-download
     description: Uploads the PLC user program (OB1), simulates offline modification, then downloads the modified block. Reproduces
     technique: T0889 the Stuxnet-style technique of altering PLC control logic via S7comm program download.
     steps:
@@ -3165,7 +3126,7 @@ scenarios:
       count: 6
       interval: 0.3s
   T0890__priv_esc__opcua_privilege_escalate:
-    title: Exploitation for Privilege Escalation — OPC UA role escalation (T0890 precursor)
+    title: T0890 – Exploitation for Privilege Escalation — OPC UA role escalation
     description: Exploits OPC UA access control misconfigurations to escalate from guest/operator role to administrator, gaining
     technique: T0890 access to write-protected nodes. Observable as abnormal browse+write sequences post session activation.
     steps:
@@ -3188,7 +3149,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0891__hardcoded_creds__s7comm_factory_pin:
-    title: Hardcoded Credentials — S7comm factory/hardcoded PIN (T0891)
+    title: T0891 – Hardcoded Credentials — S7comm factory/hardcoded PIN
     description: Authenticates using known hardcoded factory credentials in S7comm firmware (service mode PIN, or OEM-set
     technique: T0891 fixed passwords). Models credential extraction from firmware then use over the network.
     steps:
@@ -3211,7 +3172,7 @@ scenarios:
       count: 5
       interval: 0.3s
   T0891__hardcoded_creds__opcua_embedded_password:
-    title: Hardcoded Credentials — OPC UA embedded hardcoded password (T0891)
+    title: T0891 – Hardcoded Credentials — OPC UA embedded hardcoded password
     description: Uses hardcoded credentials extracted from device firmware or engineering software to authenticate to OPC
     technique: T0891 UA servers. Common in OEM-configured gateways and protocol converters.
     steps:
@@ -3234,7 +3195,7 @@ scenarios:
       count: 4
       interval: 0.3s
   T0892__change_credential__modbus_register_write:
-    title: Change Credential — Modbus credential register overwrite (T0892)
+    title: T0892 – Change Credential — Modbus credential register overwrite
     description: Overwrites credential/PIN holding registers via Modbus FC16 to change or disable device authentication. Targets
     technique: T0892 PLCs that store access PINs in Modbus holding registers (Schneider M340, some Rockwell units).
     steps:
@@ -3251,7 +3212,7 @@ scenarios:
       count: 6
       interval: 0.4s
   T0892__change_credential__opcua_password_change:
-    title: Change Credential — OPC UA ChangePassword (T0892)
+    title: T0892 – Change Credential — OPC UA ChangePassword
     description: Uses OPC UA ChangePassword service to modify user credentials after authentication, locking out legitimate
     technique: T0892 operators from historian and SCADA OPC UA access.
     steps:
@@ -3268,7 +3229,7 @@ scenarios:
       count: 4
       interval: 0.5s
   T0895__autorun_image__s7comm_sdb0_download:
-    title: Autorun Image — S7comm SDB0 startup configuration download (T0895)
+    title: T0895 – Autorun Image — S7comm SDB0 startup configuration download
     description: Downloads a modified System Data Block 0 (SDB0) which controls S7 CPU startup configuration. Modified SDB0
     technique: T0895 forces the PLC to execute attacker-controlled startup routines on every power cycle.
     steps:
@@ -3299,8 +3260,8 @@ scenarios:
   CHAIN__firmware_persistence__s7comm:
     title: CHAIN – Firmware Persistence via S7comm (T0889+T0839+T0857+T0858)
     technique: T0839
-    description: 'Full firmware persistence chain: enumerate → stop CPU → modify OB1 → re-download → flash module firmware
-      technique: T0839 → replace system firmware. Persistent implant survives configuration wipes.'
+    description: 'Full firmware persistence chain: enumerate → stop CPU → modify OB1 → re-download → flash module firmware technique: T0839 → replace system firmware. Persistent implant survives configuration
+      wipes.'
     steps:
     - type: pcap
       proto: s7comm
@@ -3353,8 +3314,8 @@ scenarios:
   CHAIN__aitm_sensor_spoof__opcua_dnp3:
     title: CHAIN – AitM + Sensor Spoofing via OPC UA + DNP3 (T0830+T0856+T0832)
     technique: T0830
-    description: 'AitM chain: establish OPC UA relay position → inject false sensor values → spoof DNP3 responses → modify
-      technique: T0830 alarm nodes → exfiltrate operational data. Operator sees normal values throughout.'
+    description: 'AitM chain: establish OPC UA relay position → inject false sensor values → spoof DNP3 responses → modify technique: T0830 alarm nodes → exfiltrate operational data. Operator sees normal
+      values throughout.'
     steps:
     - type: pcap
       proto: opcua
@@ -3430,8 +3391,7 @@ scenarios:
   CHAIN__default_creds_to_ics_impact__multi:
     title: CHAIN – Default Creds → Lateral Pivot → Program Modification → Impact
     technique: T0812
-    description: 'End-to-end kill chain: default credential exploitation on EtherNet/IP and OPC UA → S7comm lateral pivot
-      technique: T0812 → PLC program modification → setpoint manipulation → physical impact.'
+    description: 'End-to-end kill chain: default credential exploitation on EtherNet/IP and OPC UA → S7comm lateral pivot technique: T0812 → PLC program modification → setpoint manipulation → physical impact.'
     steps:
     - type: pcap
       proto: enip
@@ -3478,8 +3438,8 @@ scenarios:
   CHAIN__full_ics_kill_chain__s7comm:
     title: CHAIN – Full ICS Kill Chain — Recon to Impact (S7comm-centric)
     technique: T0889
-    description: 'Complete ICS kill chain: network discovery → device enumeration → default credential access → I/O image
-      technique: T0812 read → program upload → modify OB1 → re-download → I/O manipulation → alarm suppression → CPU stop.'
+    description: 'Complete ICS kill chain: network discovery → device enumeration → default credential access → I/O image technique: T0812 read → program upload → modify OB1 → re-download → I/O manipulation
+      → alarm suppression → CPU stop.'
     steps:
     - type: pcap
       proto: s7comm
@@ -3543,8 +3503,7 @@ scenarios:
       interval: 0.5s
   T0840__network_enum__bacnet_who_is:
     title: T0840 – BACnet/IP Who-Is broadcast (Network Connection Enumeration)
-    description: BACnet/IP Who-Is broadcast to discover all BAS controllers on the segment. Standard building automation reconnaissance.
-      Maps to T0840.
+    description: BACnet/IP Who-Is broadcast to discover all BAS controllers on the segment. Standard building automation reconnaissance. Maps to T0840.
     tactic: Discovery
     technique: T0840
     steps:
@@ -3556,8 +3515,7 @@ scenarios:
       interval: 0.05s
   T0888__remote_sys_info__bacnet_read_device:
     title: T0888 – BACnet/IP ReadPropertyMultiple device fingerprint
-    description: ReadPropertyMultiple on Device object to extract vendor name, model, firmware revision, and system status.
-      Building automation device profiling.
+    description: ReadPropertyMultiple on Device object to extract vendor name, model, firmware revision, and system status. Building automation device profiling.
     tactic: Discovery
     technique: T0888
     steps:
@@ -3569,8 +3527,7 @@ scenarios:
       interval: 0.1s
   T0861__point_tag_id__bacnet_who_has:
     title: T0861 – BACnet/IP Who-Has point discovery
-    description: Who-Has broadcast to discover named objects (HVAC setpoints, alarms, schedules). Point and tag identification
-      for building automation.
+    description: Who-Has broadcast to discover named objects (HVAC setpoints, alarms, schedules). Point and tag identification for building automation.
     tactic: Discovery
     technique: T0861
     steps:
@@ -3582,8 +3539,7 @@ scenarios:
       interval: 0.1s
   T0801__monitor_process__bacnet_read:
     title: T0801 – BACnet/IP ReadProperty process monitoring
-    description: ReadProperty on AnalogInput present-value to monitor building processes (temperature, pressure, flow). Passive
-      process state collection.
+    description: ReadProperty on AnalogInput present-value to monitor building processes (temperature, pressure, flow). Passive process state collection.
     tactic: Collection
     technique: T0801
     steps:
@@ -3595,8 +3551,7 @@ scenarios:
       interval: 0.15s
   T0802__automated_collection__bacnet_subscribe:
     title: T0802 – BACnet/IP SubscribeCOV automated collection
-    description: SubscribeCOV to receive automatic change-of-value notifications. Attacker subscribes to critical setpoints
-      for continuous monitoring.
+    description: SubscribeCOV to receive automatic change-of-value notifications. Attacker subscribes to critical setpoints for continuous monitoring.
     tactic: Collection
     technique: T0802
     steps:
@@ -3608,8 +3563,7 @@ scenarios:
       interval: 0.2s
   T0882__theft_operational_info__bacnet_file_read:
     title: T0882 – BACnet/IP AtomicReadFile configuration theft
-    description: AtomicReadFile to download configuration files, schedules, and trend logs from BAS controllers. Theft of
-      operational information.
+    description: AtomicReadFile to download configuration files, schedules, and trend logs from BAS controllers. Theft of operational information.
     tactic: Collection
     technique: T0882
     steps:
@@ -3621,8 +3575,7 @@ scenarios:
       interval: 0.2s
   T0855__unauth_command__bacnet_write:
     title: T0855 – BACnet/IP WriteProperty unauthorized setpoint change
-    description: WriteProperty to AnalogOutput present-value to change HVAC setpoints, damper positions, or valve states.
-      Unauthorized process manipulation.
+    description: WriteProperty to AnalogOutput present-value to change HVAC setpoints, damper positions, or valve states. Unauthorized process manipulation.
     tactic: Impair Process Control
     technique: T0855
     steps:
@@ -3634,8 +3587,7 @@ scenarios:
       interval: 0.1s
   T0836__modify_parameter__bacnet_write_multi:
     title: T0836 – BACnet/IP WritePropertyMultiple bulk parameter change
-    description: WritePropertyMultiple to change multiple setpoints in a single request. Bulk parameter manipulation for building
-      automation.
+    description: WritePropertyMultiple to change multiple setpoints in a single request. Bulk parameter manipulation for building automation.
     tactic: Impair Process Control
     technique: T0836
     steps:
@@ -3647,8 +3599,7 @@ scenarios:
       interval: 0.15s
   T0816__device_restart__bacnet_reinit:
     title: T0816 – BACnet/IP ReinitializeDevice cold restart
-    description: ReinitializeDevice to force BAS controller cold restart. Disrupts building automation and clears runtime
-      state.
+    description: ReinitializeDevice to force BAS controller cold restart. Disrupts building automation and clears runtime state.
     tactic: Inhibit Response Function
     technique: T0816
     steps:
@@ -3660,8 +3611,7 @@ scenarios:
       interval: 0.5s
   T0813__dos__bacnet_comm_disable:
     title: T0813 – BACnet/IP DeviceCommunicationControl denial of service
-    description: DeviceCommunicationControl with disable flag to block all BAS communication. Building automation denial of
-      service.
+    description: DeviceCommunicationControl with disable flag to block all BAS communication. Building automation denial of service.
     tactic: Inhibit Response Function
     technique: T0813
     steps:
@@ -3673,8 +3623,7 @@ scenarios:
       interval: 0.3s
   T0843__program_download__bacnet_write_file:
     title: T0843 – BACnet/IP AtomicWriteFile program upload
-    description: AtomicWriteFile to upload modified configuration or program files to BAS controller. Program download via
-      file transfer.
+    description: AtomicWriteFile to upload modified configuration or program files to BAS controller. Program download via file transfer.
     tactic: Execution
     technique: T0843
     steps:
@@ -3686,8 +3635,7 @@ scenarios:
       interval: 0.2s
   T0849__masquerade__bacnet_fake_iam:
     title: T0849 – BACnet/IP fake I-Am device masquerading
-    description: Broadcast fake I-Am response to impersonate a BAS controller. Can redirect supervisory station queries to
-      attacker-controlled device.
+    description: Broadcast fake I-Am response to impersonate a BAS controller. Can redirect supervisory station queries to attacker-controlled device.
     tactic: Evasion
     technique: T0849
     steps:
@@ -3705,8 +3653,7 @@ scenarios:
       interval: 0.3s
   T0869__c2_protocol__bacnet_private_transfer:
     title: T0869 – BACnet/IP PrivateTransfer covert channel
-    description: ConfirmedPrivateTransfer with vendor-specific data as covert C2 channel. Legitimate BACnet service used for
-      command and control.
+    description: ConfirmedPrivateTransfer with vendor-specific data as covert C2 channel. Legitimate BACnet service used for command and control.
     tactic: Command and Control
     technique: T0869
     steps:
@@ -3718,8 +3665,7 @@ scenarios:
       interval: 0.3s
   T0889__modify_program__bacnet_create_object:
     title: T0889 – BACnet/IP CreateObject program injection
-    description: CreateObject to inject new Program or Schedule objects into BAS controller. Modifies controller logic without
-      direct file manipulation.
+    description: CreateObject to inject new Program or Schedule objects into BAS controller. Modifies controller logic without direct file manipulation.
     tactic: Impair Process Control
     technique: T0889
     steps:
@@ -3731,8 +3677,7 @@ scenarios:
       interval: 0.2s
   T0809__data_destruction__bacnet_delete_object:
     title: T0809 – BACnet/IP DeleteObject data destruction
-    description: DeleteObject to remove Schedule, NotificationClass, or TrendLog objects. Destroys operational data and disrupts
-      automation sequences.
+    description: DeleteObject to remove Schedule, NotificationClass, or TrendLog objects. Destroys operational data and disrupts automation sequences.
     tactic: Impact
     technique: T0809
     steps:
@@ -3744,8 +3689,7 @@ scenarios:
       interval: 0.2s
   T0822__external_remote__mqtt_connect:
     title: T0822 – MQTT broker connection (External Remote Services)
-    description: MQTT CONNECT to ICS/IIoT broker. Establishes session for subsequent publish/subscribe operations. Common
-      entry point for IIoT attacks.
+    description: MQTT CONNECT to ICS/IIoT broker. Establishes session for subsequent publish/subscribe operations. Common entry point for IIoT attacks.
     tactic: Initial Access
     technique: T0822
     steps:
@@ -3757,8 +3701,7 @@ scenarios:
       interval: 0.2s
   T0859__valid_accounts__mqtt_creds:
     title: T0859 – MQTT credential-based broker access
-    description: MQTT CONNECT with stolen/default credentials. Tests detection of unauthorized authenticated sessions to the
-      ICS message bus.
+    description: MQTT CONNECT with stolen/default credentials. Tests detection of unauthorized authenticated sessions to the ICS message bus.
     tactic: Lateral Movement
     technique: T0859
     steps:
@@ -3770,8 +3713,7 @@ scenarios:
       interval: 0.15s
   T0831__manipulation_control__mqtt_setpoint:
     title: T0831 – MQTT setpoint change (Manipulation of Control)
-    description: MQTT PUBLISH to setpoint topic with modified process parameters. Changes PID loop targets via IIoT messaging
-      layer.
+    description: MQTT PUBLISH to setpoint topic with modified process parameters. Changes PID loop targets via IIoT messaging layer.
     tactic: Impair Process Control
     technique: T0831
     steps:
@@ -3795,8 +3737,7 @@ scenarios:
       interval: 0.3s
   T0836__modify_parameter__mqtt_config:
     title: T0836 – MQTT config publish (Modify Parameter)
-    description: MQTT PUBLISH to SCADA gateway config topic. Changes polling intervals, alarm thresholds, or device parameters
-      remotely.
+    description: MQTT PUBLISH to SCADA gateway config topic. Changes polling intervals, alarm thresholds, or device parameters remotely.
     tactic: Impair Process Control
     technique: T0836
     steps:
@@ -3808,8 +3749,7 @@ scenarios:
       interval: 0.2s
   T0802__automated_collection__mqtt_wildcard:
     title: T0802 – MQTT wildcard subscription harvest
-    description: 'SUBSCRIBE to # wildcard to capture ALL messages on the broker. Full ICS message bus interception via single
-      subscription.'
+    description: 'SUBSCRIBE to # wildcard to capture ALL messages on the broker. Full ICS message bus interception via single subscription.'
     tactic: Collection
     technique: T0802
     steps:
@@ -3833,8 +3773,7 @@ scenarios:
       interval: 0.05s
   T0826__loss_availability__mqtt_disconnect:
     title: T0826 – MQTT forced disconnect (Loss of Availability)
-    description: MQTT DISCONNECT to terminate broker sessions. Combined with repeated connects, can cause broker resource
-      exhaustion.
+    description: MQTT DISCONNECT to terminate broker sessions. Combined with repeated connects, can cause broker resource exhaustion.
     tactic: Impact
     technique: T0826
     steps:
@@ -3852,8 +3791,7 @@ scenarios:
       interval: 0.05s
   T0812__default_creds__mqtt_anonymous:
     title: T0812 – MQTT anonymous broker access
-    description: MQTT CONNECT without credentials. Many ICS MQTT brokers allow anonymous access by default, enabling unauthorized
-      message bus access.
+    description: MQTT CONNECT without credentials. Many ICS MQTT brokers allow anonymous access by default, enabling unauthorized message bus access.
     tactic: Lateral Movement
     technique: T0812
     steps:
@@ -3877,8 +3815,7 @@ scenarios:
       interval: 0.1s
   T0801__monitor_process__mqtt_subscribe:
     title: T0801 – MQTT subscribe to sensor telemetry
-    description: SUBSCRIBE to IIoT sensor topics to passively monitor process state. Attacker harvests temperature, pressure,
-      flow readings.
+    description: SUBSCRIBE to IIoT sensor topics to passively monitor process state. Attacker harvests temperature, pressure, flow readings.
     tactic: Collection
     technique: T0801
     steps:
@@ -3896,8 +3833,7 @@ scenarios:
       interval: 0.1s
   T0869__c2_protocol__mqtt_connect:
     title: T0869 – MQTT CONNECT session establishment
-    description: MQTT CONNECT to broker as covert C2 channel. Standard IIoT protocol used for command and control over industrial
-      messaging bus.
+    description: MQTT CONNECT to broker as covert C2 channel. Standard IIoT protocol used for command and control over industrial messaging bus.
     tactic: Command and Control
     technique: T0869
     steps:
@@ -3921,8 +3857,7 @@ scenarios:
       interval: 0.15s
   T0836__modify_parameter__mqtt_setpoint:
     title: T0836 – MQTT setpoint modification via PUBLISH
-    description: PUBLISH setpoint change to HVAC/process control topic. Modifies operational parameters through the IIoT messaging
-      layer.
+    description: PUBLISH setpoint change to HVAC/process control topic. Modifies operational parameters through the IIoT messaging layer.
     tactic: Impair Process Control
     technique: T0836
     steps:
@@ -3946,8 +3881,7 @@ scenarios:
       interval: 0.2s
   T0889__modify_program__mqtt_config:
     title: T0889 – MQTT configuration overwrite
-    description: PUBLISH to config topic to overwrite gateway/controller configuration. Disables watchdog, auth, and polling
-      intervals.
+    description: PUBLISH to config topic to overwrite gateway/controller configuration. Disables watchdog, auth, and polling intervals.
     tactic: Impair Process Control
     technique: T0889
     steps:
@@ -3959,8 +3893,7 @@ scenarios:
       interval: 0.2s
   T0815__denial_of_view__mqtt_unsubscribe:
     title: T0815 – MQTT UNSUBSCRIBE denial of view
-    description: UNSUBSCRIBE from sensor and alarm topics to disrupt telemetry feed. Operators lose visibility into process
-      state.
+    description: UNSUBSCRIBE from sensor and alarm topics to disrupt telemetry feed. Operators lose visibility into process state.
     tactic: Inhibit Response Function
     technique: T0815
     steps:
@@ -3984,8 +3917,7 @@ scenarios:
       interval: 0.1s
   T0814__dos__mqtt_flood:
     title: T0814 – MQTT PUBLISH flood denial of service
-    description: PUBLISH large payloads to saturate broker and downstream subscribers. Overwhelms message processing on resource-constrained
-      ICS devices.
+    description: PUBLISH large payloads to saturate broker and downstream subscribers. Overwhelms message processing on resource-constrained ICS devices.
     tactic: Inhibit Response Function
     technique: T0814
     steps:
@@ -3997,8 +3929,7 @@ scenarios:
       interval: 0.02s
   T0856__spoof_reporting__mqtt_will:
     title: T0856 – MQTT Last Will spoofed status
-    description: CONNECT with malicious Last Will and Testament message. When connection drops, broker publishes false OFFLINE/emergency
-      status.
+    description: CONNECT with malicious Last Will and Testament message. When connection drops, broker publishes false OFFLINE/emergency status.
     tactic: Evasion
     technique: T0856
     steps:
@@ -4078,8 +4009,7 @@ aliases:
   enip_manufacturing: CHAIN__enip_manufacturing_attack
   T0803__block_command__modbus_flood:
     title: T0803 – Block command channel via Modbus TCP port flood
-    description: 'Saturates the Modbus TCP port (502) with max-size FC03 reads, consuming all available TCP connections and
-      blocking legitimate command traffic from reaching the PLC.
+    description: 'Saturates the Modbus TCP port (502) with max-size FC03 reads, consuming all available TCP connections and blocking legitimate command traffic from reaching the PLC.
 
       '
     steps:
@@ -4091,8 +4021,8 @@ aliases:
       interval: 0.02s
   T0803__block_command__iec104_stopdt:
     title: T0803 – Block IEC-104 command channel via STOPDT
-    description: 'Sends IEC-104 STOPDT (Stop Data Transfer) U-frame from an attacker-controlled source, causing the RTU to
-      halt command processing on that link. Legitimate SCADA commands are subsequently ignored.
+    description: 'Sends IEC-104 STOPDT (Stop Data Transfer) U-frame from an attacker-controlled source, causing the RTU to halt command processing on that link. Legitimate SCADA commands are subsequently
+      ignored.
 
       '
     steps:
@@ -4110,8 +4040,7 @@ aliases:
       interval: 0.15s
   T0804__block_reporting__dnp3_disable_unsol:
     title: T0804 – Block DNP3 unsolicited reporting via disable_unsolicited
-    description: 'Sends DNP3 FC21 (Disable Unsolicited Reporting) targeted at class data objects, preventing the outstation
-      from sending spontaneous event reports to the master.
+    description: 'Sends DNP3 FC21 (Disable Unsolicited Reporting) targeted at class data objects, preventing the outstation from sending spontaneous event reports to the master.
 
       '
     steps:
@@ -4129,9 +4058,8 @@ aliases:
       interval: 0.3s
   T0805__block_serial__modbus_gateway_flood:
     title: T0805 – Block serial COM via Modbus RTU gateway flood
-    description: 'Floods the Modbus TCP gateway (port 502) that bridges to a serial RTU network. The gateway queue fills,
-      serial transmission stalls, and RTU devices on the serial bus become unreachable. Observable as max-rate FC03/FC16 bursts
-      from unexpected source.
+    description: 'Floods the Modbus TCP gateway (port 502) that bridges to a serial RTU network. The gateway queue fills, serial transmission stalls, and RTU devices on the serial bus become unreachable.
+      Observable as max-rate FC03/FC16 bursts from unexpected source.
 
       '
     steps:
@@ -4149,9 +4077,8 @@ aliases:
       interval: 0.01s
   T0807__cli__opcua_method_shell:
     title: T0807 – Command-Line Interface via OPC UA method call with script argument
-    description: 'Invokes an OPC UA server method with a shell command as the argument. Some OPC UA servers (particularly
-      on Windows HMIs) expose methods that execute operating system commands. Observable as unusual CallRequest with string
-      arguments on port 4840.
+    description: 'Invokes an OPC UA server method with a shell command as the argument. Some OPC UA servers (particularly on Windows HMIs) expose methods that execute operating system commands. Observable
+      as unusual CallRequest with string arguments on port 4840.
 
       '
     steps:
@@ -4175,8 +4102,7 @@ aliases:
       interval: 0.3s
   T0807__cli__dnp3_file_transfer:
     title: T0807 – Command-Line Interface via DNP3 file transfer to outstation
-    description: 'Uses DNP3 FC25 (open_file) to push a script file to an outstation that exposes a writable filesystem. The
-      file can contain commands executed on the RTU''s embedded OS.
+    description: 'Uses DNP3 FC25 (open_file) to push a script file to an outstation that exposes a writable filesystem. The file can contain commands executed on the RTU''s embedded OS.
 
       '
     steps:
@@ -4194,8 +4120,8 @@ aliases:
       interval: 0.2s
   T0811__data_repos__opcua_history:
     title: 'T0811 – Data from Information Repositories: OPC UA historian bulk read'
-    description: 'Performs OPC UA HistoryReadRequest to extract bulk historical process data stored in the OPC UA historian.
-      Used to understand process baselines, identify production schedules, and select attack timing windows.
+    description: 'Performs OPC UA HistoryReadRequest to extract bulk historical process data stored in the OPC UA historian. Used to understand process baselines, identify production schedules, and select
+      attack timing windows.
 
       '
     steps:
@@ -4219,8 +4145,7 @@ aliases:
       interval: 0.2s
   T0811__data_repos__s7comm_db_sweep:
     title: 'T0811 – Data from Information Repositories: S7comm DB block sweep'
-    description: 'Systematically reads all accessible data blocks (DB1-DB100) via S7comm FC04 read_var. Data blocks commonly
-      hold recipe data, production parameters, and historical setpoints.
+    description: 'Systematically reads all accessible data blocks (DB1-DB100) via S7comm FC04 read_var. Data blocks commonly hold recipe data, production parameters, and historical setpoints.
 
       '
     steps:
@@ -4244,9 +4169,8 @@ aliases:
       interval: 0.1s
   T0812__default_creds__enip_unauthenticated:
     title: 'T0812 – Default Credentials: EtherNet/IP unauthenticated session'
-    description: 'EtherNet/IP has no session-layer authentication by default. Registers a session and immediately accesses
-      CIP objects. Demonstrates that Allen-Bradley PLCs accept connections without any credential challenge when ACL is not
-      configured.
+    description: 'EtherNet/IP has no session-layer authentication by default. Registers a session and immediately accesses CIP objects. Demonstrates that Allen-Bradley PLCs accept connections without any
+      credential challenge when ACL is not configured.
 
       '
     steps:
@@ -4270,8 +4194,7 @@ aliases:
       interval: 0.2s
   T0812__default_creds__dnp3_no_auth:
     title: 'T0812 – Default Credentials: DNP3 operate without SAv5 challenge'
-    description: 'Sends DNP3 direct_operate without completing SAv5 (Secure Authentication v5) challenge. Older or misconfigured
-      outstations accept operations without auth, exposing all outputs.
+    description: 'Sends DNP3 direct_operate without completing SAv5 (Secure Authentication v5) challenge. Older or misconfigured outstations accept operations without auth, exposing all outputs.
 
       '
     steps:
@@ -4283,8 +4206,8 @@ aliases:
       interval: 0.2s
   T0819__exploit_public__opcua_malformed_browse:
     title: 'T0819 – Exploit Public-Facing Application: malformed OPC UA BrowseRequest'
-    description: 'Sends a malformed OPC UA BrowseRequest with an excessive path depth and invalid node IDs, targeting known
-      buffer overflow vulnerabilities in OPC UA server implementations (e.g. CVE-2022-25762 OPC Foundation stack).
+    description: 'Sends a malformed OPC UA BrowseRequest with an excessive path depth and invalid node IDs, targeting known buffer overflow vulnerabilities in OPC UA server implementations (e.g. CVE-2022-25762
+      OPC Foundation stack).
 
       '
     steps:
@@ -4302,8 +4225,8 @@ aliases:
       interval: 0.25s
   T0819__exploit_public__enip_malformed_ucmm:
     title: 'T0819 – Exploit Public-Facing Application: malformed EtherNet/IP UCMM'
-    description: 'Sends a malformed CIP path with invalid segment type to the unconnected messaging manager. Targets Allen-Bradley
-      buffer handling vulnerabilities observable as UCMM requests with oversized or malformed path segments on port 44818.
+    description: 'Sends a malformed CIP path with invalid segment type to the unconnected messaging manager. Targets Allen-Bradley buffer handling vulnerabilities observable as UCMM requests with oversized
+      or malformed path segments on port 44818.
 
       '
     steps:
@@ -4321,8 +4244,8 @@ aliases:
       interval: 0.2s
   T0823__gui__enip_write_tag_from_hmi:
     title: 'T0823 – Graphical User Interface: tag write from unexpected source IP'
-    description: 'EtherNet/IP named tag write (CIP service 0x4D) originating from an unexpected source IP — the network-observable
-      signature of unauthorized HMI interaction or lateral movement to an HMI that then writes process tags.
+    description: 'EtherNet/IP named tag write (CIP service 0x4D) originating from an unexpected source IP — the network-observable signature of unauthorized HMI interaction or lateral movement to an HMI
+      that then writes process tags.
 
       '
     steps:
@@ -4340,9 +4263,8 @@ aliases:
       interval: 0.3s
   T0826__loss_availability__modbus_connection_exhaust:
     title: 'T0826 – Loss of Availability: Modbus TCP connection exhaustion'
-    description: 'Opens the maximum number of simultaneous TCP connections to port 502 without releasing them, exhausting
-      the PLC''s connection table. Legitimate SCADA clients cannot connect. Distinct from T0814 (volumetric) — this targets
-      connection state, not bandwidth.
+    description: 'Opens the maximum number of simultaneous TCP connections to port 502 without releasing them, exhausting the PLC''s connection table. Legitimate SCADA clients cannot connect. Distinct from
+      T0814 (volumetric) — this targets connection state, not bandwidth.
 
       '
     steps:
@@ -4354,8 +4276,7 @@ aliases:
       interval: 0.01s
   T0826__loss_availability__opcua_session_flood:
     title: 'T0826 – Loss of Availability: OPC UA session table exhaustion'
-    description: 'Rapidly creates OPC UA sessions without closing them, exhausting the server''s session table. The OPC UA
-      server rejects new legitimate sessions with BadTooManySessions.
+    description: 'Rapidly creates OPC UA sessions without closing them, exhausting the server''s session table. The OPC UA server rejects new legitimate sessions with BadTooManySessions.
 
       '
     steps:
@@ -4373,9 +4294,8 @@ aliases:
       interval: 0.05s
   T0828__loss_productivity__modbus_setpoint_drift:
     title: 'T0828 – Loss of Productivity and Revenue: Modbus setpoint drift causing off-spec output'
-    description: 'Writes subtly incorrect setpoints to product quality control registers — slightly outside specification
-      but within range (not triggering alarms). Product produced is out-of-spec, causing waste and revenue loss without obvious
-      process upset.
+    description: 'Writes subtly incorrect setpoints to product quality control registers — slightly outside specification but within range (not triggering alarms). Product produced is out-of-spec, causing
+      waste and revenue loss without obvious process upset.
 
       '
     steps:
@@ -4399,8 +4319,7 @@ aliases:
       interval: 0.5s
   T0828__loss_productivity__iec104_slow_setpoint:
     title: 'T0828 – Loss of Productivity and Revenue: IEC-104 slow setpoint manipulation'
-    description: 'Sends IEC-104 C_SE_NC_1 float setpoint commands at low frequency, gradually shifting process parameters
-      over hours. Causes slow quality degradation not immediately attributed to an attack.
+    description: 'Sends IEC-104 C_SE_NC_1 float setpoint commands at low frequency, gradually shifting process parameters over hours. Causes slow quality degradation not immediately attributed to an attack.
 
       '
     steps:
@@ -4418,9 +4337,8 @@ aliases:
       interval: 0.4s
   T0830__aitm__modbus_session_hijack:
     title: 'T0830 – Adversary-in-the-Middle: Modbus session hijack (incorrect TID injection)'
-    description: 'Injects Modbus TCP frames with transaction IDs (TID) that mismatch the legitimate session, observable as
-      responses from unexpected sources or TID collisions in traffic capture. The attacker intercepts and replaces legitimate
-      read responses with falsified data.
+    description: 'Injects Modbus TCP frames with transaction IDs (TID) that mismatch the legitimate session, observable as responses from unexpected sources or TID collisions in traffic capture. The attacker
+      intercepts and replaces legitimate read responses with falsified data.
 
       '
     steps:
@@ -4444,9 +4362,8 @@ aliases:
       interval: 0.2s
   T0830__aitm__iec104_measurement_inject:
     title: 'T0830 – Adversary-in-the-Middle: IEC-104 measurement injection'
-    description: 'Injects IEC-104 M_ME_NC_1 (float measurement) frames from an attacker-controlled source into the control
-      network, causing the SCADA master to see falsified sensor readings. Observable as measurement spontaneous reports from
-      unexpected source IP.
+    description: 'Injects IEC-104 M_ME_NC_1 (float measurement) frames from an attacker-controlled source into the control network, causing the SCADA master to see falsified sensor readings. Observable
+      as measurement spontaneous reports from unexpected source IP.
 
       '
     steps:
@@ -4470,9 +4387,8 @@ aliases:
       interval: 0.2s
   T0834__native_api__s7comm_raw_cotp:
     title: 'T0834 – Native API: Raw COTP connection without S7 session layer'
-    description: 'Establishes an ISO 8073 COTP connection (transport layer) to port 102 without using the S7comm application
-      layer. Accesses the protocol stack at its lowest network-observable level — a signature of tools using native PDU construction
-      rather than vendor SDKs.
+    description: 'Establishes an ISO 8073 COTP connection (transport layer) to port 102 without using the S7comm application layer. Accesses the protocol stack at its lowest network-observable level — a
+      signature of tools using native PDU construction rather than vendor SDKs.
 
       '
     steps:
@@ -4490,9 +4406,8 @@ aliases:
       interval: 0.2s
   T0834__native_api__opcua_raw_secure_channel:
     title: 'T0834 – Native API: OPC UA raw secure channel open (no session handshake)'
-    description: 'Opens an OPC UA secure channel (OPN message) without performing the normal HEL/ACK discovery sequence, then
-      issues service calls directly. Characteristic of attackers using raw SDK access rather than the standard OPC UA client
-      stack.
+    description: 'Opens an OPC UA secure channel (OPN message) without performing the normal HEL/ACK discovery sequence, then issues service calls directly. Characteristic of attackers using raw SDK access
+      rather than the standard OPC UA client stack.
 
       '
     steps:
@@ -4510,9 +4425,8 @@ aliases:
       interval: 0.2s
   T0835__io_image__s7comm_write_inputs:
     title: 'T0835 – Manipulate I/O Image: S7comm write to AREA_INPUTS (process input image)'
-    description: 'Writes false values to the S7comm process input image area (AREA_INPUTS 0x81) which is normally read-only.
-      Forces the PLC to execute control logic with attacker-supplied sensor values rather than real I/O. Observed in Siemens
-      S7-400 field exploitation.
+    description: 'Writes false values to the S7comm process input image area (AREA_INPUTS 0x81) which is normally read-only. Forces the PLC to execute control logic with attacker-supplied sensor values
+      rather than real I/O. Observed in Siemens S7-400 field exploitation.
 
       '
     steps:
@@ -4542,8 +4456,7 @@ aliases:
       interval: 0.2s
   T0835__io_image__modbus_discrete_input_write:
     title: 'T0835 – Manipulate I/O Image: Modbus FC16 write to discrete input address space'
-    description: 'Writes to Modbus discrete input addresses (via FC16 to coil addresses that map to gateway input registers)
-      to inject false input states into the PLC input image.
+    description: 'Writes to Modbus discrete input addresses (via FC16 to coil addresses that map to gateway input registers) to inject false input states into the PLC input image.
 
       '
     steps:
@@ -4561,8 +4474,8 @@ aliases:
       interval: 0.15s
   T0837__loss_protection__modbus_relay_disable:
     title: 'T0837 – Loss of Protection: disable protection relay via Modbus FC16'
-    description: 'Writes maximum values to protection relay pickup registers (register range 50000-59999), raising trip thresholds
-      so overcurrent/overvoltage protection will never trigger regardless of actual fault conditions.
+    description: 'Writes maximum values to protection relay pickup registers (register range 50000-59999), raising trip thresholds so overcurrent/overvoltage protection will never trigger regardless of
+      actual fault conditions.
 
       '
     steps:
@@ -4586,8 +4499,8 @@ aliases:
       interval: 0.15s
   T0837__loss_protection__iec104_protection_cmd:
     title: 'T0837 – Loss of Protection: IEC-104 deactivate protection relay command'
-    description: 'Sends IEC-104 C_SC_NA_1 with deactivation COT to the IOA assigned to a protection relay function. Instructs
-      the relay to disable its protection function, leaving the associated equipment (motor, transformer, line) unprotected.
+    description: 'Sends IEC-104 C_SC_NA_1 with deactivation COT to the IOA assigned to a protection relay function. Instructs the relay to disable its protection function, leaving the associated equipment
+      (motor, transformer, line) unprotected.
 
       '
     steps:
@@ -4611,9 +4524,8 @@ aliases:
       interval: 0.2s
   T0839__module_firmware__s7comm_sdb:
     title: 'T0839 – Module Firmware: S7comm module firmware download (SDB block)'
-    description: 'Sends S7comm FC1A (Request Download) targeting SDB type 0x38 (module firmware block), followed by FC1B/FC1C
-      download sequence. Modifies the firmware of a specific I/O module (e.g. SM 321/322 digital I/O) without affecting the
-      main CPU.
+    description: 'Sends S7comm FC1A (Request Download) targeting SDB type 0x38 (module firmware block), followed by FC1B/FC1C download sequence. Modifies the firmware of a specific I/O module (e.g. SM 321/322
+      digital I/O) without affecting the main CPU.
 
       '
     steps:
@@ -4643,8 +4555,7 @@ aliases:
       interval: 0.2s
   T0839__module_firmware__enip_cip_fw:
     title: 'T0839 – Module Firmware: EtherNet/IP CIP firmware download to I/O module'
-    description: 'Downloads firmware to an Allen-Bradley I/O module via CIP service 0x2C to the identity object. The module
-      enters update mode and applies the new (potentially malicious) firmware.
+    description: 'Downloads firmware to an Allen-Bradley I/O module via CIP service 0x2C to the identity object. The module enters update mode and applies the new (potentially malicious) firmware.
 
       '
     steps:
@@ -4668,9 +4579,8 @@ aliases:
       interval: 0.2s
   T0851__rootkit__s7comm_output_vs_szl:
     title: 'T0851 – Rootkit: S7comm output state vs SZL diagnostic discrepancy probe'
-    description: 'Reads actual process outputs (AREA_OUTPUTS) then reads SZL diagnostic data. An attacker using a rootkit
-      manipulates what SZL reports, creating a discrepancy between the true physical output state and the diagnostic data
-      visible to the operator.
+    description: 'Reads actual process outputs (AREA_OUTPUTS) then reads SZL diagnostic data. An attacker using a rootkit manipulates what SZL reports, creating a discrepancy between the true physical output
+      state and the diagnostic data visible to the operator.
 
       '
     steps:
@@ -4700,9 +4610,8 @@ aliases:
       interval: 0.2s
   T0853__scripting__opcua_call_method:
     title: 'T0853 – Scripting: OPC UA CallRequest with script payload in method argument'
-    description: 'Calls an OPC UA server method with a Python/VBScript payload encoded in the method argument string. OPC
-      UA servers that expose scripting-capable method nodes (common in SCADA gateways and some HMI platforms) will execute
-      the payload.
+    description: 'Calls an OPC UA server method with a Python/VBScript payload encoded in the method argument string. OPC UA servers that expose scripting-capable method nodes (common in SCADA gateways
+      and some HMI platforms) will execute the payload.
 
       '
     steps:
@@ -4726,8 +4635,7 @@ aliases:
       interval: 0.25s
   T0853__scripting__s7comm_program_download:
     title: 'T0853 – Scripting: S7comm SCL program block download'
-    description: 'Downloads a new FC block to the Siemens PLC using S7comm download sequence. The block contains SCL (Structured
-      Control Language) code — the scripting equivalent for Siemens PLCs.
+    description: 'Downloads a new FC block to the Siemens PLC using S7comm download sequence. The block contains SCL (Structured Control Language) code — the scripting equivalent for Siemens PLCs.
 
       '
     steps:
@@ -4763,8 +4671,8 @@ aliases:
       interval: 0.2s
   T0856__spoof_reporting__dnp3_unsolicited_inject:
     title: 'T0856 – Spoof Reporting Message: DNP3 unsolicited response injection'
-    description: 'Sends DNP3 FC130 (unsolicited response) with fabricated analog input values from an attacker-controlled
-      IP. The DNP3 master accepts the unsolicited response as if it came from the legitimate outstation.
+    description: 'Sends DNP3 FC130 (unsolicited response) with fabricated analog input values from an attacker-controlled IP. The DNP3 master accepts the unsolicited response as if it came from the legitimate
+      outstation.
 
       '
     steps:
@@ -4776,9 +4684,8 @@ aliases:
       interval: 0.2s
   T0857__system_firmware__s7comm_sdb0:
     title: 'T0857 – System Firmware: S7comm full system firmware replacement (SDB0)'
-    description: 'Downloads a replacement firmware image to Siemens SDB0 (System Data Block 0), which is the complete PLC
-      firmware loaded at boot. Larger payload and different block type than T0839 Module Firmware — this replaces the entire
-      CPU firmware.
+    description: 'Downloads a replacement firmware image to Siemens SDB0 (System Data Block 0), which is the complete PLC firmware loaded at boot. Larger payload and different block type than T0839 Module
+      Firmware — this replaces the entire CPU firmware.
 
       '
     steps:
@@ -4808,9 +4715,8 @@ aliases:
       interval: 0.2s
   T0857__system_firmware__enip_full_fw:
     title: 'T0857 – System Firmware: EtherNet/IP full firmware replacement'
-    description: 'Sends CIP firmware download to the identity object (class 0x01) of an Allen-Bradley PLC, followed by a reset
-      to boot into the new firmware. This is larger and more destructive than module firmware (T0839) as it replaces the entire
-      device firmware image.
+    description: 'Sends CIP firmware download to the identity object (class 0x01) of an Allen-Bradley PLC, followed by a reset to boot into the new firmware. This is larger and more destructive than module
+      firmware (T0839) as it replaces the entire device firmware image.
 
       '
     steps:
@@ -4834,9 +4740,8 @@ aliases:
       interval: 0.5s
   T0858__change_mode__s7comm_program_mode:
     title: 'T0858 – Change Operating Mode: S7comm set PLC to PROGRAM mode'
-    description: 'Sends S7comm FC28 (PLC Control) with PROGRAM mode selector, transitioning the PLC from RUN to PROGRAM mode.
-      In PROGRAM mode the PLC halts execution of the control program — a prerequisite for loading malicious code or the first
-      step in a denial of control attack.
+    description: 'Sends S7comm FC28 (PLC Control) with PROGRAM mode selector, transitioning the PLC from RUN to PROGRAM mode. In PROGRAM mode the PLC halts execution of the control program — a prerequisite
+      for loading malicious code or the first step in a denial of control attack.
 
       '
     steps:
@@ -4854,8 +4759,8 @@ aliases:
       interval: 0.25s
   T0858__change_mode__enip_reset_safe:
     title: 'T0858 – Change Operating Mode: EtherNet/IP CIP reset to safe mode'
-    description: 'Sends CIP Reset service with parameter 0x01 (out-of-box reset) to the identity object, forcing the device
-      into a factory-default safe mode state. All active connections are terminated and the device awaits reconfiguration.
+    description: 'Sends CIP Reset service with parameter 0x01 (out-of-box reset) to the identity object, forcing the device into a factory-default safe mode state. All active connections are terminated
+      and the device awaits reconfiguration.
 
       '
     steps:
@@ -4873,9 +4778,8 @@ aliases:
       interval: 0.4s
   T0858__change_mode__dnp3_warm_restart:
     title: 'T0858 – Change Operating Mode: DNP3 warm restart forcing mode change'
-    description: 'Sends DNP3 FC14 (Warm Restart) which reboots the outstation into its startup mode, potentially a different
-      operating mode than the running configuration. Used to force mode changes that can''t be achieved with normal control
-      commands.
+    description: 'Sends DNP3 FC14 (Warm Restart) which reboots the outstation into its startup mode, potentially a different operating mode than the running configuration. Used to force mode changes that
+      can''t be achieved with normal control commands.
 
       '
     steps:
@@ -4887,9 +4791,8 @@ aliases:
       interval: 0.3s
   T0860__wireless__profinet_identify_wireless:
     title: 'T0860 – Wireless Compromise: PROFINET DCP identify from wireless segment'
-    description: 'Sends PROFINET DCP Identify All multicast from a wireless segment (e.g. Industrial WLAN, WirelessHART, or
-      ISA100.11a). Observable as PROFINET discovery traffic from an unexpected wireless source MAC/IP, indicating an attacker
-      has compromised the wireless OT network.
+    description: 'Sends PROFINET DCP Identify All multicast from a wireless segment (e.g. Industrial WLAN, WirelessHART, or ISA100.11a). Observable as PROFINET discovery traffic from an unexpected wireless
+      source MAC/IP, indicating an attacker has compromised the wireless OT network.
 
       '
     steps:
@@ -4907,9 +4810,8 @@ aliases:
       interval: 0.3s
   T0860__wireless__enip_list_identity_wireless:
     title: 'T0860 – Wireless Compromise: EtherNet/IP list_identity from wireless segment'
-    description: 'Sends EtherNet/IP List Identity broadcast from a wireless segment. The traffic pattern (unauthenticated
-      list request from a wireless source IP range) indicates the attacker has lateral access from a compromised wireless
-      OT device.
+    description: 'Sends EtherNet/IP List Identity broadcast from a wireless segment. The traffic pattern (unauthenticated list request from a wireless source IP range) indicates the attacker has lateral
+      access from a compromised wireless OT device.
 
       '
     steps:
@@ -4933,9 +4835,8 @@ aliases:
       interval: 0.2s
   T0862__supply_chain__s7comm_dl_unknown_source:
     title: 'T0862 – Supply Chain Compromise: S7comm program download from unexpected vendor IP'
-    description: 'Performs S7comm program download sequence from an IP address associated with an unexpected vendor or unknown
-      entity — the network-observable signature of a supply chain compromise where a malicious update is pushed from a vendor''s
-      compromised update server.
+    description: 'Performs S7comm program download sequence from an IP address associated with an unexpected vendor or unknown entity — the network-observable signature of a supply chain compromise where
+      a malicious update is pushed from a vendor''s compromised update server.
 
       '
     steps:
@@ -4965,9 +4866,8 @@ aliases:
       interval: 0.2s
   T0862__supply_chain__enip_fw_unknown_oui:
     title: 'T0862 – Supply Chain Compromise: EtherNet/IP firmware from unexpected OUI'
-    description: 'Sends EtherNet/IP firmware update from a source MAC with an OUI not matching the device vendor. Observable
-      indicator of supply chain compromise: firmware pushed from infrastructure that doesn''t match the vendor''s known network
-      footprint.
+    description: 'Sends EtherNet/IP firmware update from a source MAC with an OUI not matching the device vendor. Observable indicator of supply chain compromise: firmware pushed from infrastructure that
+      doesn''t match the vendor''s known network footprint.
 
       '
     steps:
@@ -4985,8 +4885,8 @@ aliases:
       interval: 0.2s
   T0863__user_execution__enip_write_tag_hmi:
     title: 'T0863 – User Execution: EtherNet/IP tag write triggered by HMI button'
-    description: 'Tag write from an HMI IP to PLC during off-hours or on unusual schedule — the network signature of a trojanized
-      HMI button or HMI script that executes when an operator unknowingly triggers a malicious action.
+    description: 'Tag write from an HMI IP to PLC during off-hours or on unusual schedule — the network signature of a trojanized HMI button or HMI script that executes when an operator unknowingly triggers
+      a malicious action.
 
       '
     steps:
@@ -5004,9 +4904,8 @@ aliases:
       interval: 0.5s
   T0863__user_execution__opcua_call_method:
     title: 'T0863 – User Execution: OPC UA method call triggered by operator action'
-    description: 'OPC UA method call from an EWS IP at an unusual time — characteristic of a trojanized HMI or engineering
-      station that executes malicious code when the operator performs a routine action (opening a screen, acknowledging an
-      alarm).
+    description: 'OPC UA method call from an EWS IP at an unusual time — characteristic of a trojanized HMI or engineering station that executes malicious code when the operator performs a routine action
+      (opening a screen, acknowledging an alarm).
 
       '
     steps:
@@ -5030,8 +4929,8 @@ aliases:
       interval: 0.4s
   T0864__transient_asset__enip_new_device_scan:
     title: 'T0864 – Transient Cyber Asset: EtherNet/IP scan from new/unknown device'
-    description: 'EtherNet/IP List Identity burst from an IP not in the known device inventory — the network signature of
-      a transient cyber asset (laptop, USB-to-Ethernet adapter, rogue device) connecting to the OT network.
+    description: 'EtherNet/IP List Identity burst from an IP not in the known device inventory — the network signature of a transient cyber asset (laptop, USB-to-Ethernet adapter, rogue device) connecting
+      to the OT network.
 
       '
     steps:
@@ -5061,8 +4960,7 @@ aliases:
       interval: 0.15s
   T0864__transient_asset__profinet_unknown_mac:
     title: 'T0864 – Transient Cyber Asset: PROFINET DCP identify from unknown MAC OUI'
-    description: 'PROFINET DCP Identify All request from a device with a MAC address OUI not in the known vendor whitelist.
-      Observable as multicast identify request from unregistered device.
+    description: 'PROFINET DCP Identify All request from a device with a MAC address OUI not in the known vendor whitelist. Observable as multicast identify request from unregistered device.
 
       '
     steps:
@@ -5080,9 +4978,8 @@ aliases:
       interval: 0.2s
   T0866__exploit_remote__s7comm_malformed_pdu:
     title: 'T0866 – Exploitation of Remote Services: S7comm malformed parameter block overflow'
-    description: 'Sends S7comm FC04 with 20 variable items in the parameter block (well above the PDU- negotiated maximum).
-      Targets known S7comm parsing vulnerabilities in Siemens firmware that can cause heap overflow when processing oversized
-      parameter counts.
+    description: 'Sends S7comm FC04 with 20 variable items in the parameter block (well above the PDU- negotiated maximum). Targets known S7comm parsing vulnerabilities in Siemens firmware that can cause
+      heap overflow when processing oversized parameter counts.
 
       '
     steps:
@@ -5100,8 +4997,8 @@ aliases:
       interval: 0.2s
   T0866__exploit_remote__opcua_malformed_browse:
     title: 'T0866 – Exploitation of Remote Services: OPC UA malformed Browse overflow'
-    description: 'Crafts an OPC UA BrowseRequest with a maximally malformed path structure to exploit vulnerabilities in OPC
-      UA server Browse implementations. Targets stack or heap corruption in servers that don''t validate path segment lengths.
+    description: 'Crafts an OPC UA BrowseRequest with a maximally malformed path structure to exploit vulnerabilities in OPC UA server Browse implementations. Targets stack or heap corruption in servers
+      that don''t validate path segment lengths.
 
       '
     steps:
@@ -5119,9 +5016,8 @@ aliases:
       interval: 0.2s
   T0867__lateral_tool__s7comm_db_payload:
     title: 'T0867 – Lateral Tool Transfer: encode tool in S7comm DB block download'
-    description: 'Downloads a large binary payload disguised as a Siemens data block. Attackers use the S7comm download protocol
-      to transfer tooling between engineering stations and PLC memory, which can then be exfiltrated or used as staging for
-      further attacks.
+    description: 'Downloads a large binary payload disguised as a Siemens data block. Attackers use the S7comm download protocol to transfer tooling between engineering stations and PLC memory, which can
+      then be exfiltrated or used as staging for further attacks.
 
       '
     steps:
@@ -5139,8 +5035,8 @@ aliases:
       interval: 0.1s
   T0867__lateral_tool__opcua_file_write:
     title: 'T0867 – Lateral Tool Transfer: large binary blob via OPC UA write'
-    description: 'Uses OPC UA WriteRequest to push a large binary blob to an OPC UA file node, exploiting the UA File Transfer
-      service to move attacker tooling between OT hosts via the OPC UA server as relay.
+    description: 'Uses OPC UA WriteRequest to push a large binary blob to an OPC UA file node, exploiting the UA File Transfer service to move attacker tooling between OT hosts via the OPC UA server as
+      relay.
 
       '
     steps:
@@ -5164,8 +5060,8 @@ aliases:
       interval: 0.15s
   T0867__lateral_tool__enip_fragmented_write:
     title: 'T0867 – Lateral Tool Transfer: fragmented CIP write encoding tool payload'
-    description: 'Uses EtherNet/IP CIP fragmented write (service 0x53) to the file object (class 0x37) to transfer a tool
-      payload encoded as a device file. Allen-Bradley devices with file object support accept arbitrary binary content.
+    description: 'Uses EtherNet/IP CIP fragmented write (service 0x53) to the file object (class 0x37) to transfer a tool payload encoded as a device file. Allen-Bradley devices with file object support
+      accept arbitrary binary content.
 
       '
     steps:
@@ -5183,8 +5079,7 @@ aliases:
       interval: 0.1s
   T0869__c2_protocol__enip_param_beacon:
     title: 'T0869 – Standard Application Layer Protocol: EtherNet/IP parameter write as C2'
-    description: 'Encodes C2 beacon data in CIP set_attribute_single to a parameter object. Uses the legitimate EtherNet/IP
-      protocol on port 44818 as the C2 channel. Covers T0885 (Commonly Used Port) simultaneously.
+    description: 'Encodes C2 beacon data in CIP set_attribute_single to a parameter object. Uses the legitimate EtherNet/IP protocol on port 44818 as the C2 channel. Covers T0885 (Commonly Used Port) simultaneously.
 
       '
     steps:
@@ -5202,8 +5097,8 @@ aliases:
       interval: 0.5s
   T0872__indicator_removal__s7comm_diag_clear:
     title: 'T0872 – Indicator Removal on Host: S7comm diagnostic buffer clear via SZL'
-    description: 'Sends S7comm ROSCTR_USERDATA with SZL subfunction 0x0F11 to clear the PLC''s diagnostic buffer — the primary
-      audit trail on Siemens devices. After clearing, evidence of prior unauthorized access or program changes is removed.
+    description: 'Sends S7comm ROSCTR_USERDATA with SZL subfunction 0x0F11 to clear the PLC''s diagnostic buffer — the primary audit trail on Siemens devices. After clearing, evidence of prior unauthorized
+      access or program changes is removed.
 
       '
     steps:
@@ -5221,8 +5116,7 @@ aliases:
       interval: 0.3s
   T0872__indicator_removal__iec104_counter_reset:
     title: 'T0872 – Indicator Removal on Host: IEC-104 counter interrogation with reset'
-    description: 'Sends IEC-104 C_CI_NA_1 (Counter Interrogation) with freeze+reset qualifier (QCC=0x45), clearing the RTU
-      event counters and history that would reveal prior attack activity.
+    description: 'Sends IEC-104 C_CI_NA_1 (Counter Interrogation) with freeze+reset qualifier (QCC=0x45), clearing the RTU event counters and history that would reveal prior attack activity.
 
       '
     steps:
@@ -5240,9 +5134,8 @@ aliases:
       interval: 0.25s
   T0873__project_infection__s7comm_upload_modify_dl:
     title: 'T0873 – Project File Infection: S7comm read-modify-write OB1 cycle'
-    description: 'Reads the existing OB1 (Organization Block 1 — main cycle program) via S7comm upload, then re-downloads
-      a modified version. The network-observable signature of project file infection: an upload sequence immediately followed
-      by a download to the same block.
+    description: 'Reads the existing OB1 (Organization Block 1 — main cycle program) via S7comm upload, then re-downloads a modified version. The network-observable signature of project file infection:
+      an upload sequence immediately followed by a download to the same block.
 
       '
     steps:
@@ -5296,8 +5189,8 @@ aliases:
       interval: 0.2s
   T0884__connection_proxy__modbus_hop:
     title: 'T0884 – Connection Proxy: Modbus TCP traffic relayed through intermediate host'
-    description: 'Sequential Modbus sessions from an unexpected intermediate IP — the network signature of connection proxying
-      where an attacker routes Modbus commands through a compromised engineering station to reach otherwise segmented PLCs.
+    description: 'Sequential Modbus sessions from an unexpected intermediate IP — the network signature of connection proxying where an attacker routes Modbus commands through a compromised engineering
+      station to reach otherwise segmented PLCs.
 
       '
     steps:
@@ -5315,9 +5208,8 @@ aliases:
       interval: 0.2s
   T0885__common_port__modbus_non_modbus:
     title: 'T0885 – Commonly Used Port: non-Modbus traffic on port 502'
-    description: 'Sends traffic on Modbus TCP port 502 that does not conform to the Modbus frame format — the protocol port
-      is used as a covert channel because it is permitted through OT firewalls. Observable as malformed Modbus frames with
-      encoded non-Modbus data.
+    description: 'Sends traffic on Modbus TCP port 502 that does not conform to the Modbus frame format — the protocol port is used as a covert channel because it is permitted through OT firewalls. Observable
+      as malformed Modbus frames with encoded non-Modbus data.
 
       '
     steps:
@@ -5335,8 +5227,8 @@ aliases:
       interval: 0.2s
   T0885__common_port__enip_port_abuse:
     title: 'T0885 – Commonly Used Port: encoded data on EtherNet/IP port 44818'
-    description: 'Encodes C2 beacon data in CIP parameter writes on port 44818. The well-known EtherNet/IP port is permitted
-      through OT network firewalls, providing a reliable C2 channel that blends with legitimate Allen-Bradley traffic.
+    description: 'Encodes C2 beacon data in CIP parameter writes on port 44818. The well-known EtherNet/IP port is permitted through OT network firewalls, providing a reliable C2 channel that blends with
+      legitimate Allen-Bradley traffic.
 
       '
     steps:
@@ -5354,8 +5246,8 @@ aliases:
       interval: 0.5s
   T0886__remote_services__s7comm_lateral:
     title: 'T0886 – Remote Services: S7comm lateral movement to additional PLCs'
-    description: 'Establishes S7comm sessions to additional PLCs in the network from a compromised engineering station — the
-      lateral movement signature of an attacker pivoting between Siemens PLCs on the PROFIBUS/PROFINET network.
+    description: 'Establishes S7comm sessions to additional PLCs in the network from a compromised engineering station — the lateral movement signature of an attacker pivoting between Siemens PLCs on the
+      PROFIBUS/PROFINET network.
 
       '
     steps:
@@ -5379,8 +5271,7 @@ aliases:
       interval: 0.2s
   T0886__remote_services__opcua_pivot:
     title: 'T0886 – Remote Services: OPC UA session from unexpected source (lateral pivot)'
-    description: 'OPC UA session established from an engineering station IP not normally associated with OPC UA client activity
-      — the signature of lateral movement through the OPC UA infrastructure.
+    description: 'OPC UA session established from an engineering station IP not normally associated with OPC UA client activity — the signature of lateral movement through the OPC UA infrastructure.
 
       '
     steps:
@@ -5422,9 +5313,8 @@ aliases:
       interval: 0.2s
   T0887__wireless_sniff__profinet_passive:
     title: 'T0887 – Wireless Sniffing: PROFINET DCP passive identify on wireless segment'
-    description: 'Sends PROFINET DCP Identify All broadcast from a wireless segment without actively targeting devices. The
-      multicast query causes all PROFINET devices to respond with identity data — equivalent to passive wireless sniffing
-      of device announcements.
+    description: 'Sends PROFINET DCP Identify All broadcast from a wireless segment without actively targeting devices. The multicast query causes all PROFINET devices to respond with identity data — equivalent
+      to passive wireless sniffing of device announcements.
 
       '
     steps:
@@ -5436,9 +5326,8 @@ aliases:
       interval: 0.5s
   T0887__wireless_sniff__enip_multicast:
     title: 'T0887 – Wireless Sniffing: EtherNet/IP list_identity broadcast on wireless segment'
-    description: 'Sends EtherNet/IP List Identity to the broadcast address from a wireless segment. Devices respond with identity
-      packets that reveal vendor, model, serial, and IP — passive wireless intelligence gathering observable as broadcast
-      traffic from a wireless source.
+    description: 'Sends EtherNet/IP List Identity to the broadcast address from a wireless segment. Devices respond with identity packets that reveal vendor, model, serial, and IP — passive wireless intelligence
+      gathering observable as broadcast traffic from a wireless source.
 
       '
     steps:
@@ -5456,8 +5345,8 @@ aliases:
       interval: 0.3s
   T0890__privilege_escalation__opcua_malformed_token:
     title: 'T0890 – Exploitation for Privilege Escalation: OPC UA malformed identity token'
-    description: 'Sends an ActivateSession request with an oversized, malformed identity token to exploit authentication parser
-      vulnerabilities in OPC UA servers. A successful exploit returns elevated session privileges without valid credentials.
+    description: 'Sends an ActivateSession request with an oversized, malformed identity token to exploit authentication parser vulnerabilities in OPC UA servers. A successful exploit returns elevated session
+      privileges without valid credentials.
 
       '
     steps:
@@ -5481,9 +5370,8 @@ aliases:
       interval: 0.25s
   T0890__privilege_escalation__s7comm_restricted_fc:
     title: 'T0890 – Exploitation for Privilege Escalation: S7comm restricted function code access'
-    description: 'Sends S7comm FC28 (PLC Control) and FC29 (PLC Stop) without completing the protection level authentication
-      handshake. Exploits PLCs with incomplete protection level enforcement to gain control-level access from a monitoring-only
-      session.
+    description: 'Sends S7comm FC28 (PLC Control) and FC29 (PLC Stop) without completing the protection level authentication handshake. Exploits PLCs with incomplete protection level enforcement to gain
+      control-level access from a monitoring-only session.
 
       '
     steps:
@@ -5507,9 +5395,8 @@ aliases:
       interval: 0.3s
   T0891__hardcoded_creds__opcua_vendor_default:
     title: 'T0891 – Hardcoded Credentials: OPC UA known vendor hardcoded account'
-    description: 'Authenticates using the known hardcoded vendor credential (opcua_admin / blank password) present in Kepware
-      KEPServerEX, ICONICS Genesis64, and other OPC UA implementations. These credentials are documented in vendor advisories
-      but remain unchanged in many deployments.
+    description: 'Authenticates using the known hardcoded vendor credential (opcua_admin / blank password) present in Kepware KEPServerEX, ICONICS Genesis64, and other OPC UA implementations. These credentials
+      are documented in vendor advisories but remain unchanged in many deployments.
 
       '
     steps:
@@ -5533,9 +5420,8 @@ aliases:
       interval: 0.2s
   T0891__hardcoded_creds__s7comm_siemens_default:
     title: 'T0891 – Hardcoded Credentials: S7comm Siemens hardcoded session token'
-    description: 'Uses the known blank-auth session token hardcoded in all Siemens S7-300/400 PLCs at protection level 0 and
-      1. Unlike T0812 (general default creds), this specifically uses the hardcoded token that cannot be changed without upgrading
-      firmware.
+    description: 'Uses the known blank-auth session token hardcoded in all Siemens S7-300/400 PLCs at protection level 0 and 1. Unlike T0812 (general default creds), this specifically uses the hardcoded
+      token that cannot be changed without upgrading firmware.
 
       '
     steps:
@@ -5559,8 +5445,8 @@ aliases:
       interval: 0.3s
   T0892__change_credential__opcua_change_password:
     title: 'T0892 – Change Credential: OPC UA ChangePassword to lock out operators'
-    description: 'Calls OPC UA ActivateSession to change the admin password to an attacker-controlled value, locking out legitimate
-      operators from the OPC UA server. After execution, all monitoring and control sessions by legitimate users fail.
+    description: 'Calls OPC UA ActivateSession to change the admin password to an attacker-controlled value, locking out legitimate operators from the OPC UA server. After execution, all monitoring and
+      control sessions by legitimate users fail.
 
       '
     steps:
@@ -5590,9 +5476,8 @@ aliases:
       interval: 0.3s
   T0892__change_credential__modbus_credential_write:
     title: 'T0892 – Change Credential: Modbus FC16 write to access control registers'
-    description: 'Writes 0xFFFF to credential/access-control holding registers (49000-49050 range) on PLCs that store PINs
-      or access codes in Modbus registers (common in Schneider M340, some Unitronics Vision series). Sets credentials to a
-      locked/attacker-controlled value.
+    description: 'Writes 0xFFFF to credential/access-control holding registers (49000-49050 range) on PLCs that store PINs or access codes in Modbus registers (common in Schneider M340, some Unitronics
+      Vision series). Sets credentials to a locked/attacker-controlled value.
 
       '
     steps:
@@ -5610,8 +5495,8 @@ aliases:
       interval: 0.3s
   T0893__data_local__s7comm_db_exfil:
     title: 'T0893 – Data from Local System: S7comm systematic DB exfiltration'
-    description: 'Reads all accessible S7comm data blocks (DB1-DB100) to extract local system data: recipe files, production
-      parameters, calibration data, and historical setpoints stored in PLC data block memory.
+    description: 'Reads all accessible S7comm data blocks (DB1-DB100) to extract local system data: recipe files, production parameters, calibration data, and historical setpoints stored in PLC data block
+      memory.
 
       '
     steps:
@@ -5629,9 +5514,8 @@ aliases:
       interval: 0.1s
   T0893__data_local__opcua_file_read:
     title: 'T0893 – Data from Local System: OPC UA file node read (local config)'
-    description: 'Reads OPC UA file-type nodes (FileType, UA Part 5, class 0x37) to access local configuration files served
-      by the OPC UA server from the device filesystem. Common on OPC UA servers running on Windows HMIs that expose %APPDATA%
-      as file nodes.
+    description: 'Reads OPC UA file-type nodes (FileType, UA Part 5, class 0x37) to access local configuration files served by the OPC UA server from the device filesystem. Common on OPC UA servers running
+      on Windows HMIs that expose %APPDATA% as file nodes.
 
       '
     steps:
@@ -5661,8 +5545,8 @@ aliases:
       interval: 0.15s
   T0895__autorun_image__enip_boot_firmware:
     title: 'T0895 – Autorun Image: EtherNet/IP boot partition firmware download'
-    description: 'Downloads a malicious firmware image to an Allen-Bradley PLC''s boot partition via CIP reset with boot parameter
-      0x01, followed by firmware write. On next reboot the device executes the attacker-controlled image automatically.
+    description: 'Downloads a malicious firmware image to an Allen-Bradley PLC''s boot partition via CIP reset with boot parameter 0x01, followed by firmware write. On next reboot the device executes the
+      attacker-controlled image automatically.
 
       '
     steps:
@@ -5686,8 +5570,8 @@ aliases:
       interval: 0.4s
   CHAIN__credential_theft_pivot__opcua:
     title: 'CHAIN – Credential theft + pivot: OPC UA default creds → exfil → lateral'
-    description: 'Uses OPC UA default credentials (T0812) to access the server, reads historian data for operational intelligence
-      (T0811), then uses hardcoded credentials (T0891) to escalate and pivot to additional OPC UA endpoints (T0886).
+    description: 'Uses OPC UA default credentials (T0812) to access the server, reads historian data for operational intelligence (T0811), then uses hardcoded credentials (T0891) to escalate and pivot to
+      additional OPC UA endpoints (T0886).
 
       '
     steps:
@@ -5735,9 +5619,8 @@ aliases:
       interval: 0.2s
   CHAIN__alarm_suppression_then_impact__iec104_modbus:
     title: 'CHAIN – Alarm suppression then impact: IEC-104 threshold modify + Modbus sabotage'
-    description: 'First suppresses alarms by writing max alarm thresholds via IEC-104 (T0838) and Modbus (T0838), then delivers
-      the impact payload: unauthorized setpoint commands (T0831/T0855) and protection relay disable (T0837) — all without
-      triggering operator alerts.
+    description: 'First suppresses alarms by writing max alarm thresholds via IEC-104 (T0838) and Modbus (T0838), then delivers the impact payload: unauthorized setpoint commands (T0831/T0855) and protection
+      relay disable (T0837) — all without triggering operator alerts.
 
       '
     steps:
@@ -5779,9 +5662,8 @@ aliases:
       interval: 0.3s
   CHAIN__firmware_persistence__enip_s7comm:
     title: 'CHAIN – Firmware persistence: EtherNet/IP module FW + S7comm SDB0 autorun'
-    description: 'Two-vector persistent firmware implant: replaces the EtherNet/IP I/O module firmware (T0839) to maintain
-      network persistence, then writes to S7comm SDB0 (T0895) to persist through PLC reboots. Both implants survive normal
-      recovery procedures.
+    description: 'Two-vector persistent firmware implant: replaces the EtherNet/IP I/O module firmware (T0839) to maintain network persistence, then writes to S7comm SDB0 (T0895) to persist through PLC
+      reboots. Both implants survive normal recovery procedures.
 
       '
     steps:

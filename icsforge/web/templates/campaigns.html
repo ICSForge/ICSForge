@@ -6,18 +6,17 @@
   <!-- ── Left: selector ─────────────────────────────────────────── -->
   <div style="display:flex;flex-direction:column;gap:12px">
 
-    <!-- Attack Chains -->
-    <div class="card" style="padding:12px 14px;border-top:2px solid var(--good)">
-      <div style="font-weight:700;font-size:13px;margin-bottom:2px">⛓ Attack Chains</div>
-      <div class="small muted">Pre-built multi-step attack sequences from the scenario library. Each chain fires as a single run_id.</div>
+    <!-- Industry Profile Filter -->
+    <div class="card" style="padding:10px 14px">
+      <div style="font-weight:700;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Industry Profile</div>
+      <select id="camp_profile_select" onchange="filterByProfile()" style="width:100%;padding:7px 10px;font-size:13px">
+        <option value="">All sectors — show everything</option>
+      </select>
+      <div id="camp_profile_desc" class="small muted" style="margin-top:5px;line-height:1.4;min-height:16px"></div>
     </div>
 
-    <div id="chains_list" style="display:flex;flex-direction:column;gap:8px">
-      <div class="small muted" style="padding:8px">Loading chains…</div>
-    </div>
-
-    <!-- Campaign Playbooks -->
-    <div class="card" style="padding:12px 14px;border-top:2px solid var(--brand);margin-top:8px">
+    <!-- Campaign Playbooks (first) -->
+    <div class="card" style="padding:12px 14px;border-top:2px solid var(--brand)">
       <div style="font-weight:700;font-size:13px;margin-bottom:2px">🎯 Campaign Playbooks</div>
       <div class="small muted">Multi-scenario sequenced campaigns with configurable dwell timers between steps.</div>
     </div>
@@ -38,6 +37,16 @@
       </div>
     </div>
     {% endfor %}
+
+    <!-- Attack Chains (below playbooks) -->
+    <div class="card" style="padding:12px 14px;border-top:2px solid var(--good);margin-top:8px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">⛓ Attack Chains</div>
+      <div class="small muted">Pre-built multi-step attack sequences from the scenario library. Each chain fires as a single run_id.</div>
+    </div>
+
+    <div id="chains_list" style="display:flex;flex-direction:column;gap:8px">
+      <div class="small muted" style="padding:8px">Loading chains…</div>
+    </div>
 
   </div>
 
@@ -126,6 +135,34 @@ let _chains  = [];
 let _currentRunId = null;
 let _totalSteps = 0;
 let _doneSteps  = 0;
+let _allProfiles = [];
+let _activeProfile = null;
+
+// Load profiles and populate selector
+fetch('/api/profiles').then(r=>r.json()).then(d=>{
+  _allProfiles = d.profiles || [];
+  const sel = document.getElementById('camp_profile_select');
+  _allProfiles.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value = p.sector;
+    opt.textContent = p.sector.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) +
+      (p.description ? ' — '+p.description.slice(0,40) : '');
+    sel.appendChild(opt);
+  });
+});
+
+function filterByProfile(){
+  const sector = document.getElementById('camp_profile_select').value;
+  _activeProfile = _allProfiles.find(p=>p.sector===sector) || null;
+  const desc = document.getElementById('camp_profile_desc');
+  if(_activeProfile){
+    const protos = (_activeProfile.protocols||[]).join(', ');
+    desc.textContent = protos ? 'Protocols: '+protos : '';
+  } else {
+    desc.textContent = '';
+  }
+  _renderChains();
+}
 
 // Load campaigns
 fetch('/api/campaigns/list').then(r=>r.json()).then(d=>{
@@ -156,7 +193,21 @@ const CHAIN_META = {
 function _renderChains() {
   const el = document.getElementById('chains_list');
   if (!_chains.length) { el.innerHTML='<div class="small muted" style="padding:8px">No chains found.</div>'; return; }
-  el.innerHTML = _chains.map(sc => {
+  // Apply profile filter if active
+  let chains = _chains;
+  if(_activeProfile){
+    const profProtos = new Set(_activeProfile.protocols || []);
+    const profTechs  = new Set(_activeProfile.priority_techniques || []);
+    chains = _chains.filter(sc=>
+      (sc.protocols||[]).some(p=>profProtos.has(p)) ||
+      (sc.techniques||[]).some(t=>profTechs.has(t))
+    );
+  }
+  if(!chains.length){
+    el.innerHTML='<div class="small muted" style="padding:8px">No chains match this profile filter.</div>';
+    return;
+  }
+  el.innerHTML = chains.map(sc => {
     const m = CHAIN_META[sc.id] || {icon:'⛓', label:sc.title, sub:(sc.protocols||[]).join(' · ')};
     const pills = (sc.techniques||[]).slice(0,5).map(t=>`<span class="badge" style="font-size:8px">${t}</span>`).join('');
     return `<div class="card camp-card chain-type" data-id="${sc.id}" data-type="chain" onclick="selectItem('chain','${sc.id}')"
@@ -293,11 +344,10 @@ function _runChain() {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      scenario: _selId,
+      name: _selId,
       dst_ip: dst,
       iface: iface||null,
-      confirm_live_network: true,
-      pcap: false,
+      also_build_pcap: false,
     })
   })
   .then(r=>r.json())

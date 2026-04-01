@@ -18,6 +18,27 @@
         <label style="font-size:11px;margin-bottom:2px">Receiver Port</label>
         <input id="cfg_receiver_port" value="9090" style="padding:6px 10px;font-size:13px;max-width:80px">
       </div>
+      <div class="field" style="min-width:260px;margin:0;flex:1 1 260px">
+        <label style="font-size:11px;margin-bottom:2px">Sender Callback URL (optional override)</label>
+        <input id="cfg_sender_callback_url" placeholder="http://sender-ip:8080/api/receiver/callback" style="padding:6px 10px;font-size:13px">
+      </div>
+      <div class="field" style="min-width:160px;margin:0;max-width:220px">
+        <label style="font-size:11px;margin-bottom:2px">Callback Token (optional)</label>
+        <input id="cfg_callback_token" placeholder="shared-secret" style="padding:6px 10px;font-size:13px">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <input id="cfg_pull_mode" type="checkbox" style="display:none">
+        <button id="btn_pull_mode" type="button" onclick="togglePullMode()"
+          title="Sender polls the receiver for receipts instead of waiting for callbacks. Use when the sender has no reachable callback address (e.g. running behind NAT, no public IP, or receiver cannot initiate outbound connections)."
+          style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.05em;
+            text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
+            background:var(--panel2);color:var(--muted);white-space:nowrap;
+            display:flex;align-items:center;gap:7px;transition:all .15s;font-family:var(--sans)">
+          <span id="pull_mode_icon" style="font-size:13px">○</span>
+          <span>Pull Mode</span>
+          <span class="small" style="font-weight:400;opacity:.7">sender-initiates</span>
+        </button>
+      </div>
       <button class="btn primary" id="btn_save_net" style="padding:6px 16px;font-size:12px;white-space:nowrap" onclick="saveNetworkConfig()">Save &amp; Connect</button>
       <span id="net_status" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
     </div>
@@ -40,7 +61,18 @@
 
     <div class="card">
       <h2>Scenario</h2>
-      <input class="scenario-search" id="sc_search" placeholder="Filter by name, technique ID, or protocol…" autocomplete="off">
+      <div class="row" style="gap:10px;margin-bottom:8px">
+        <div class="field" style="max-width:220px">
+          <label>Industry Profile</label>
+          <select id="profile_select" onchange="applyProfile()" style="padding:8px 10px">
+            <option value="">All sectors</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;display:block;margin-bottom:5px">Search</label>
+          <input class="scenario-search" id="sc_search" placeholder="Filter by name, technique ID, or protocol…" autocomplete="off" style="margin-bottom:0">
+        </div>
+      </div>
       <div class="scenario-list" id="sc_list"></div>
       <div class="desc-box" id="sc_desc">Select a scenario above.</div>
     </div>
@@ -67,8 +99,18 @@
           <input id="iface" placeholder="eth0">
         </div>
       </div>
-      <div class="row" style="margin-top:10px;gap:16px">
-        <label class="check"><input id="pcap" type="checkbox"> Build PCAP</label>
+      <!-- Protocol-specific parameters (loaded dynamically) -->
+      <div id="proto_params" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px;gap:10px">
+        <input id="pcap" type="checkbox" style="display:none">
+        <button id="btn_pcap" type="button" onclick="togglePcapBtn()"
+          style="padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.05em;
+            text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
+            background:var(--panel2);color:var(--muted);
+            display:flex;align-items:center;gap:7px;transition:all .15s;font-family:var(--sans)">
+          <span id="pcap_icon" style="font-size:13px">○</span>
+          <span>Build PCAP</span>
+        </button>
       </div>
       <!-- Safety confirmation toggle -->
       <div style="margin-top:12px">
@@ -89,13 +131,7 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Step Plan</h2>
-      <div id="step_plan" class="step-plan"></div>
-      <div class="run-log" id="run_log" style="margin-top:10px"></div>
-    </div>
-
-    <!-- ─── Live Receiver Feed (v0.23) ─────────────────────── -->
+    <!-- ─── Live Receiver Feed ───────────────────────────────── -->
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <h2 style="margin-bottom:0">Live Receiver Feed</h2>
@@ -110,7 +146,35 @@
       <div id="feed_techs" class="pillrow" style="margin-top:6px"></div>
     </div>
 
-    <!-- ─── Run History (v0.23) ─────────────────────────────── -->
+    <!-- ─── EVE Tap (v0.49) ───────────────────────────────── -->
+    <div class="card">
+      <h2>Suricata EVE Tap</h2>
+      <div class="small muted" style="margin-bottom:10px">Tail EVE JSON live — confirmed detections update the timeline automatically.</div>
+      <div class="field">
+        <label>EVE JSON path</label>
+        <input id="cfg_eve_path" placeholder="/var/log/suricata/eve.json" style="font-size:12px">
+      </div>
+      <div class="row" style="margin-top:8px;gap:8px">
+        <button class="btn primary" onclick="armEveTap()" style="font-size:11px">⬤ Arm tap</button>
+        <button class="btn" onclick="disarmEveTap()" style="font-size:11px">◼ Stop + report</button>
+      </div>
+    </div>
+
+    <!-- ─── Webhook (v0.49) ───────────────────────────────── -->
+    <div class="card">
+      <h2>Webhook Notifications</h2>
+      <div class="small muted" style="margin-bottom:10px">POST run/campaign results to Slack, Teams, or any HTTP endpoint.</div>
+      <div class="field">
+        <label>Webhook URL</label>
+        <input id="cfg_webhook_url" placeholder="https://hooks.slack.com/..." style="font-size:12px">
+      </div>
+      <div class="row" style="margin-top:8px;gap:8px">
+        <button class="btn primary" onclick="saveWebhookConfig()" style="font-size:11px">Save</button>
+        <button class="btn" onclick="testWebhook()" style="font-size:11px">Test</button>
+      </div>
+    </div>
+
+    <!-- ─── Run History ──────────────────────────────────────── -->
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <h2 style="margin-bottom:0">Recent Runs</h2>
@@ -119,6 +183,28 @@
       <div class="history-list" id="history_list">
         <div class="history-item" style="cursor:default;color:var(--muted)">No runs yet.</div>
       </div>
+    </div>
+
+    <!-- ─── Run Management Panel (v0.49.3) ───────────────────── -->
+    <div class="card" id="run_mgmt_panel" style="display:none">
+      <h2 style="margin-bottom:6px">Run Management</h2>
+      <div class="mono" id="rmp_run_id" style="font-size:10px;color:var(--muted);margin-bottom:10px"></div>
+      <div class="field" style="margin-bottom:8px">
+        <label>Label / title</label>
+        <input id="rmp_title_input" placeholder="Short description…" style="font-size:12px">
+      </div>
+      <div class="row" style="gap:6px;margin-bottom:8px">
+        <button class="btn primary" onclick="rmpRename()" style="font-size:11px;flex:1">Rename</button>
+        <button class="btn" onclick="rmpValidate()" style="font-size:11px;flex:1">Validate</button>
+        <button class="btn" onclick="rmpCorrelate()" style="font-size:11px;flex:1">Correlate</button>
+        <button class="btn" onclick="rmpExport()" style="font-size:11px;flex:1">Export</button>
+      </div>
+      <div class="field" style="margin-bottom:8px">
+        <label>Tags (comma-separated)</label>
+        <input id="rmp_tags_input" placeholder="regression, baseline, post-patch…" style="font-size:12px">
+      </div>
+      <button class="btn" onclick="rmpTag()" style="font-size:11px;width:100%">Save Tags</button>
+      <div id="rmp_status" class="small muted" style="margin-top:8px;min-height:16px"></div>
     </div>
 
   </div><!-- end LEFT -->
@@ -150,374 +236,71 @@
       <div id="preview_steps" style="display:flex;flex-direction:column;gap:4px"></div>
     </div>
 
+    <div class="card">
+      <h2>Step Plan</h2>
+      <div id="step_plan" class="step-plan"></div>
+      <div class="run-log" id="run_log" style="margin-top:10px"></div>
+    </div>
+
+    <!-- ─── Live Attack Timeline ──────────────────────────────── -->
+    <div class="card" id="timeline_card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin-bottom:0">Live Attack Timeline</h2>
+        <span id="tl_run_id" class="mono" style="font-size:10px;color:var(--muted)"></span>
+      </div>
+      <div id="tl_progress" style="height:3px;background:var(--border);border-radius:2px;margin-bottom:12px;overflow:hidden">
+        <div id="tl_progress_bar" style="height:100%;width:0%;background:var(--brand);border-radius:2px;transition:width 0.4s ease"></div>
+      </div>
+      <div id="timeline_steps" style="display:flex;flex-direction:column;gap:5px;max-height:320px;overflow-y:auto"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:var(--muted)">
+        <span id="tl_summary">—</span>
+        <span id="tl_elapsed"></span>
+      </div>
+    </div>
+
   </div><!-- end RIGHT -->
 
 </div><!-- end sender-grid -->
 
 <script>
-(function(){
-const $ = id => document.getElementById(id);
-const API = window.fetchJSON;
-
-/* ── State ──────────────────────────────────────────────────── */
-let allGroups    = [];
-let selectedName = null;
-let previewData  = null;
-let hexStepIdx   = 0;
-let feedPollTimer = null;
-let prevTotal    = null;
-
-/* ── Protocol colours ───────────────────────────────────────── */
-const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c",bacnet:"#8b5cf6",mqtt:"#06b6d4"};
-function protoBadge(p){const c=PROTO_C[p]||"#475569";return `<span class="proto-badge" style="background:${c};${c==='#f59e0b'?'color:#000':''}">${p}</span>`;}
-function protoDot(p){const c=PROTO_C[p]||"#888";return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}" title="${p}"></span>`;}
-
-/* ── Log ────────────────────────────────────────────────────── */
-function logln(msg, cls=""){
-  const el = $("run_log"), s = document.createElement("span");
-  if(cls) s.className = cls;
-  s.textContent = msg + "\n";
-  el.appendChild(s); el.scrollTop = el.scrollHeight;
-}
-
-/* ── Load groups ────────────────────────────────────────────── */
-async function loadGroups(){
-  const data = await API("/api/scenarios_grouped");
-  allGroups = data.groups || [];
-  renderChainCards();
-  renderScenarioList("");
-}
-
-/* ── Chain cards ────────────────────────────────────────────── */
-const CHAIN_META = {
-  CHAIN__industroyer2__power_grid:   {icon:"⚡",label:"Industroyer2",sub:"Ukraine 2022 · IEC-104 + S7comm"},
-  CHAIN__triton__safety_system:      {icon:"☢",label:"Triton / TRISIS",sub:"Safety system targeting · SIS"},
-  CHAIN__stuxnet__siemens_plc:       {icon:"⚙",label:"Stuxnet-style",sub:"Siemens PLC · Program manipulation"},
-  CHAIN__water_treatment_tampering:  {icon:"💧",label:"Water Treatment",sub:"Oldsmar-style · Setpoint tampering"},
-  CHAIN__industrial_espionage__opcua:{icon:"🕵",label:"OPC UA Espionage",sub:"Silent exfil via OPC UA sessions"},
-  CHAIN__enip_manufacturing_attack:  {icon:"🏭",label:"EtherNet/IP MFG",sub:"Allen-Bradley · CIP manipulation"},
-};
-function renderChainCards(){
-  const grid = $("chains_grid");
-  const chains = (allGroups.find(g=>g.name.includes("Attack Chains"))||{}).scenarios||[];
-  if(!chains.length){grid.innerHTML='<div class="small">No chains found.</div>';return;}
-  grid.innerHTML = chains.map(sc=>{
-    const m = CHAIN_META[sc.id]||{icon:"⛓",label:sc.title,sub:sc.protocols.join(" · ")};
-    const pills = sc.techniques.slice(0,4).map(t=>`<span class="chain-pill">${t}</span>`).join("");
-    return `<div class="chain-card" onclick="selectScenario('${sc.id}')">
-      <div class="chain-name">${m.icon} ${m.label}</div>
-      <div class="chain-sub">${m.sub}</div>
-      <div class="chain-pills">${pills}</div>
-    </div>`;
-  }).join("");
-}
-
-/* ── Scenario list ──────────────────────────────────────────── */
-function renderScenarioList(filter){
-  const f = filter.toLowerCase().trim();
-  let html = "", total = 0;
-  for(const group of allGroups){
-    const items = group.scenarios.filter(sc =>
-      !f || [sc.id, sc.title, ...sc.techniques, ...sc.protocols].some(s=>(s||"").toLowerCase().includes(f))
-    );
-    if(!items.length) continue;
-    html += `<div class="sc-group-head">${group.name}</div>`;
-    for(const sc of items){
-      const active = sc.id === selectedName ? " active" : "";
-      const dots = sc.protocols.map(p=>protoDot(p)).join("");
-      const nameStr = sc.title.length > 50 ? sc.title.slice(0,48)+"…" : sc.title;
-      html += `<div class="sc-item${active}" onclick="selectScenario('${sc.id}')">
-        <span>${nameStr}</span>
-        <span class="sc-protos">${dots}</span>
-      </div>`;
-      total++;
-    }
-  }
-  if(!total) html = '<div class="sc-item" style="cursor:default;color:var(--muted)">No matches.</div>';
-  $("sc_list").innerHTML = html;
-}
-
-$("sc_search").addEventListener("input", e => renderScenarioList(e.target.value));
-
-/* ── Select scenario ────────────────────────────────────────── */
-async function selectScenario(name){
-  selectedName = name; hexStepIdx = 0;
-  renderScenarioList($("sc_search").value);
-  const data = await API("/api/preview?name="+encodeURIComponent(name));
-  previewData = data;
-  if(data.error){$("sc_desc").textContent = data.error; return;}
-  $("sc_desc").textContent = data.description || data.title || name;
-  const steps = data.steps || [];
-  const totalPkts = steps.reduce((a,s)=>a+(s.count||1),0);
-  const protos = [...new Set(steps.map(s=>s.proto).filter(Boolean))];
-  $("step_summary").innerHTML =
-    `<span>${steps.length} steps · ${totalPkts} total packets</span> ` +
-    protos.map(p=>protoBadge(p)).join(" ");
-  // Render preview step list in right panel
-  $("preview_steps").innerHTML = steps.map(s=>{
-    const badge = s.proto ? protoBadge(s.proto) : "";
-    const tech = s.technique ? `<span class="badge" style="font-size:9px">${s.technique}</span>` : "";
-    const style = s.style && s.style!=="auto" ? `<span class="muted" style="font-size:10px">${s.style}</span>` : "";
-    const cnt = s.count > 1 ? `<span class="muted" style="font-size:10px">×${s.count}</span>` : "";
-    const intv = s.interval && s.interval!=="0s" ? `<span class="muted" style="font-size:10px">${s.interval}</span>` : "";
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:var(--panel2);border:1px solid var(--border)">${badge}${tech}${style}${cnt}${intv}</div>`;
-  }).join("");
-  renderStepPlan(steps, null);
-  await loadHexDump(name, 0);
-}
-
-/* ── Step plan ──────────────────────────────────────────────── */
-function renderStepPlan(steps, statuses){
-  if(!steps||!steps.length){$("step_plan").innerHTML="";return;}
-  $("step_plan").innerHTML = steps.map((s,i)=>{
-    const st = statuses ? statuses[i] : "pending";
-    const icon = {ok:"✓",err:"✗",sending:"…",pending:"·"}[st]||"·";
-    const badge = s.proto ? protoBadge(s.proto) : "";
-    const tech  = s.technique ? `<span class="badge" style="font-size:9px">${s.technique}</span>` : "";
-    const style = s.style && s.style!=="auto" ? `<span class="muted">${s.style}</span>` : "";
-    const cnt   = s.count>1 ? `<span class="muted">×${s.count}</span>` : "";
-    return `<div class="step-row st-${st}" id="sr_${i}">
-      <span class="step-icon">${icon}</span>${badge}${tech}${style}${cnt}
-    </div>`;
-  }).join("");
-}
-function setStepSt(i, st){
-  const el = document.getElementById(`sr_${i}`);
-  if(!el) return;
-  el.className = `step-row st-${st}`;
-  const ic = el.querySelector(".step-icon");
-  if(ic) ic.textContent = {ok:"✓",err:"✗",sending:"…",pending:"·"}[st]||"·";
-}
-
-/* ── Hex dump ───────────────────────────────────────────────── */
-function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
-async function loadHexDump(name, stepIdx){
-  $("hex_dump").innerHTML = '<span style="color:#475569">Loading…</span>';
-  $("hex_meta").innerHTML = "";
-  $("hex_nav").style.display = "none";
-  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}`);
-  if(data.error){$("hex_dump").innerHTML=`<span style="color:var(--bad)">${escHtml(data.error)}</span>`;return;}
-  const lines = (data.hexdump||"").split("\n").map(line=>{
-    const m = line.match(/^([0-9a-f]{4})  ([ 0-9a-f]{47})  (.+)$/);
-    if(!m) return escHtml(line);
-    return `<span style="color:#7c3aed">${m[1]}</span>  <span style="color:#a5f3fc">${m[2]}</span>  <span style="color:#6ee7b7">${escHtml(m[3])}</span>`;
-  });
-  $("hex_dump").innerHTML = lines.join("\n");
-  $("hex_meta").innerHTML = [
-    `${protoBadge(data.proto)}`,
-    `<span class="small">style: <b>${data.style}</b></span>`,
-    `<span class="small">port <b>${data.port||"L2"}</b></span>`,
-    `<span class="small"><b>${data.length}</b> bytes</span>`,
-    `<span class="badge">${data.technique}</span>`,
-  ].join("");
-  if(data.step_count > 1){
-    $("hex_nav").style.display = "flex";
-    $("hex_step_label").textContent = `Step ${data.step_index+1} / ${data.step_count}`;
-    hexStepIdx = data.step_index;
-  }
-}
-async function hexStep(delta){
-  if(!selectedName) return;
-  hexStepIdx = Math.max(0, hexStepIdx + delta);
-  await loadHexDump(selectedName, hexStepIdx);
-}
-window.hexStep = hexStep;
-
-/* ── Run scenario ───────────────────────────────────────────── */
-async function doSend(offline=false){
-  if(!offline && !$("confirm").checked){logln("[BLOCKED] Check the safety confirmation checkbox.","log-err");return;}
-  if(!selectedName){logln("[ERROR] No scenario selected.","log-err");return;}
-  const dst_ip = $("dst_ip").value.trim();
-  if(!dst_ip && !offline){logln("[ERROR] Destination IP required.","log-err");return;}
-  const steps = (previewData&&previewData.steps)||[];
-  const statuses = steps.map(()=>"pending");
-  renderStepPlan(steps, statuses);
-  const endpoint = offline ? "/api/generate_offline" : "/api/send";
-  const payload = offline
-    ? {name:selectedName, dst_ip:dst_ip||$("cfg_receiver_ip").value.trim()||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true}
-    : {name:selectedName, dst_ip, src_ip:$("src_ip").value.trim(), iface:$("iface").value.trim(),
-       timeout:parseFloat($("timeout").value)||2.0, also_build_pcap:$("pcap").checked};
-  logln(`[${offline?"OFFLINE":"LIVE"}] ${selectedName} → ${dst_ip||"(offline)"}`, "log-info");
-  // Animate steps
-  let ai = 0;
-  const anim = setInterval(()=>{if(ai<statuses.length){statuses[ai]="sending";renderStepPlan(steps,statuses);ai++;}},200);
-  try {
-    const data = await API(endpoint, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    clearInterval(anim);
-    if(data.error){statuses.fill("err");renderStepPlan(steps,statuses);logln("[ERROR] "+data.error,"log-err");window.toast("Error",data.error,"err");return;}
-    statuses.fill("ok");renderStepPlan(steps,statuses);
-    logln(`[OK] run_id=${data.run_id}  sent=${data.sent||"—"}`,"log-ok");
-    if(data.pcap)   logln(`  pcap   → ${data.pcap}`,"log-info");
-    if(data.events) logln(`  events → ${data.events}`,"log-info");
-    // Show any per-step warnings (e.g. profinet skipped due to missing iface)
-    if(data.warnings && data.warnings.length){
-      data.warnings.forEach(w => logln(`  ⚠ ${w}`, "log-warn"));
-      if(data.warnings.some(w => w.includes('profinet_dcp') && w.includes('iface'))){
-        window.toast("PROFINET skipped",
-          "No interface specified. Set the Interface (L2) field to e.g. eth0.", "warn");
-      }
-    }
-    window.toast("Scenario fired", `${selectedName} · ${data.sent||"—"} packets`, "ok");
-    // Refresh history after run
-    setTimeout(loadHistory, 800);
-    // Start feed poll if not already
-    startFeedPoll();
-  } catch(e){
-    clearInterval(anim);statuses.fill("err");renderStepPlan(steps,statuses);
-    logln("[EXCEPTION] "+e,"log-err");
-  }
-}
-
-$("btn_send").addEventListener("click",   e=>{e.preventDefault();doSend(false);});
-$("btn_offline").addEventListener("click", e=>{e.preventDefault();doSend(true);});
-$("btn_clear").addEventListener("click",   e=>{e.preventDefault();$("run_log").innerHTML="";});
-
-/* ── Safety confirm toggle ────────────────────────────────── */
-window.toggleConfirm = function(){
-  const cb  = $("confirm");
-  const btn = $("confirm_btn");
-  const ico = $("confirm_icon");
-  cb.checked = !cb.checked;
+function togglePullMode(){
+  const cb=document.getElementById("cfg_pull_mode");
+  const btn=document.getElementById("btn_pull_mode");
+  const ico=document.getElementById("pull_mode_icon");
+  cb.checked=!cb.checked;
   if(cb.checked){
-    btn.style.borderColor = "var(--good)";
-    btn.style.background  = "rgba(16,185,129,.1)";
-    btn.style.color       = "var(--good)";
-    ico.textContent       = "✓";
+    btn.style.borderColor="var(--brand2,#00d4ff)";
+    btn.style.background="rgba(0,212,255,.1)";
+    btn.style.color="var(--brand2,#00d4ff)";
+    ico.textContent="●";
   } else {
-    btn.style.borderColor = "var(--border)";
-    btn.style.background  = "var(--panel2)";
-    btn.style.color       = "var(--muted)";
-    ico.textContent       = "○";
+    btn.style.borderColor="var(--border)";
+    btn.style.background="var(--panel2)";
+    btn.style.color="var(--muted)";
+    ico.textContent="○";
   }
-};
-
-/* ── Live Receiver Feed (v0.23) ─────────────────────────────── */
-function startFeedPoll(){
-  if(feedPollTimer) return;  // already polling
-  $("live_dot").classList.remove("off");
-  feedPollTimer = setInterval(pollFeed, 2000);
-  pollFeed();
 }
-async function pollFeed(){
-  try {
-    const data = await API("/api/receiver/overview");
-    if(!data || data.error) return;
-    const pkts = data.total ?? 0;
-    $("fk_pkts").textContent  = pkts;
-    $("fk_runs").textContent  = data.top_protocols ? data.top_protocols.length : "—";
-    $("fk_tech").textContent  = data.top_techniques ? data.top_techniques.length : "—";
-    $("fk_proto").textContent = data.top_protocols ? data.top_protocols.length : "—";
-    // Techniques pill row
-    const techs = (data.top_techniques||[]).slice(0,8);
-    $("feed_techs").innerHTML = techs.map(([t,n])=>`<span class="badge brand">${t} <span style="color:var(--muted)">${n}</span></span>`).join("");
-    // Flash if new packets
-    if(prevTotal !== null && pkts > prevTotal){
-      $("fk_pkts").style.color = "var(--good)";
-      setTimeout(()=>{ $("fk_pkts").style.color=""; }, 600);
-    }
-    prevTotal = pkts;
-  } catch(e){/* receiver may be offline, silent fail */}
+function togglePcapBtn(){
+  const cb=document.getElementById("pcap");
+  const btn=document.getElementById("btn_pcap");
+  const ico=document.getElementById("pcap_icon");
+  cb.checked=!cb.checked;
+  if(cb.checked){
+    btn.style.borderColor="var(--brand)";
+    btn.style.background="rgba(245,158,11,.1)";
+    btn.style.color="var(--brand)";
+    ico.textContent="✓";
+  } else {
+    btn.style.borderColor="var(--border)";
+    btn.style.background="var(--panel2)";
+    btn.style.color="var(--muted)";
+    ico.textContent="○";
+  }
 }
-
-/* ── Run History (v0.23) ────────────────────────────────────── */
-async function loadHistory(){
-  const data = await API("/api/runs");
-  const runs = (data.runs||[]).slice(0,8);
-  const el = $("history_list");
-  if(!runs.length){el.innerHTML='<div class="history-item" style="cursor:default;color:var(--muted)">No runs yet.</div>';return;}
-  el.innerHTML = runs.map(r=>{
-    const name = r.scenario || r.run_id || "—";
-    const ts   = (r.ts||"").replace("T"," ").slice(0,19);
-    const sc   = name.length > 32 ? name.slice(0,30)+"…" : name;
-    return `<div class="history-item" onclick="inspectRun('${r.run_id}','${sc}')">
-      <span class="hi-name">${sc}</span>
-      <span class="hi-ts">${ts}</span>
-    </div>`;
-  }).join("");
-}
-function inspectRun(run_id, label){
-  window.toast(`run_id: ${run_id.slice(0,12)}`, label, "");
-  // Copy run_id to clipboard if available
-  if(navigator.clipboard) navigator.clipboard.writeText(run_id).catch(()=>{});
-}
-
-window.selectScenario = selectScenario;
-window.loadHistory    = loadHistory;
-
-/* ── Boot ───────────────────────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", async ()=>{
-  // Load saved network config and prefill IP fields
-  await loadNetworkConfig();
-  await loadGroups();
-  // Auto-select first non-chain scenario
-  const first = (allGroups.find(g=>!g.name.includes("Chain"))||allGroups[0]);
-  if(first && first.scenarios && first.scenarios[0]) selectScenario(first.scenarios[0].id);
-  loadHistory();
-  startFeedPoll();
+// Sync toggle button state when loadNetworkConfig restores pull_enabled
+document.addEventListener("DOMContentLoaded", ()=>{
+  const orig = window.saveNetworkConfig;
 });
-
-/* ── Network Config ────────────────────────────────────────── */
-async function loadNetworkConfig(){
-  try {
-    const data = await API("/api/config/network");
-    if(data.sender_ip){
-      $("cfg_sender_ip").value = data.sender_ip;
-      $("src_ip").value = data.sender_ip;
-    }
-    if(data.receiver_ip){
-      $("cfg_receiver_ip").value = data.receiver_ip;
-      $("dst_ip").value = data.receiver_ip;
-      $("net_status").textContent = "Receiver: " + data.receiver_ip;
-      $("net_status").style.color = "var(--good)";
-    }
-    if(data.receiver_port){
-      $("cfg_receiver_port").value = data.receiver_port;
-    }
-  } catch(e){}
-}
-
-async function saveNetworkConfig(){
-  const sender_ip   = $("cfg_sender_ip").value.trim();
-  const receiver_ip = $("cfg_receiver_ip").value.trim();
-  const receiver_port = parseInt($("cfg_receiver_port").value) || 9090;
-  $("net_status").textContent = "Saving…";
-  $("net_status").style.color = "var(--muted)";
-  try {
-    // Save combined config
-    await API("/api/config/network", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({sender_ip, receiver_ip})
-    });
-    // Prefill scenario fields
-    if(sender_ip)   $("src_ip").value = sender_ip;
-    if(receiver_ip) $("dst_ip").value = receiver_ip;
-    // If receiver IP set, push callback config to receiver
-    if(receiver_ip){
-      const data = await API("/api/config/receiver_ip", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({receiver_ip, receiver_port})
-      });
-      if(data.callback_configured){
-        $("net_status").textContent = "✓ Connected — callback active";
-        $("net_status").style.color = "var(--good)";
-        window.toast("Receiver linked", `${receiver_ip}:${receiver_port} — live callbacks active`, "ok");
-      } else {
-        $("net_status").textContent = "✓ IP saved — receiver unreachable for callback";
-        $("net_status").style.color = "var(--warn, #f59e0b)";
-        window.toast("IP saved", `Receiver at ${receiver_ip} not reachable for callback push`, "warn");
-      }
-    } else {
-      $("net_status").textContent = "Sender IP saved";
-      $("net_status").style.color = "var(--muted)";
-    }
-  } catch(e){
-    $("net_status").textContent = "Error: " + e;
-    $("net_status").style.color = "var(--err, #ef4444)";
-  }
-}
-window.saveNetworkConfig = saveNetworkConfig;
-})();
 </script>
+<script src="/static/js/sender.js"></script>
 {% endblock %}

@@ -10,7 +10,9 @@ v0.4: thread-safe receipt writing, structured logging, proper error handling.
 import fcntl
 import hashlib
 import json
+import argparse
 import os
+import sys
 import socket
 import struct
 import threading
@@ -21,7 +23,7 @@ from datetime import datetime, timezone
 import yaml
 
 from icsforge.core import marker_prefix
-from icsforge.log import get_logger
+from icsforge.log import get_logger, configure as configure_logging
 
 log = get_logger(__name__)
 
@@ -29,6 +31,7 @@ log = get_logger(__name__)
 
 _receipt_lock = threading.Lock()
 _callback_url = ""       # set by config, CLI, or sender push
+_callback_token = ""     # optional shared token for callback auth
 _callback_timeout = 2
 
 
@@ -40,8 +43,20 @@ def set_callback_url(url: str):
         log.info("Sender callback URL set: %s", _callback_url)
 
 
+def set_callback_token(token: str):
+    """Set optional shared callback token."""
+    global _callback_token
+    _callback_token = (token or "").strip()
+    if _callback_token:
+        log.info("Sender callback token configured")
+
+
 def get_callback_url() -> str:
     return _callback_url
+
+
+def get_callback_token() -> str:
+    return _callback_token
 
 
 def _now():
@@ -69,9 +84,12 @@ def _send_callback(ev: dict):
     try:
         import urllib.request
         data = json.dumps(ev, ensure_ascii=False).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if _callback_token:
+            headers["X-ICSForge-Callback-Token"] = _callback_token
         req = urllib.request.Request(
             url, data=data,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
         urllib.request.urlopen(req, timeout=_callback_timeout)
@@ -274,9 +292,7 @@ def _l2_profinet_listener(iface, receipts_path, max_payload):
 
 
 def main():
-    import argparse
 
-    from icsforge.log import configure as configure_logging
 
     ap = argparse.ArgumentParser(prog="icsforge-receiver")
     ap.add_argument("--web", action="store_true", default=True)
@@ -307,12 +323,15 @@ def main():
     max_payload = int((cfg.get("safety") or {}).get("max_payload", 8192))
 
     # Sender callback URL — CLI overrides config
-    global _callback_url, _callback_timeout
+    global _callback_url, _callback_token, _callback_timeout
     cb_cfg = cfg.get("callback") or {}
     cb_url = (args.callback_url or "").strip() or (cb_cfg.get("url") or "").strip()
+    cb_token = (cb_cfg.get("token") or "").strip()
     _callback_timeout = int(cb_cfg.get("timeout", 2))
     if cb_url:
         set_callback_url(cb_url)
+    if cb_token:
+        set_callback_token(cb_token)
 
     # TCP listeners
     for proto, port in listen.items():
@@ -338,7 +357,6 @@ def main():
 
             def _run_web():
                 os.environ["ICSFORGE_UI_MODE"] = "receiver"
-                import sys
                 sys.argv = ["icsforge-web", "--host", args.web_host, "--port", str(args.web_port)]
                 web_main()
 

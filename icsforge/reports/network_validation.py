@@ -1,5 +1,9 @@
 import json
+import os
 from collections import defaultdict
+from icsforge.log import get_logger
+
+log = get_logger(__name__)
 
 
 def _load_jsonl(path: str):
@@ -23,6 +27,21 @@ def build_network_validation_report(
     events = list(_load_jsonl(events_jsonl))
     receipts = list(_load_jsonl(receipts_jsonl))
     alerts = list(_load_jsonl(alerts_jsonl)) if alerts_jsonl else []
+
+    # Validate inputs and warn loudly about quality issues
+    _warnings: list[str] = []
+    if not events:
+        msg = (
+            f"Events file is empty: {events_jsonl}. "
+            "Ground-truth techniques will be missing — report will lack expected_techniques. "
+            "For live sends, run 'icsforge send' with --also-build-pcap to generate ground truth."
+        )
+        log.warning(msg)
+        _warnings.append(msg)
+    if not receipts:
+        msg = f"Receipts file is empty: {receipts_jsonl}. Delivery ratios will be zero."
+        log.warning(msg)
+        _warnings.append(msg)
 
     expected_by_run = defaultdict(set)
     for e in events:
@@ -63,6 +82,8 @@ def build_network_validation_report(
             item["coverage_ratio"] = round(len(set(obs) & set(exp)) / max(1, len(exp)), 2)
         report["runs"].append(item)
 
+    if _warnings:
+        report["warnings"] = _warnings
     report["summary"] = {
         "runs": len(runs),
         "total_received_packets": sum(x["received_packets"] for x in report["runs"]),

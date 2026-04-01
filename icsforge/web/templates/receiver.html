@@ -26,6 +26,31 @@
   <div id="l2_banner" style="display:none;margin-top:12px;padding:8px 12px;border-radius:6px;font-size:12px"></div>
 </div>
 
+
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>
+      <h2 style="margin-bottom:4px">Sender Callback Settings</h2>
+      <div class="small muted">Configure where this receiver should send live receipt confirmations.</div>
+    </div>
+    <span id="cb_status" class="small muted"></span>
+  </div>
+  <div class="row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
+    <div class="field" style="flex:2 1 360px">
+      <label>Sender Callback URL</label>
+      <input id="cb_url" placeholder="http://sender-ip:8080/api/receiver/callback">
+    </div>
+    <div class="field" style="flex:1 1 180px">
+      <label>Callback Token (optional)</label>
+      <input id="cb_token" placeholder="shared-secret">
+    </div>
+    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+      <button class="btn primary" onclick="saveCallbackConfig()">Save Callback</button>
+      <button class="btn" onclick="testCallback()">Test Callback</button>
+    </div>
+  </div>
+</div>
+
 <div class="grid">
   <!-- Live receipts -->
   <div class="card">
@@ -69,143 +94,5 @@
   </div>
 </div>
 
-<script>
-const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c",bacnet:"#8b5cf6",mqtt:"#06b6d4"};
-
-function $(id){ return document.getElementById(id); }
-
-function protoBadge(p){
-  const c=PROTO_C[p]||"#475569";
-  return `<span style="display:inline-block;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:700;background:${c};color:${c==='#f59e0b'?'#000':'#fff'};font-family:var(--mono)">${p||"?"}</span>`;
-}
-function techBadge(t){
-  if(!t) return '<span class="badge" style="font-size:9px">—</span>';
-  return `<span class="badge brand" style="font-size:9px">${t}</span>`;
-}
-
-// NATO-style run IDs: YYYY-MM-DD-WORD-NN  |  Legacy: 12 hex chars
-function isLegacyRunId(id){
-  return id && /^[0-9a-f]{12}$/.test(id);
-}
-function runIdBadge(id){
-  if(!id) return '—';
-  if(isLegacyRunId(id)){
-    return `<span class="mono" style="font-size:9px;color:var(--muted);opacity:.7"
-      title="Legacy run ID">${id.slice(0,12)}</span>`;
-  }
-  // NATO format: show date muted, word bold, number normal
-  const parts = id.split('-');  // ['2026','03','05','BRAVO','07']
-  if(parts.length === 5){
-    const date = parts.slice(0,3).join('-');
-    const word = parts[3];
-    const num  = parts[4];
-    return `<span style="cursor:pointer" onclick="loadRun('${id}')">` +
-      `<span class="mono" style="font-size:9px;color:var(--muted)">${date} </span>` +
-      `<span class="mono" style="font-size:10px;font-weight:700;color:var(--brand2)">${word}</span>` +
-      `<span class="mono" style="font-size:9px;color:var(--fg)">-${num}</span>` +
-      `</span>`;
-  }
-  return `<a class="mono" style="color:var(--brand2);font-size:10px;cursor:pointer"
-    onclick="loadRun('${id}')">${id.slice(0,20)}</a>`;
-}
-
-async function reloadReceipts(){
-  const qs = new URLSearchParams();
-  const rv=$("f_run").value.trim(), tv=$("f_tech").value.trim(), pv=$("f_proto").value.trim();
-  if(rv) qs.set("run_id",rv); if(tv) qs.set("technique",tv); if(pv) qs.set("proto",pv);
-  const data = await window.fetchJSON("{{ url_for('web.api_receipts') }}?"+qs.toString());
-  const tb = document.querySelector("#receipts_tbl tbody");
-  tb.innerHTML = "";
-  for(const r of (data.items||[])){
-    const ts = (r["@timestamp"]||"").replace("T"," ").slice(0,19);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="mono" style="font-size:10px;white-space:nowrap">${ts}</td>
-      <td>${protoBadge(r["receiver.proto"])}</td>
-      <td class="mono" style="font-size:10px">${r["receiver.l2"] ? (r.src_mac||"L2") : ((r.src_ip||"")+":"+(r.src_port||""))}</td>
-      <td>${techBadge(r.technique)}</td>
-      <td>${runIdBadge(r.run_id)}</td>
-      <td class="mono" style="font-size:10px">${r.bytes||0}</td>`;
-    tb.appendChild(tr);
-  }
-}
-
-async function loadRun(run_id){
-  const data = await window.fetchJSON("{{ url_for('web.api_run_detail') }}?run_id="+encodeURIComponent(run_id));
-  const p = document.getElementById("run_panel");
-  if(!data.run_id){ p.innerHTML="<span style='color:var(--muted)'>Run not found.</span>"; return; }
-  const techs = (data.techniques||[]).map(t=>`<span class="badge brand" style="font-size:10px">${t}</span>`).join(" ");
-  if(data.bins){ drawSparkline(document.getElementById("spark_run"), (data.bins||[]).map((b,i)=>[i,b.count])); }
-  const legacyNote = isLegacyRunId(data.run_id)
-    ? `<span class="badge" style="font-size:9px;opacity:.6;margin-left:6px">legacy id</span>` : '';
-  p.innerHTML = `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
-      <div>
-        <div class="mono" style="font-size:15px;font-weight:700;color:var(--brand2)">${data.run_id}${legacyNote}</div>
-        <div class="small" style="margin-top:4px">Packets: <b>${data.packets}</b></div>
-        <div class="small">First: ${(data.first_seen||"—").replace("T"," ").slice(0,19)}</div>
-        <div class="small">Last:  ${(data.last_seen||"—").replace("T"," ").slice(0,19)}</div>
-      </div>
-      <span class="badge good">DELIVERED</span>
-    </div>
-    <div class="hr"></div>
-    <div class="small" style="margin-bottom:6px">Techniques observed:</div>
-    <div class="pillrow">${techs || "<span class='badge'>none</span>"}</div>
-    <div class="hr"></div>
-    <div class="small" style="color:var(--muted)">Evidence stored in receipts.jsonl with correlation marker.</div>`;
-}
-
-async function resetReceipts(){
-  if(!confirm('Archive current receipts.jsonl and reset all counters?\n\nYour data is not deleted — it is saved as receipts_TIMESTAMP.jsonl in the same folder.')) return;
-  const btn = $("reset_btn");
-  btn.disabled = true; btn.textContent = "Resetting…";
-  try {
-    const res = await fetch("{{ url_for('web.api_receiver_reset') }}", {method:"POST"});
-    const d   = await res.json();
-    if(d.error){ alert("Reset failed: "+d.error); return; }
-    const msg = d.archived
-      ? `Archived ${d.lines} packets → ${d.archived}`
-      : "Nothing to reset (0 packets).";
-    window.toast("Reset complete", msg, "ok");
-    reloadReceipts();
-    reloadOverview();
-  } finally {
-    btn.disabled = false; btn.textContent = "⟳ Reset";
-  }
-}
-
-async function reloadOverview(){
-  const data = await window.fetchJSON("{{ url_for('web.api_receiver_overview') }}");
-  if(!data) return;
-  $("k_total").textContent = data.total ?? 0;
-  $("k_runs").textContent  = data.runs  ?? 0;
-  $("k_tech").textContent  = (data.top_techniques||[]).length;
-  $("k_proto").textContent = (data.top_protocols||[]).length;
-  // L2 listener status banner
-  const banner = $("l2_banner");
-  if(banner){
-    if(data.l2_active){
-      banner.style.display = "";
-      banner.style.background = "rgba(16,185,129,.1)";
-      banner.style.border = "1px solid rgba(16,185,129,.3)";
-      banner.style.color = "#10b981";
-      banner.textContent = "⬡ PROFINET L2 listener active on interface: " + data.l2_iface;
-    } else {
-      banner.style.display = "";
-      banner.style.background = "rgba(239,68,68,.08)";
-      banner.style.border = "1px solid rgba(239,68,68,.25)";
-      banner.style.color = "#ef4444";
-      banner.textContent = "⚠ PROFINET L2 listener not running. Start receiver with --l2-iface eth0 to capture PROFINET DCP frames.";
-    }
-  }
-  const lbl = $("live_label");
-  if(lbl) lbl.textContent = `Last: ${(data.last_ts||"—").replace("T"," ").slice(0,19)}`;
-  const dot = $("live_dot");
-  if(dot) dot.classList.remove("off");
-}
-
-reloadReceipts();
-reloadOverview();
-setInterval(()=>{ reloadReceipts(); reloadOverview(); }, 2000);
-</script>
+<script src="/static/js/receiver.js"></script>
 {% endblock %}

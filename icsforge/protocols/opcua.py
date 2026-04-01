@@ -61,6 +61,26 @@ def _request_header(req_handle: int = 1) -> bytes:
     )[:28]  # fixed 28 bytes for simplified header
 
 
+
+def _parse_node_numeric(val, default=None) -> int:
+    """Parse a NodeId value that may be 'ns=2;i=1001', '1001', or an int."""
+    if val is None:
+        return default if default is not None else rnd.randint(1000, 9999)
+    if isinstance(val, int):
+        return val
+    s = str(val).strip()
+    # "ns=X;i=NNN" or "i=NNN"
+    if "i=" in s:
+        try:
+            return int(s.split("i=")[-1])
+        except (ValueError, IndexError):
+            pass
+    # plain integer string
+    try:
+        return int(s)
+    except ValueError:
+        return default if default is not None else rnd.randint(1000, 9999)
+
 def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
     """
     Build OPC UA TCP frame.
@@ -170,7 +190,7 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
     elif style == "read_value":
         # ReadRequest — T0801 Monitor Process State
         # ReadValueId: nodeId + attributeId(Value=13)
-        node_id = struct.pack("<BBI", 0x01, 0, int(kwargs.get("node_id", rnd.randint(1000, 9999))))
+        node_id = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
         attr_id = struct.pack("<I", 13)  # Value attribute
         payload = struct.pack("<I", 1) + node_id + attr_id + mb  # count=1
         body    = _msg_body(SVC["Read"], payload)
@@ -178,7 +198,7 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
 
     elif style == "read_history":
         # HistoryReadRequest — T0879 Data Historian Compromise
-        node_id  = struct.pack("<BBI", 0x01, 0, int(kwargs.get("node_id", rnd.randint(1000, 9999))))
+        node_id  = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
         # HistoryReadDetails: ReadRawModifiedDetails (start/end time)
         start_ts = struct.pack("<q", 132_700_000_000_000_000)
         end_ts   = struct.pack("<q", 132_800_000_000_000_000)
@@ -188,7 +208,7 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
 
     elif style == "write_value":
         # WriteRequest — T0831/T0836/T0855
-        node_id  = struct.pack("<BBI", 0x01, 0, int(kwargs.get("node_id", rnd.randint(1000, 9999))))
+        node_id  = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
         attr_id  = struct.pack("<I", 13)  # Value
         value    = struct.pack("<f", float(kwargs.get("value", rnd.uniform(0.0, 100.0))))
         payload  = struct.pack("<I", 1) + node_id + attr_id + value + mb
@@ -197,8 +217,8 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
 
     elif style == "call_method":
         # CallRequest — T0871 Execution through API
-        obj_id   = struct.pack("<BBI", 0x01, 0, int(kwargs.get("object_id", 85)))
-        meth_id  = struct.pack("<BBI", 0x01, 0, int(kwargs.get("method_id",  rnd.randint(1000, 9999))))
+        obj_id   = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("object_id"), 85))
+        meth_id  = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("method_id"), rnd.randint(1000, 9999)))
         payload  = struct.pack("<I", 1) + obj_id + meth_id + mb
         body     = _msg_body(SVC["Call"], payload)
         return _opc_header(MSG_MSG, b"F", body)

@@ -1,6 +1,7 @@
 
 import argparse
 import json
+import sqlite3
 import os
 import signal
 import subprocess
@@ -20,13 +21,50 @@ log = get_logger(__name__)
 
 
 def cmd_generate(args) -> int:
-    res = run_scenario(args.file, args.name, args.outdir, dst_ip=args.dst_ip, src_ip=args.src_ip)
+    # Resolve --file to absolute path so command works from any directory
+    if not os.path.isabs(args.file) and not os.path.exists(args.file):
+        import icsforge as _pkg
+        candidate = os.path.join(os.path.dirname(_pkg.__file__), "scenarios", "scenarios.yml")
+        if os.path.exists(candidate):
+            args.file = candidate
+    args.file = os.path.abspath(args.file)
+    args.outdir = os.path.abspath(args.outdir)
+
+    # Generate a meaningful run_id (same convention as web generate_offline)
+    # so artifacts are named T0855__unauth_command__2026-04-01__BRAVO instead of offline
+    import random as _rnd
+    import datetime as _dt
+    _NATO = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL",
+             "INDIA","JULIET","KILO","LIMA","MIKE","NOVEMBER","OSCAR","PAPA",
+             "QUEBEC","ROMEO","SIERRA","TANGO","UNIFORM","VICTOR","WHISKEY",
+             "XRAY","YANKEE","ZULU"]
+    _date = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+    _word = _rnd.choice(_NATO)
+    _parts = args.name.split("__")[:2]
+    _run_id = "__".join(_parts) + f"__{_date}__{_word}"
+
+    res = run_scenario(args.file, args.name, args.outdir,
+                       dst_ip=args.dst_ip, src_ip=args.src_ip,
+                       run_id=_run_id, build_pcap=True)
     log.info("Generate complete:\n%s", json.dumps(res, indent=2))
     return 0
 
 
 def cmd_send(args) -> int:
     allowlist: list[str] = [x.strip() for x in (args.allowlist.split(",") if args.allowlist else []) if x.strip()] or [args.dst_ip]
+
+    # Resolve --file to an absolute path so the command works from any working directory.
+    # If the given path doesn't exist relative to CWD, fall back to the installed package.
+    if not os.path.isabs(args.file) and not os.path.exists(args.file):
+        import icsforge as _pkg
+        candidate = os.path.join(os.path.dirname(_pkg.__file__), "scenarios", "scenarios.yml")
+        if os.path.exists(candidate):
+            log.debug("--file %s not found from CWD; using installed path %s", args.file, candidate)
+            args.file = candidate
+    args.file = os.path.abspath(args.file)
+
+    # Resolve --outdir relative to CWD (not the package dir)
+    args.outdir = os.path.abspath(args.outdir)
 
     res = send_scenario_live(
         scenario_file=args.file,
@@ -38,27 +76,76 @@ def cmd_send(args) -> int:
         timeout=args.timeout,
     )
 
-    gt = run_scenario(
-        args.file,
-        args.name,
-        args.outdir,
-        dst_ip=args.dst_ip,
-        src_ip=args.src_ip,
-        run_id=res["run_id"],
-        build_pcap=args.also_build_pcap,
-    )
-
-    # Enterprise run registry (out/runs.db)
+    # Use try/finally so the run registry is always updated,
+    # even if the user interrupts (Ctrl+C) during ground-truth generation.
+    gt: dict = {"events": None, "pcap": None}
+    interrupted = False
     try:
-        repo_root = str(Path(__file__).resolve().parents[1])
+        gt = run_scenario(
+            args.file,
+            args.name,
+            args.outdir,
+            dst_ip=args.dst_ip,
+            src_ip=args.src_ip,
+            run_id=res["run_id"],
+            build_pcap=args.also_build_pcap,
+            skip_intervals=True,  # live traffic already paced; pcap needs no delays
+        )
+        events_path = gt.get("events")
+        pcap_path = gt.get("pcap")
+        log.info("  events: %s", events_path)
+        if pcap_path:
+            log.info("  pcap:   %s", pcap_path)
+        elif args.also_build_pcap:
+            log.warning("PCAP was requested (--also-build-pcap) but was not generated")
+        # Validate events file actually has content
+        if events_path and os.path.exists(events_path):
+            event_count = sum(1 for _ in open(events_path, encoding="utf-8"))
+            if event_count == 0:
+                log.warning(
+                    "Ground-truth events file is EMPTY: %s\n"
+                    "  This can happen if pcap building raised an exception before events were written.\n"
+                    "  The live send itself succeeded (%d packets). Run net-validate against receipts only.",
+                    events_path, res.get("sent", 0)
+                )
+            else:
+                log.info("  events written: %d lines", event_count)
+        else:
+            log.warning("Events file not found: %s", events_path)
+    except KeyboardInterrupt:
+        log.warning("Ground-truth generation interrupted — run will still be registered")
+        interrupted = True
+    except Exception as exc:
+        log.error("Ground-truth artifact generation failed: %s", exc)
+
+    # Enterprise run registry (out/runs.db) + JSONL fallback
+    repo_root = str(Path(__file__).resolve().parents[1])
+    try:
         reg = RunRegistry(default_db_path(repo_root))
         reg.upsert_run(res["run_id"], scenario=args.name, pack=args.file, dst_ip=args.dst_ip, src_ip=args.src_ip,
                        iface=args.iface, mode="live", status="ok", meta={"sent": res.get("sent")})
         reg.add_artifact(res["run_id"], "events", gt.get("events"))
         if gt.get("pcap"):
             reg.add_artifact(res["run_id"], "pcap", gt.get("pcap"))
-    except Exception:
-        pass
+        log.debug("Run registered in SQLite: %s", res["run_id"])
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        log.warning("SQLite registry failed for %s: %s — falling back to JSONL index", res["run_id"], exc)
+    # Always write to JSONL run index (web UI fallback + visibility)
+    try:
+        from icsforge.web.helpers_io import _append_run_index
+        import datetime as _dt
+        _append_run_index({
+            "run_id": res["run_id"],
+            "scenario": args.name,
+            "pack": args.file,
+            "events": gt.get("events"),
+            "pcap": gt.get("pcap"),
+            "dst_ip": args.dst_ip,
+            "mode": "live",
+            "ts": _dt.datetime.now(_dt.timezone.utc).isoformat() + "Z",
+        })
+    except (OSError, ImportError) as exc:
+        log.debug("JSONL index write failed: %s", exc)
 
     log.info("Live send complete")
     log.info("  run_id: %s", res["run_id"])
@@ -93,14 +180,27 @@ def cmd_selftest(args) -> int:
         return 2
 
     dst_ip = args.dst_ip
-    receipts_path = args.receipts
+    # Resolve receipts path relative to cwd so subprocess writes to same location
+    receipts_path = os.path.join(os.path.abspath(args.cwd), args.receipts)
+
+    # Check for root/CAP_NET_RAW (required for raw sockets used by receiver)
+    if os.geteuid() != 0:
+        log.warning(
+            "Selftest --live requires root or CAP_NET_RAW to bind protocol ports (502, 20000, etc). "
+            "Run with sudo or as root, otherwise the receiver may not bind and receipts will be empty."
+        )
 
     # Clean receipts for fresh run
     os.makedirs(os.path.dirname(receipts_path) or ".", exist_ok=True)
     if os.path.exists(receipts_path):
         os.remove(receipts_path)
 
-    recv_cmd = [sys.executable, "-m", "icsforge.receiver", "--bind", args.bind]
+    recv_cmd = [
+        sys.executable, "-m", "icsforge.receiver",
+        "--bind", args.bind,
+        "--no-web",  # avoid web server port conflict during selftest
+        "--log-level", "WARNING",
+    ]
     if args.receiver_config:
         recv_cmd += ["--config", args.receiver_config]
 
@@ -113,7 +213,7 @@ def cmd_selftest(args) -> int:
     )
 
     try:
-        time.sleep(1.5)
+        time.sleep(2.0)  # give receiver time to bind all ports
 
         # Build a temp scenario file (pcap steps = live send steps)
         scenario = """scenarios:
@@ -146,7 +246,7 @@ def cmd_selftest(args) -> int:
         )
 
         # Allow receiver to write receipts
-        time.sleep(1.0)
+        time.sleep(2.0)
 
         # Validate receipts
         if not os.path.exists(receipts_path):

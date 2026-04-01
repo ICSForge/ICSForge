@@ -4,7 +4,7 @@
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.45.2-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
+[![Version](https://img.shields.io/badge/version-0.50.7-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
@@ -95,16 +95,18 @@ ICSFORGE_NO_AUTH=1 icsforge-web
 ```
 
 Credentials are stored in `~/.icsforge/credentials.json` (SHA-256 + salt, file mode 0600).
-The following endpoints are exempt from auth: `/api/health` (monitoring), `/api/receiver/callback` (receiver→sender), `/api/config/set_callback` (sender→receiver).
+The following endpoints are exempt from auth: `/api/health` (monitoring), `/api/receiver/callback` (receiver→sender), `/api/config/set_callback` (sender→receiver). When `callback_token` is configured, live receipts also require the `X-ICSForge-Callback-Token` header.
 
 ### Live Receiver Callback
 
 The receiver automatically notifies the sender when it receives ICSForge traffic, closing the loop in real time without manual file inspection.
 
 1. In the sender UI, set the **Receiver IP** (or via API: `POST /api/config/receiver_ip`)
-2. The sender pushes its callback URL to the receiver
-3. When the receiver parses a marker, it POSTs the receipt back to the sender
-4. The sender UI shows live receipt confirmations as they arrive
+2. Optionally set an explicit **Sender Callback URL** and shared callback token
+3. The sender can push its callback URL to the receiver as a convenience path
+4. Or configure the callback directly on the receiver UI and use **Test Callback** to verify reachability
+5. When the receiver parses a marker, it POSTs the receipt back to the sender
+6. The sender UI shows live receipt confirmations as they arrive
 
 ```bash
 # Or configure via CLI

@@ -80,7 +80,7 @@ icsforge = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short --timeout=30"
+addopts = "-v --tb=short --timeout=30 -p no:cov"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "network: marks tests requiring network access",

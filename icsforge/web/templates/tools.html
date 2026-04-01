@@ -13,8 +13,6 @@
       <div class="hr"></div>
       <div class="row" style="align-items:center; gap:12px; flex-wrap:wrap">
         <button class="btn" onclick="healthCheck()">Health</button>
-        <button class="btn" onclick="selfTest()">Selftest</button>
-        <button class="btn" onclick="matrixStatus()">Matrix status</button>
       </div>
       <div class="hr"></div>
       <div class="field">
@@ -64,9 +62,20 @@
         </div>
       </div>
 
-      <div class="row" style="align-items:center; gap:12px; flex-wrap:wrap">
-        <label class="small"><input type="checkbox" id="g_pcap"> Also build PCAP</label>
+      <div class="row" style="align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px">
+        <input type="checkbox" id="g_pcap" style="display:none">
+        <button id="btn_g_pcap" type="button" onclick="toggleToolPcap()"
+          style="padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.05em;
+            text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
+            background:var(--panel2);color:var(--muted);
+            display:flex;align-items:center;gap:7px;transition:all .15s;font-family:var(--sans)">
+          <span id="g_pcap_icon">○</span>
+          <span>Build PCAP</span>
+        </button>
         <button class="btn primary" onclick="offlineGenerate()">Generate</button>
+      </div>
+      <div id="g_pcap_download" style="display:none;margin-top:10px">
+        <a id="g_pcap_link" class="btn" style="font-size:12px" download>⬇ Download PCAP</a>
       </div>
 
       <div class="hr"></div>
@@ -82,8 +91,22 @@
       <div class="hr"></div>
       <div class="row">
         <div class="field">
-          <label>PCAP path</label>
-          <input id="r_pcap" placeholder="pcaps/example.pcap">
+          <label>PCAP path (server-side) or upload below</label>
+          <input id="r_pcap" placeholder="out/pcaps/example.pcap">
+        </div>
+      </div>
+      <div class="row" style="align-items:center;gap:10px;margin-bottom:4px">
+        <label class="small" style="color:var(--muted);white-space:nowrap">Upload PCAP:</label>
+        <input type="file" id="r_pcap_file" accept=".pcap,.pcapng"
+          style="flex:1;font-size:11px;color:var(--muted);background:var(--panel2);
+            border:1px solid var(--border);border-radius:6px;padding:5px 8px;cursor:pointer">
+        <button class="btn" onclick="uploadPcap()" style="white-space:nowrap;font-size:11px">Upload</button>
+        <span id="r_upload_status" class="small muted"></span>
+      </div>
+      <div class="row" style="display:none">
+        <div class="field" style="display:none">
+          <label>_</label>
+          <input id="_dummy_" placeholder="">
         </div>
         <div class="field">
           <label>Destination IP</label>
@@ -103,6 +126,49 @@
         <textarea id="r_log" readonly></textarea>
       </div>
     </div>
+
+    <!-- ── Alerts Ingest (v0.50) ──────────────────────────────────── -->
+    <div class="card">
+      <h2>Alerts Ingest</h2>
+      <p class="small muted" style="margin-bottom:10px">Import Suricata EVE JSON or normalized alert files for run correlation. Normalised output is saved to <code>out/alerts/</code>.</p>
+      <div class="small" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:7px 10px;margin-bottom:12px;color:var(--muted)">⚠ Path must be inside the repo directory or <code>/var/log/suricata</code>.<br>Example: <code>out/alerts/suricata_eve.json</code></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label>Alert file path (server-side)</label>
+          <input id="ai_path" placeholder="out/alerts/suricata_eve.json">
+        </div>
+        <div>
+          <label>Run ID (optional)</label>
+          <input id="ai_run_id" placeholder="2026-03-27-ECHO-95">
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <label>Profile</label>
+        <select id="ai_profile">
+          <option value="suricata_eve">Suricata EVE JSON</option>
+          <option value="generic">Generic (pass-through)</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" onclick="alertsIngest()">Ingest Alerts</button>
+      </div>
+      <div class="hr"></div>
+      <div class="field">
+        <label>Result</label>
+        <textarea id="ai_log" readonly></textarea>
+      </div>
+    </div>
+
+    <!-- ── Coverage Heatmap Export (v0.50) ─────────────────────────── -->
+    <div class="card">
+      <h2>Coverage Heatmap</h2>
+      <p class="small muted" style="margin-bottom:14px">Generate a standalone HTML heatmap of all runnable scenarios against the ATT&CK for ICS matrix — no run required. Ready to share as a handout.</p>
+      <div class="row">
+        <a href="/api/report/heatmap" class="btn primary" target="_blank">⬇ Download Coverage Heatmap</a>
+        <a href="/report" class="btn">Custom Report Builder →</a>
+      </div>
+    </div>
+
     {% endif %}
 
   </div>
@@ -115,24 +181,12 @@
 
     async function healthCheck(){
       document.getElementById("health_log").value = "Working...";
-      const data = await fetchJSON("{{ url_for('web.api_health') }}");
-      document.getElementById("health_log").value = JSON.stringify(data, null, 2);
-    }
-
-    async function selfTest(){
-      document.getElementById("health_log").value = "Working...";
-      const data = await fetchJSON("{{ url_for('web.api_selftest') }}");
-      document.getElementById("health_log").value = JSON.stringify(data, null, 2);
-    }
-
-    async function matrixStatus(){
-      document.getElementById("health_log").value = "Working...";
-      const data = await fetchJSON("{{ url_for('web.api_matrix_status') }}");
+      const data = await fetchJSON("/api/health");
       document.getElementById("health_log").value = JSON.stringify(data, null, 2);
     }
 
     async function loadIfaces(){
-      const data = await fetchJSON("{{ url_for('web.api_interfaces') }}");
+      const data = await fetchJSON("/api/interfaces");
       if(data.error){ document.getElementById("ifaces_box").textContent = data.error; return; }
       document.getElementById("ifaces_box").textContent = (data.interfaces||[]).join("\n") || "(none)";
     }
@@ -140,7 +194,7 @@
     {% if ui_mode == 'sender' %}
     let _g_all = [];
     async function loadGenerateScenarios(){
-      const data = await fetchJSON("{{ url_for('web.api_scenarios') }}");
+      const data = await fetchJSON("/api/scenarios");
       _g_all = (data.scenarios || []);
       renderGenerateScenarioOptions(_g_all);
     }
@@ -157,6 +211,24 @@
       const filt = (_g_all||[]).filter(x => (x||"").toLowerCase().includes(q));
       renderGenerateScenarioOptions(filt);
     }
+    function toggleToolPcap(){
+      const cb=document.getElementById("g_pcap");
+      const btn=document.getElementById("btn_g_pcap");
+      const ico=document.getElementById("g_pcap_icon");
+      cb.checked=!cb.checked;
+      if(cb.checked){
+        btn.style.borderColor="var(--brand)";
+        btn.style.background="rgba(245,158,11,.1)";
+        btn.style.color="var(--brand)";
+        ico.textContent="✓";
+      } else {
+        btn.style.borderColor="";
+        btn.style.background="";
+        btn.style.color="";
+        ico.textContent="○";
+        document.getElementById("g_pcap_download").style.display="none";
+      }
+    }
     async function offlineGenerate(){
       const name = document.getElementById("g_name").value.trim();
       const outdir = document.getElementById("g_outdir").value.trim();
@@ -164,24 +236,68 @@
       const src_ip = document.getElementById("g_src").value.trim();
       const build_pcap = document.getElementById("g_pcap").checked;
       document.getElementById("g_log").value = "Working...";
-      const res = await fetch("{{ url_for('web.api_generate_offline') }}",{
+      document.getElementById("g_pcap_download").style.display="none";
+      const res = await fetch("/api/generate_offline",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({name, outdir, dst_ip, src_ip, build_pcap})
       });
       const data = await res.json();
-      document.getElementById("g_log").value = JSON.stringify(data, null, 2);
+      let summary = data.error ? "Error: "+data.error : "✓ Events: "+data.events;
+      if(data.pcap){
+        summary += "\n✓ PCAP:   "+data.pcap;
+        // Show download link via /download?path=...
+        const dl = document.getElementById("g_pcap_download");
+        const link = document.getElementById("g_pcap_link");
+        link.href = "/download?path="+encodeURIComponent(data.pcap);
+        const fname = data.pcap.split("/").pop();
+        link.textContent = "⬇ Download PCAP — "+fname;
+        link.removeAttribute("download");
+        dl.style.display="";
+      }
+      document.getElementById("g_log").value = summary;
+    }
+    async function uploadPcap(){
+      const f = document.getElementById('r_pcap_file').files[0];
+      if(!f){ document.getElementById('r_upload_status').textContent='No file selected'; return; }
+      const status = document.getElementById('r_upload_status');
+      status.textContent='Uploading…';
+      const fd = new FormData();
+      fd.append('file', f);
+      const res = await fetch('/api/pcap/upload', {method:'POST', body:fd});
+      const d = await res.json();
+      if(d.ok){
+        document.getElementById('r_pcap').value = d.path;
+        status.textContent='✓ '+d.filename;
+        status.style.color='var(--good)';
+      } else {
+        status.textContent='Error: '+(d.error||'upload failed');
+        status.style.color='var(--bad)';
+      }
     }
     async function replayTool(){
       const pcap_path = document.getElementById("r_pcap").value.trim();
       const dst_ip = document.getElementById("r_dst").value.trim();
       const interval = parseFloat(document.getElementById("r_interval").value.trim() || "0.05");
       document.getElementById("r_log").value = "Working...";
-      const res = await fetch("{{ url_for('web.api_pcap_replay') }}",{
+      const res = await fetch("/api/pcap/replay",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({pcap_path, dst_ip, interval})
       });
       const data = await res.json();
       document.getElementById("r_log").value = JSON.stringify(data, null, 2);
+    }
+    async function alertsIngest(){
+      const path    = document.getElementById("ai_path").value.trim();
+      const run_id  = document.getElementById("ai_run_id").value.trim();
+      const profile = document.getElementById("ai_profile").value;
+      if(!path){ document.getElementById("ai_log").value = "Error: file path required"; return; }
+      document.getElementById("ai_log").value = "Ingesting...";
+      const res = await fetch("/api/alerts/ingest",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({path, run_id: run_id||undefined, profile})
+      });
+      const data = await res.json();
+      document.getElementById("ai_log").value = JSON.stringify(data, null, 2);
     }
     {% endif %}
 

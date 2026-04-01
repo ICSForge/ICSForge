@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 def app():
     """Create a Flask test app with all routes registered."""
     os.environ["ICSFORGE_UI_MODE"] = "sender"
+    os.environ["ICSFORGE_NO_AUTH"] = "1"  # disable auth for functional tests
     from icsforge.web.app import create_app
     application = create_app()
     application.config["TESTING"] = True
@@ -165,10 +166,13 @@ class TestRouteAudit:
         "/api/runs",
         "/sender",
         "/matrix",
-        "/soc",
         "/tools",
         "/api/technique/variants",
         "/api/interfaces",
+        "/api/profiles",
+        "/api/receiver/stream",
+        "/api/report/heatmap",
+        "/api/campaigns/list",
     ]
 
     CORE_POST_ROUTES = [
@@ -206,3 +210,34 @@ class TestRouteAudit:
         for route in self.CORE_POST_ROUTES:
             resp = client.post(route, json={})
             assert resp.status_code != 500, f"POST {route} with empty body returned 500"
+
+
+class TestLiveCallbackConfig:
+    def test_callback_routes_exist(self, app):
+        rules = {rule.rule for rule in app.url_map.iter_rules()}
+        assert "/api/config/set_callback" in rules
+        assert "/api/config/test_callback" in rules
+
+    def test_set_callback_accepts_push(self, client):
+        resp = client.post("/api/config/set_callback", json={"callback_url": "http://127.0.0.1:8080/api/receiver/callback", "callback_token": "abc"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["callback_token_set"] is True
+
+    def test_receiver_callback_rejects_bad_token(self, app, client):
+        import icsforge.web.helpers as web_helpers
+
+        web_helpers._callback_token = "expected-token"
+        try:
+            resp = client.post("/api/receiver/callback", json={"marker_found": True})
+            assert resp.status_code == 401
+            resp = client.post(
+                "/api/receiver/callback",
+                json={"marker_found": True, "run_id": "x"},
+                headers={"X-ICSForge-Callback-Token": "expected-token"},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["stored"] is True
+        finally:
+            web_helpers._callback_token = None

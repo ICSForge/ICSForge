@@ -35,3 +35,4 @@ receiver_out/
 # OS
 .DS_Store
 Thumbs.db
+out/.credentials.json

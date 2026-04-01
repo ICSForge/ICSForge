@@ -6,29 +6,21 @@ from typing import Any
 
 import yaml
 
+from icsforge.log import get_logger
 from icsforge.core import build_marker, event_base, parse_interval, write_pcap
-from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm
+from icsforge.protocols import (
+    bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm,
+    TCP_PROTOS as PROTO_PAYLOADS,
+    UDP_PROTOS as UDP_PAYLOADS,
+)
 from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet
-
-# TCP payload builders (return bytes) + default destination ports
-PROTO_PAYLOADS = {
-    "modbus": (502, modbus.build_payload),
-    "dnp3": (20000, dnp3.build_payload),
-    "s7comm": (102, s7comm.build_payload),
-    "iec104": (2404, iec104.build_payload),
-    "opcua": (4840, opcua.build_payload),
-    "enip": (44818, enip.build_payload),
-    "mqtt": (1883, mqtt.build_payload),
-}
-
-# UDP payload builders + default destination ports
-UDP_PAYLOADS = {
-    "bacnet": (47808, bacnet.build_payload),
-}
 
 def load_scenarios(scenario_path: str) -> dict[str, Any]:
     with open(scenario_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
+log = get_logger(__name__)
+
 
 def run_scenario(
     scenario_path: str,
@@ -38,6 +30,7 @@ def run_scenario(
     src_ip: str = "127.0.0.1",
     run_id: str | None = None,
     build_pcap: bool = True,
+    skip_intervals: bool = False,
 ) -> dict[str, Any]:
     """Offline scenario runner.
 
@@ -82,7 +75,23 @@ def run_scenario(
 
             step_id = f"{name}:{idx}:{proto or ''}"
 
-            # Build PCAP packets (optional)
+            # Write ground-truth events FIRST — before pcap building.
+            # This ensures events are always recorded even if pcap building
+            # fails, raises, or is interrupted (e.g. KeyboardInterrupt).
+            for _ in range(count):
+                ev = event_base(
+                    tech,
+                    source=stype,
+                    scenario=name,
+                    proto=proto,
+                    message=step.get("message", ""),
+                )
+                ev["run_id"] = rid          # always present; "offline" when no run_id given
+                ev["icsforge.run_id"] = rid
+                ef.write(json.dumps(ev, ensure_ascii=False) + "\n")
+            ef.flush()  # flush after each step so partial runs are readable
+
+            # Build PCAP packets (optional) — after events are safely written
             pcap_step = (stype == "pcap") or (stype == "packet" and bool(step.get("pcap")))
             if build_pcap and pcap_step:
                 if proto == "profinet_dcp":
@@ -103,35 +112,21 @@ def run_scenario(
                     pb = PROTO_PAYLOADS.get(proto)
                     upb = UDP_PAYLOADS.get(proto)
                     if not pb and not upb:
-                        raise ValueError(f"Unknown proto '{proto}'")
-                    if pb:
+                        log.warning("PCAP skipped for step %d: unknown proto '%s' (events already written)", idx, proto)
+                    elif pb:
                         dport, payload_builder = pb
                         for _ in range(count):
                             marker = build_marker(run_id, tech, step_id)
                             packets.append(tcp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
-                            if interval:
+                            if interval and not skip_intervals:
                                 time.sleep(interval)
                     elif upb:
                         dport, payload_builder = upb
                         for _ in range(count):
                             marker = build_marker(run_id, tech, step_id)
                             packets.append(udp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
-                            if interval:
+                            if interval and not skip_intervals:
                                 time.sleep(interval)
-
-            # Always write ground-truth events
-            for _ in range(count):
-                ev = event_base(
-                    tech,
-                    source=stype,
-                    scenario=name,
-                    proto=proto,
-                    message=step.get("message", ""),
-                )
-                if run_id:
-                    ev["run_id"] = run_id
-                    ev["icsforge.run_id"] = run_id
-                ef.write(json.dumps(ev, ensure_ascii=False) + "\n")
 
     if build_pcap and packets:
         write_pcap(packets, pcap_path)

@@ -1,3 +1,4 @@
+import re
 """
 ICSForge core — pure Python, zero scapy dependency.
 
@@ -269,7 +270,6 @@ def generate_run_id() -> str:
 
 def is_legacy_run_id(run_id: str) -> bool:
     """Return True for old hex run IDs (12 lowercase hex chars)."""
-    import re
     return bool(re.fullmatch(r"[0-9a-f]{12}", run_id or ""))
 
 # ── On-wire correlation marker ────────────────────────────────────────

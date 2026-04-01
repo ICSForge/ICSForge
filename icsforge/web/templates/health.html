@@ -30,7 +30,7 @@
 <script>
 async function runHealth(){
   const receiver = document.getElementById("receiver_url").value.trim();
-  const base = "{{ url_for('web.api_health') }}";
+  const base = "/api/health";
   const url = receiver ? (base + "?receiver=" + encodeURIComponent(receiver)) : base;
   const data = await fetch(url).then(r=>r.json());
   document.getElementById("health_out").textContent = JSON.stringify(data, null, 2);

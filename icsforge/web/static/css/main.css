@@ -11,9 +11,9 @@
   --panel2:   #0e1520;
   --panel3:   #060c14;
   --panel-glass: rgba(12,20,32,.85);
-  --text:     #d4dce8;
-  --muted:    #566882;
-  --dim:      #2c3a4e;
+  --text:     #dce4ef;
+  --muted:    #8499b5;
+  --dim:      #506070;
   --brand:    #f0a500;
   --brand-dim: rgba(240,165,0,.10);
   --brand-glow: rgba(240,165,0,.35);
@@ -270,6 +270,22 @@ table tr:hover td{background:var(--brand-dim)}
 .step-row.st-sending{border-color:rgba(0,212,255,.5);background:rgba(0,212,255,.06);box-shadow:0 0 12px var(--brand2-glow)}
 .step-row.st-ok{border-color:rgba(0,230,138,.4);background:rgba(0,230,138,.06);box-shadow:0 0 8px var(--good-glow)}
 .step-row.st-err{border-color:rgba(255,59,92,.4);background:rgba(255,59,92,.06)}
+.tl-step{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--border);font-size:11px;transition:all .3s}
+.tl-step.tls-pending{opacity:.35}
+.tl-step.tls-sending{border-color:rgba(0,212,255,.55);background:rgba(0,212,255,.07);box-shadow:0 0 10px var(--brand2-glow)}
+.tl-step.tls-delivered{border-color:rgba(240,165,0,.45);background:rgba(240,165,0,.06)}
+.tl-step.tls-confirmed{border-color:rgba(0,230,138,.5);background:rgba(0,230,138,.07);box-shadow:0 0 10px var(--good-glow)}
+.tl-step.tls-err{border-color:rgba(255,59,92,.4);background:rgba(255,59,92,.06)}
+.tl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--border);background:var(--panel);transition:all .3s}
+.tls-pending .tl-dot{background:var(--panel2)}
+.tls-sending .tl-dot{background:var(--brand2);border-color:var(--brand2);box-shadow:0 0 6px var(--brand2-glow);animation:tl-pulse 1s ease-in-out infinite}
+.tls-delivered .tl-dot{background:var(--warn);border-color:var(--warn)}
+.tls-confirmed .tl-dot{background:var(--good);border-color:var(--good);box-shadow:0 0 6px var(--good-glow)}
+.tls-err .tl-dot{background:var(--bad);border-color:var(--bad)}
+.tl-tech{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid var(--border-bright);color:var(--brand);background:var(--brand-dim);white-space:nowrap}
+.tl-confirmed-badge{font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid rgba(0,230,138,.3);color:var(--good);background:rgba(0,230,138,.08);margin-left:auto;white-space:nowrap;animation:tl-pop .25s ease}
+@keyframes tl-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes tl-pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .step-icon{font-size:12px;width:16px;text-align:center;flex-shrink:0}
 .proto-badge{padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:.04em;font-family:var(--mono);text-shadow:0 1px 2px rgba(0,0,0,.4)}
 .run-log{font-family:var(--mono);font-size:11px;line-height:1.55;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:140px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}

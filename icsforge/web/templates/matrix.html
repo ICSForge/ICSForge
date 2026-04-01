@@ -134,9 +134,9 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow3);
-  min-width: 105px;
+  min-width: 110px;
 }
 .mc-head {
   padding: 6px 8px;
@@ -157,7 +157,8 @@
   flex-direction: column;
   gap: 3px;
   overflow-y: auto;
-  max-height: calc(100vh - 280px);
+  overflow-x: hidden;
+  max-height: calc(100vh - 260px);
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -170,7 +171,8 @@
   background: var(--panel2);
   cursor: default;
   transition: all .09s;
-  min-height: 38px;
+  min-height: 36px;
+  height: auto;
 }
 .mt-id {
   font-family: var(--mono);
@@ -180,11 +182,14 @@
   line-height: 1;
 }
 .mt-name {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 600;
   line-height: 1.25;
   margin-top: 2px;
   color: var(--text);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* ── States ─────────────────────────────────────────────────── */
@@ -217,7 +222,9 @@
 .mt-nil .mt-name { color: var(--muted) }
 
 /* ── Overlay states ──────────────────────────────────────────── */
-.mt.executed { background: rgba(16,185,129,.12) !important; border-color: var(--good) !important }
+.mt.executed { background: rgba(16,185,129,.28) !important; border-color: #10b981 !important; box-shadow: 0 0 0 1px #10b981; }
+.mt.executed .mt-id { color: #10b981 !important; font-weight: 800 !important; }
+.mt.executed .mt-name { color: var(--text) !important; font-weight: 700 !important; }
 .mt.detected { background: rgba(34,211,238,.1) !important; border-color: var(--brand2) !important }
 .mt.gap      { background: rgba(239,68,68,.1) !important; border-color: var(--bad) !important }
 .mt.dim      { opacity: .12 }
@@ -273,7 +280,7 @@ function setFilter(f){
 function closeModal(){ document.getElementById("modal").style.display = "none" }
 
 async function fetchVariants(tid){
-  const data = await window.fetchJSON("{{ url_for('web.api_technique_variants') }}?technique="+encodeURIComponent(tid));
+  const data = await window.fetchJSON("/api/technique/variants?technique="+encodeURIComponent(tid));
   const sel = document.getElementById("m_variant");
   sel.innerHTML = "";
   (data.variants||[]).forEach(v=>{
@@ -312,7 +319,7 @@ async function sendTech(){
   const iface        = document.getElementById("m_iface").value.trim();
   document.getElementById("m_out").textContent = "Sending…";
 
-  const data = await window.postJSON("{{ url_for('web.api_technique_send') }}", {
+  const data = await window.postJSON("/api/technique/send", {
     technique: currentTech.tid, variant, dst_ip, timeout, src_ip, iface, also_build_pcap: also_pcap
   });
   if(data.error){
@@ -327,7 +334,7 @@ async function sendTech(){
     const firedEl = document.querySelector(`.mt[data-techid="${currentTech.tid}"]`);
     if(firedEl){ firedEl.classList.add("executed"); }
     try {
-      const st = await window.fetchJSON("{{ url_for('web.api_matrix_status') }}?run_id="+encodeURIComponent(data.run_id));
+      const st = await window.fetchJSON("/api/matrix_status?run_id="+encodeURIComponent(data.run_id));
       if(st && st.status){
         for(const el of document.querySelectorAll(".mt")){
           const tid = el.dataset.techid; if(!tid) continue;
@@ -352,7 +359,7 @@ async function sendTech(){
 
 /* ── Overlay controls ────────────────────────────────────────── */
 async function loadRuns(){
-  const data = await window.fetchJSON("{{ url_for('web.api_runs') }}");
+  const data = await window.fetchJSON("/api/runs");
   const sel = document.getElementById("run_sel");
   sel.innerHTML = '<option value="">(no overlay)</option>';
   for(const r of (data.runs||[])){
@@ -367,7 +374,7 @@ async function loadRuns(){
 async function applyOverlay(){
   const run_id = document.getElementById("run_sel").value;
   if(!run_id){ window.toast("No run","Pick a run first","err"); return; }
-  const data = await window.fetchJSON("{{ url_for('web.api_matrix_status') }}?run_id="+encodeURIComponent(run_id));
+  const data = await window.fetchJSON("/api/matrix_status?run_id="+encodeURIComponent(run_id));
   const st = data.status||{};
   for(const el of document.querySelectorAll(".mt")){
     const tid = el.dataset.techid; if(!tid) continue;

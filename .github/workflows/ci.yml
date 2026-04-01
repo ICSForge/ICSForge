@@ -50,6 +50,10 @@ jobs:
         if: matrix.python-version == '3.12'
         run: pytest tests/ --cov=icsforge --cov-report=term-missing --cov-report=xml
 
+      - name: pcap-validate — quick PCAP structural validation
+        if: matrix.python-version == '3.12'
+        run: python scripts/validate_pcaps.py --quick -v
+
       - name: Upload coverage
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4

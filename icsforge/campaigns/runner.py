@@ -1,3 +1,5 @@
+import yaml
+from icsforge.live.sender import send_scenario_live
 """
 ICSForge Campaign Playbook Runner
 
@@ -25,6 +27,97 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 
 from icsforge.core import generate_run_id, parse_interval
+
+
+class CampaignValidationError(ValueError):
+    """Raised when a campaign YAML fails schema validation."""
+    pass
+
+
+def validate_campaign(campaign: dict, available_scenarios: set | None = None) -> list[str]:
+    """
+    Validate a campaign dict against the expected schema.
+    Returns a list of warning strings (empty = valid).
+    Raises CampaignValidationError for fatal issues.
+    """
+    errors = []
+    warnings = []
+
+    if not isinstance(campaign, dict):
+        raise CampaignValidationError("Campaign must be a YAML mapping (dict)")
+
+    # Required fields
+    name = campaign.get("name")
+    if not name or not isinstance(name, str) or not name.strip():
+        raise CampaignValidationError("Campaign missing required field: 'name'")
+
+    steps = campaign.get("steps")
+    if not steps:
+        raise CampaignValidationError(f"Campaign '{name}': missing required field: 'steps'")
+    if not isinstance(steps, list):
+        raise CampaignValidationError(f"Campaign '{name}': 'steps' must be a list")
+    if len(steps) == 0:
+        raise CampaignValidationError(f"Campaign '{name}': 'steps' list is empty")
+
+    # Validate each step
+    for i, step in enumerate(steps):
+        label = f"Campaign '{name}', step {i+1}"
+        if not isinstance(step, dict):
+            raise CampaignValidationError(f"{label}: each step must be a mapping (dict)")
+
+        scenario = step.get("scenario")
+        if not scenario or not isinstance(scenario, str):
+            raise CampaignValidationError(f"{label}: missing required field 'scenario'")
+
+        # Validate delay is parseable
+        delay = step.get("delay", "0s")
+        try:
+            parse_interval(str(delay))
+        except Exception:
+            errors.append(f"{label}: invalid delay '{delay}' — use format like '10s', '1m', '0.5s'")
+
+        # Check scenario exists in pack
+        if available_scenarios is not None and scenario not in available_scenarios:
+            warnings.append(f"{label}: scenario '{scenario}' not found in scenario pack")
+
+    if errors:
+        raise CampaignValidationError("; ".join(errors))
+
+    return warnings
+
+
+def validate_campaign_file(path: str, scenarios_path: str | None = None) -> tuple[dict, list[str]]:
+    """
+    Load and validate a campaign YAML file.
+    Returns (parsed_doc, warnings).
+    """
+    with open(path, encoding="utf-8") as f:
+        doc = yaml.safe_load(f) or {}
+
+    campaigns = doc.get("campaigns", {})
+    if not campaigns:
+        raise CampaignValidationError(f"No 'campaigns' key found in {path}")
+
+    # Load scenario names for cross-reference
+    available = None
+    if scenarios_path:
+        try:
+            with open(scenarios_path, encoding="utf-8") as f:
+                sdoc = yaml.safe_load(f) or {}
+            available = set((sdoc.get("scenarios") or {}).keys())
+        except Exception:
+            pass
+
+    all_warnings = []
+    for key, campaign in campaigns.items():
+        if not isinstance(campaign, dict):
+            raise CampaignValidationError(f"Campaign '{key}' must be a mapping")
+        if "name" not in campaign:
+            campaign["name"] = key
+        w = validate_campaign(campaign, available)
+        all_warnings.extend(w)
+
+    return doc, all_warnings
 
 
 def _now() -> str:
@@ -65,7 +158,6 @@ class CampaignRunner:
         self.progress_cb(ev)
 
     def run(self) -> dict:
-        from icsforge.live.sender import send_scenario_live
 
         steps   = self.campaign.get("steps", [])
         total   = len(steps)
