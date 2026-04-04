@@ -378,17 +378,11 @@ Offline PCAP generation (`icsforge generate`) works without an interface.
 ### Coverage Report
 ![Coverage Report](screenshots/coverage_report.png)
 
-### Tools for Offline Generation and PCAP Replay
-![Tools](screenshots/tools.png)
-
 ### Receiver - Live Traffic View
 ![Receiver Live View](screenshots/receiver.png)
 
 ### Receiver - ATT&CK for ICS Matrix - Light Theme
 ![Receiver ATT&CK for ICS Matrix](screenshots/attack_matrix_receiver.png)
-
-### Receiver - ATT&CK for ICS Matrix - Dark Theme
-![Receiver ATT&CK for ICS Matrix Dark](screenshots/attack_matrix_receiver_dark.png)
 
 ---
 
