@@ -3,7 +3,7 @@
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.50.7-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
+[![Version](https://img.shields.io/badge/version-0.57.5-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
@@ -203,7 +203,7 @@ Scenarios are defined in `icsforge/scenarios/scenarios.yml`.
 
 ## What Techniques Are Covered
 
-ICSForge implements 69 of 83 ATT&CK for ICS techniques at the network-observable level. The remaining 15 are correctly classified as host-only or require physical access — they are documented in `icsforge/data/technique_support.json` with explicit rationale.
+ICSForge implements 69 of 83 ATT&CK for ICS techniques at the network-observable level. The remaining 14 are correctly classified as host-only or require physical access — they are documented in `icsforge/data/technique_support.json` with explicit rationale.
 
 **ATT&CK matrix counts explained:**
 - 83 unique technique IDs in the matrix
