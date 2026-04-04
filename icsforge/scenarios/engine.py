@@ -6,14 +6,13 @@ from typing import Any
 
 import yaml
 
-from icsforge.log import get_logger
 from icsforge.core import build_marker, event_base, parse_interval, write_pcap
-from icsforge.protocols import (
-    bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm,
-    TCP_PROTOS as PROTO_PAYLOADS,
-    UDP_PROTOS as UDP_PAYLOADS,
-)
+from icsforge.log import get_logger
+from icsforge.protocols import TCP_PROTOS as PROTO_PAYLOADS
+from icsforge.protocols import UDP_PROTOS as UDP_PAYLOADS
+from icsforge.protocols import iec61850, profinet_dcp
 from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet
+
 
 def load_scenarios(scenario_path: str) -> dict[str, Any]:
     with open(scenario_path, encoding="utf-8") as f:
@@ -31,6 +30,7 @@ def run_scenario(
     run_id: str | None = None,
     build_pcap: bool = True,
     skip_intervals: bool = False,
+    no_marker: bool = False,
 ) -> dict[str, Any]:
     """Offline scenario runner.
 
@@ -82,6 +82,7 @@ def run_scenario(
                 ev = event_base(
                     tech,
                     source=stype,
+                    no_marker=no_marker,
                     scenario=name,
                     proto=proto,
                     message=step.get("message", ""),
@@ -96,7 +97,7 @@ def run_scenario(
             if build_pcap and pcap_step:
                 if proto == "profinet_dcp":
                     for _ in range(count):
-                        marker = build_marker(run_id, tech, step_id)
+                        marker = b'' if no_marker else build_marker(run_id, tech, step_id)
                         payload = profinet_dcp.build_payload(marker, style=style)
                         # Default multicast dst for DCP Identify
                         pkt = ether_frame(
@@ -108,6 +109,15 @@ def run_scenario(
                         packets.append(pkt)
                         if interval:
                             time.sleep(interval)
+                elif proto == "iec61850":
+                    for _ in range(count):
+                        marker = b'' if no_marker else build_marker(run_id, tech, step_id)
+                        # iec61850.build_payload returns a complete Ethernet frame
+                        # (GOOSE: EtherType 0x88B8, GOOSE multicast DST)
+                        pkt = iec61850.build_payload(marker, style=style, **options)
+                        packets.append(pkt)
+                        if interval:
+                            time.sleep(interval)
                 else:
                     pb = PROTO_PAYLOADS.get(proto)
                     upb = UDP_PAYLOADS.get(proto)
@@ -116,14 +126,14 @@ def run_scenario(
                     elif pb:
                         dport, payload_builder = pb
                         for _ in range(count):
-                            marker = build_marker(run_id, tech, step_id)
+                            marker = b'' if no_marker else build_marker(run_id, tech, step_id)
                             packets.append(tcp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
                             if interval and not skip_intervals:
                                 time.sleep(interval)
                     elif upb:
                         dport, payload_builder = upb
                         for _ in range(count):
-                            marker = build_marker(run_id, tech, step_id)
+                            marker = b'' if no_marker else build_marker(run_id, tech, step_id)
                             packets.append(udp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **options)))
                             if interval and not skip_intervals:
                                 time.sleep(interval)

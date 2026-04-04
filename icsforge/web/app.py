@@ -11,14 +11,15 @@ API routes are split into blueprints:
   bp_reports    — coverage report generation, download, matrix status
 """
 import argparse
+import collections
 import json
 import os
-import yaml
-import collections
 import secrets
+from contextlib import suppress
 from datetime import timedelta
 from pathlib import Path
 
+import yaml
 from flask import (
     Blueprint,
     Flask,
@@ -29,13 +30,18 @@ from flask import (
 )
 
 from icsforge import __version__
-from icsforge.log import configure as configure_logging, get_logger
-from contextlib import suppress
-
+from icsforge.log import configure as configure_logging
+from icsforge.log import get_logger
 from icsforge.web.helpers import (
-    _default_receipts_path, _list_packs, _list_profiles,
-    _load_matrix, _load_yaml, _read_jsonl_tail, _repo_root,
-    _stats_from_receipts, _tech_name,
+    _default_receipts_path,
+    _list_packs,
+    _list_profiles,
+    _load_matrix,
+    _load_yaml,
+    _read_jsonl_tail,
+    _repo_root,
+    _stats_from_receipts,
+    _tech_name,
 )
 
 log = get_logger(__name__)
@@ -85,6 +91,7 @@ def index():
     scenarios_total = 0
     proto_set = set()
     tech_counter = collections.Counter()
+    proto_set_by_tech: dict = {}  # tid -> set of protocols
     pack_cards = []  # [{name,count,techniques,protocols}]
 
     for p in packs:
@@ -103,6 +110,10 @@ def index():
                     tid = str(step["technique"])
                     p_techs.add(tid)
                     tech_counter[tid] += 1
+                    if step.get("proto"):
+                        if tid not in proto_set_by_tech:
+                            proto_set_by_tech[tid] = set()
+                        proto_set_by_tech[tid].add(str(step["proto"]).lower())
 
         proto_set |= p_protos
         pack_cards.append(
@@ -116,10 +127,13 @@ def index():
 
     profiles_total = len(_list_profiles())
 
-    # Top techniques (by number of scenarios referencing them)
+    # Top techniques by protocol coverage breadth (how many of the 10 protocols covered)
     top_tech = []
-    for tid, cnt in tech_counter.most_common(30):
-        top_tech.append({"id": tid, "name": _tech_name(tid), "scenario_refs": cnt})
+    for tid, protos in sorted(proto_set_by_tech.items(), key=lambda x: (-len(x[1]), -tech_counter[x[0]])):
+        top_tech.append({"id": tid, "name": _tech_name(tid),
+                         "scenario_refs": tech_counter[tid],
+                         "protocol_count": len(protos),
+                         "protocols": sorted(protos)})
 
     # Sample scenarios (fast browse) from the first pack (same default as Sender UI)
     scenarios_sample = []
@@ -310,13 +324,13 @@ def create_app() -> Flask:
     app.register_blueprint(web)
 
     # Register API blueprints
-    from icsforge.web.bp_scenarios import bp as bp_scenarios
-    from icsforge.web.bp_receiver import bp as bp_receiver
-    from icsforge.web.bp_config import bp as bp_config
-    from icsforge.web.bp_runs import bp as bp_runs
     from icsforge.web.bp_campaigns import bp as bp_campaigns
+    from icsforge.web.bp_config import bp as bp_config
     from icsforge.web.bp_detections import bp as bp_detections
+    from icsforge.web.bp_receiver import bp as bp_receiver
     from icsforge.web.bp_reports import bp as bp_reports
+    from icsforge.web.bp_runs import bp as bp_runs
+    from icsforge.web.bp_scenarios import bp as bp_scenarios
 
     app.register_blueprint(bp_scenarios)
     app.register_blueprint(bp_receiver)

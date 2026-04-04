@@ -60,8 +60,10 @@
     "runnable": true
   },
   "T0813": {
-    "class": "unknown",
-    "reason": ""
+    "class": "runnable",
+    "precursor": false,
+    "reason": "Network-observable: IEC 61850 GOOSE protection-block replay flood.",
+    "runnable": true
   },
   "T0814": {
     "class": "unknown",
@@ -216,8 +218,10 @@
     "runnable": false
   },
   "T0855": {
-    "class": "unknown",
-    "reason": ""
+    "class": "runnable",
+    "precursor": false,
+    "reason": "Network-observable: IEC 61850 GOOSE trip injection and Modbus write scenarios.",
+    "runnable": true
   },
   "T0856": {
     "class": "runnable",

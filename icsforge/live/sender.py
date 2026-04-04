@@ -14,10 +14,7 @@ import yaml
 
 from icsforge.core import build_marker, generate_run_id, parse_interval
 from icsforge.log import get_logger
-from icsforge.protocols import (
-    bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm,
-    TCP_PROTOS, UDP_PROTOS,
-)
+from icsforge.protocols import TCP_PROTOS, UDP_PROTOS, iec61850, profinet_dcp
 
 log = get_logger(__name__)
 
@@ -89,6 +86,30 @@ def load_scenarios(path: str) -> dict:
         return yaml.safe_load(f) or {}
 
 
+
+def _send_iec61850(iface: str, goose_frame: bytes) -> None:
+    """
+    Send an IEC 61850 GOOSE Ethernet frame via AF_PACKET raw socket.
+
+    GOOSE is a Layer-2 multicast protocol (EtherType 0x88B8).
+    Frame is already fully formed by iec61850.build_payload().
+    Requires Linux + root/CAP_NET_RAW.
+    """
+    if not hasattr(socket, "AF_PACKET"):
+        raise RuntimeError(
+            "AF_PACKET not available (Linux only). "
+            "IEC 61850 GOOSE live send requires Linux with root/CAP_NET_RAW."
+        )
+    with suppress(Exception):
+        sock = socket.socket(
+            socket.AF_PACKET,                    # type: ignore[attr-defined]
+            socket.SOCK_RAW,
+            socket.htons(0x88B8),
+        )
+        sock.sendto(goose_frame, (iface, 0))
+        sock.close()
+
+
 def send_scenario_live(
     scenario_file: str,
     scenario_name: str,
@@ -98,6 +119,7 @@ def send_scenario_live(
     receiver_allowlist: list[str] | None = None,
     timeout: float = 2.0,
     step_options: dict | None = None,
+    no_marker: bool = False,
 ) -> dict:
     """Send a scenario live. step_options: {proto: {key: value}} overrides per-step."""
     if not confirm_live_network:
@@ -115,6 +137,7 @@ def send_scenario_live(
     run_id = generate_run_id()
     sent   = 0
     errors = []
+    confirmed_techniques: set[str] = set()  # techniques with at least one successful send
 
     for idx, step in enumerate(sc.get("steps", []), start=1):
         stype = (step.get("type") or "packet").strip().lower()
@@ -133,13 +156,32 @@ def send_scenario_live(
                 errors.append(f"step {idx}: profinet_dcp requires --iface (skipped)")
                 continue
             for _ in range(count):
-                marker  = build_marker(run_id, tech, step_id)
+                marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
                 payload = profinet_dcp.build_payload(marker, style=style)
                 try:
                     _send_profinet_dcp(iface, payload)
                     sent += 1
+                    if no_marker and tech:
+                        confirmed_techniques.add(tech)
                 except Exception as e:
                     errors.append(f"step {idx} profinet_dcp send: {e}")
+                if interval:
+                    time.sleep(interval)
+        elif proto == "iec61850":
+            if not iface:
+                errors.append(f"step {idx}: iec61850 requires --iface (skipped)")
+                continue
+            for _ in range(count):
+                marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
+                opts = (step_options or {}).get(proto, {})
+                goose_frame = iec61850.build_payload(marker, style=style, **opts)
+                try:
+                    _send_iec61850(iface, goose_frame)
+                    sent += 1
+                    if no_marker and tech:
+                        confirmed_techniques.add(tech)
+                except Exception as e:
+                    errors.append(f"step {idx} iec61850 GOOSE send: {e}")
                 if interval:
                     time.sleep(interval)
 
@@ -147,12 +189,14 @@ def send_scenario_live(
             if proto in TCP_PROTOS:
                 port, builder = TCP_PROTOS[proto]
                 for _ in range(count):
-                    marker  = build_marker(run_id, tech, step_id)
+                    marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
                     opts = (step_options or {}).get(proto, {})
                     payload = builder(marker, style=style, **opts)
                     try:
                         _tcp_send(dst_ip, port, payload, timeout)
                         sent += 1
+                        if no_marker and tech:
+                            confirmed_techniques.add(tech)
                     except Exception as e:
                         errors.append(f"step {idx} {proto} TCP send: {e}")
                     if interval:
@@ -160,12 +204,14 @@ def send_scenario_live(
             elif proto in UDP_PROTOS:
                 port, builder = UDP_PROTOS[proto]
                 for _ in range(count):
-                    marker  = build_marker(run_id, tech, step_id)
+                    marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
                     opts = (step_options or {}).get(proto, {})
                     payload = builder(marker, style=style, **opts)
                     try:
                         _udp_send(dst_ip, port, payload, timeout)
                         sent += 1
+                        if no_marker and tech:
+                            confirmed_techniques.add(tech)
                     except Exception as e:
                         errors.append(f"step {idx} {proto} UDP send: {e}")
                     if interval:
@@ -175,6 +221,8 @@ def send_scenario_live(
                 continue
 
     result: dict = {"run_id": run_id, "dst_ip": dst_ip, "sent": sent}
+    if no_marker and confirmed_techniques:
+        result["confirmed_techniques"] = sorted(confirmed_techniques)
     if errors:
         result["warnings"] = errors
     return result

@@ -1,7 +1,8 @@
-import queue
 """ICSForge web helpers — SSE push and pull-mode polling."""
+
 import collections
 import json
+import queue
 import threading
 import urllib.parse
 import urllib.request

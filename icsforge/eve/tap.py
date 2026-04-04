@@ -14,9 +14,8 @@ import json
 import os
 import re
 import threading
-import time
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Callable
 
 from icsforge.log import get_logger
 
@@ -90,7 +89,7 @@ class EveTap:
                 if not os.path.exists(self.eve_path):
                     self._stop_event.wait(_POLL_INTERVAL)
                     continue
-                with open(self.eve_path, "r", encoding="utf-8", errors="replace") as f:
+                with open(self.eve_path, encoding="utf-8", errors="replace") as f:
                     f.seek(offset)
                     while not self._stop_event.is_set():
                         line = f.readline()

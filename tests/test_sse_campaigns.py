@@ -9,11 +9,8 @@ Covers:
   - Campaign abort signal stops execution
   - Pull mode start/stop lifecycle (no network needed)
 """
-import json
 import os
-import queue
 import sys
-import threading
 import time
 
 import pytest
@@ -46,7 +43,7 @@ class TestSSE:
         unsubscribe_sse(q)
 
     def test_notify_sse_delivers_to_subscriber(self):
-        from icsforge.web.helpers_sse import subscribe_sse, unsubscribe_sse, notify_sse
+        from icsforge.web.helpers_sse import notify_sse, subscribe_sse, unsubscribe_sse
         q = subscribe_sse()
         try:
             notify_sse({"technique": "T0855", "run_id": "test-run"})
@@ -57,7 +54,7 @@ class TestSSE:
 
     def test_notify_sse_drops_on_full_queue(self):
         """A full subscriber queue must not block the notification loop."""
-        from icsforge.web.helpers_sse import subscribe_sse, unsubscribe_sse, notify_sse
+        from icsforge.web.helpers_sse import notify_sse, subscribe_sse, unsubscribe_sse
         q = subscribe_sse()
         try:
             # Fill the queue to capacity (maxsize=50)
@@ -68,9 +65,7 @@ class TestSSE:
             unsubscribe_sse(q)
 
     def test_unsubscribe_removes_dead_queue(self):
-        from icsforge.web.helpers_sse import (
-            subscribe_sse, unsubscribe_sse, _sse_subscribers
-        )
+        from icsforge.web.helpers_sse import _sse_subscribers, subscribe_sse, unsubscribe_sse
         initial = len(_sse_subscribers)
         q = subscribe_sse()
         assert len(_sse_subscribers) == initial + 1
@@ -129,23 +124,23 @@ class TestCampaignValidation:
         assert isinstance(warnings, list)
 
     def test_missing_name_raises(self):
-        from icsforge.campaigns.runner import validate_campaign, CampaignValidationError
+        from icsforge.campaigns.runner import CampaignValidationError, validate_campaign
         with pytest.raises(CampaignValidationError):
             validate_campaign({"steps": [{"scenario": "T0855__unauth_command__modbus"}]})
 
     def test_empty_steps_raises(self):
-        from icsforge.campaigns.runner import validate_campaign, CampaignValidationError
+        from icsforge.campaigns.runner import CampaignValidationError, validate_campaign
         with pytest.raises(CampaignValidationError):
             validate_campaign({"name": "Empty", "steps": []})
 
     def test_missing_steps_raises(self):
-        from icsforge.campaigns.runner import validate_campaign, CampaignValidationError
+        from icsforge.campaigns.runner import CampaignValidationError, validate_campaign
         with pytest.raises(CampaignValidationError):
             validate_campaign({"name": "No steps"})
 
     def test_invalid_delay_raises(self):
         """Invalid delay values are fatal — they indicate a broken campaign definition."""
-        from icsforge.campaigns.runner import validate_campaign, CampaignValidationError
+        from icsforge.campaigns.runner import CampaignValidationError, validate_campaign
         campaign = {
             "name": "Bad Delay",
             "steps": [{"scenario": "T0855__unauth_command__modbus", "delay": "badvalue"}],

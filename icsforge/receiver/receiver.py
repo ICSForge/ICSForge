@@ -7,14 +7,14 @@ L2 PROFINET DCP : AF_PACKET raw socket with promiscuous mode (Linux only)
 v0.4: thread-safe receipt writing, structured logging, proper error handling.
 """
 
+import argparse
 import fcntl
 import hashlib
 import json
-import argparse
 import os
-import sys
 import socket
 import struct
+import sys
 import threading
 import time
 from contextlib import suppress
@@ -23,7 +23,8 @@ from datetime import datetime, timezone
 import yaml
 
 from icsforge.core import marker_prefix
-from icsforge.log import get_logger, configure as configure_logging
+from icsforge.log import configure as configure_logging
+from icsforge.log import get_logger
 
 log = get_logger(__name__)
 

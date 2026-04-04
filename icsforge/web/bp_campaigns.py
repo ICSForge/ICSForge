@@ -1,20 +1,24 @@
 """ICSForge campaigns blueprint — campaign listing, execution, abort."""
-import threading
-
-from pathlib import Path
-
 import json
 import os
+import threading
 import time
+from contextlib import suppress
+from datetime import datetime
+from datetime import timezone as _tz
+from pathlib import Path
+
 import yaml
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
-from icsforge.campaigns.runner import CampaignRunner, validate_campaign_file, CampaignValidationError
+from icsforge.campaigns.runner import CampaignRunner, CampaignValidationError, validate_campaign_file
 from icsforge.web.helpers import (
-    _canonical_scenarios_path, _repo_root,
-    _append_run_index, _registry,
-    log,
     MATRIX_SINGLETON_PACK,
+    _append_run_index,
+    _canonical_scenarios_path,
+    _registry,
+    _repo_root,
+    log,
 )
 
 bp = Blueprint("bp_campaigns", __name__)
@@ -24,6 +28,7 @@ _CAMPAIGNS_BUILTIN = os.path.join(os.path.dirname(__file__), "..", "campaigns", 
 
 
 # ── Campaign list
+@bp.route("/api/campaigns")
 @bp.route("/api/campaigns/list")
 def api_campaigns_list():
     try:
@@ -114,8 +119,8 @@ def api_campaigns_run():
             # Derive the techniques this campaign executed from its scenario steps
             _campaign_techniques = []
             try:
-                import yaml as _yaml
-                _sc_doc = _yaml.safe_load(open(sc_path, encoding="utf-8")) or {}
+                with open(sc_path, encoding="utf-8") as _sc_f:
+                    _sc_doc = yaml.safe_load(_sc_f) or {}
                 _scenarios = _sc_doc.get("scenarios") or {}
                 _tech_set = set()
                 for _step in camp.get("steps", []):
@@ -148,8 +153,7 @@ def api_campaigns_run():
                     reg.add_artifact(runner.run_id, "events", result["events_path"])
             except Exception as exc:
                 log.debug("Registry upsert failed for campaign %s: %s", runner.run_id, exc)
-            try:
-                from datetime import datetime, timezone as _tz
+            with suppress(Exception):
                 _append_run_index({
                     "run_id": runner.run_id,
                     "scenario": camp.get("name", campaign_id),
@@ -158,8 +162,6 @@ def api_campaigns_run():
                     "events": result.get("events_path"),
                     "ts": datetime.now(_tz.utc).isoformat() + "Z",
                 })
-            except Exception:
-                pass
         except Exception as e:
             queue.append({"event": "error", "message": str(e)})
         finally:

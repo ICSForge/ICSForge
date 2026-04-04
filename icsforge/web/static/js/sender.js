@@ -11,7 +11,7 @@ let feedPollTimer = null;
 let prevTotal    = null;
 
 /* ── Protocol colours ───────────────────────────────────────── */
-const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c",bacnet:"#8b5cf6",mqtt:"#06b6d4"};
+const PROTO_C = {modbus:"#f59e0b",s7comm:"#2563eb",iec104:"#10b981",iec61850:"#16a34a",dnp3:"#7c3aed",opcua:"#0ea5e9",enip:"#ef4444",profinet_dcp:"#ea580c",bacnet:"#8b5cf6",mqtt:"#06b6d4"};
 function protoBadge(p){const c=PROTO_C[p]||"#475569";return `<span class="proto-badge" style="background:${c};${c==='#f59e0b'?'color:#000':''}">${p}</span>`;}
 function protoDot(p){const c=PROTO_C[p]||"#888";return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}" title="${p}"></span>`;}
 
@@ -44,7 +44,10 @@ function renderChainCards(){
   const grid = $("chains_grid");
   const chains = (allGroups.find(g=>g.name.includes("Attack Chains"))||{}).scenarios||[];
   if(!chains.length){grid.innerHTML='<div class="small">No chains found.</div>';return;}
-  grid.innerHTML = chains.map(sc=>{
+  // Split: named chains (in CHAIN_META) first row, generic chains second row
+  const named   = chains.filter(sc => sc.id in CHAIN_META);
+  const generic = chains.filter(sc => !(sc.id in CHAIN_META));
+  function renderCard(sc){
     const m = CHAIN_META[sc.id]||{icon:"⛓",label:sc.title,sub:sc.protocols.join(" · ")};
     const pills = sc.techniques.slice(0,4).map(t=>`<span class="chain-pill">${t}</span>`).join("");
     return `<div class="chain-card" onclick="selectScenario('${sc.id}')">
@@ -52,7 +55,13 @@ function renderChainCards(){
       <div class="chain-sub">${m.sub}</div>
       <div class="chain-pills">${pills}</div>
     </div>`;
-  }).join("");
+  }
+  let html = named.map(renderCard).join("");
+  if(generic.length){
+    html += `<div style="width:100%;font-size:10px;color:var(--muted);margin:6px 0 2px;letter-spacing:.04em">MULTI-PROTOCOL CHAINS</div>`;
+    html += generic.map(renderCard).join("");
+  }
+  grid.innerHTML = html;
 }
 
 /* ── Scenario list ──────────────────────────────────────────── */
@@ -160,7 +169,7 @@ async function loadHexDump(name, stepIdx){
   $("hex_meta").innerHTML = [
     `${protoBadge(data.proto)}`,
     `<span class="small">style: <b>${data.style}</b></span>`,
-    `<span class="small">${data.transport||"TCP"} <b>${data.port||"L2"}</b></span>`,
+    `<span class="small">${data.transport||"TCP"}${data.port ? " <b>:"+data.port+"</b>" : ""}</span>`,
     `<span class="small"><b>${data.length}</b> bytes</span>`,
     `<span class="badge">${data.technique}</span>`,
   ].join("");
@@ -234,6 +243,10 @@ function tlConfirmStep(technique, run_id){
 }
 
 function tlStart(steps, run_id, offline){
+  // Show stealth badge in timeline header when active
+  const stealthBadge = document.getElementById("tl_stealth_badge");
+  const stealthActive = !!(document.getElementById("stealth_mode") && document.getElementById("stealth_mode").checked);
+  if(stealthBadge) stealthBadge.style.display = stealthActive ? "inline" : "none";
   tlSteps = steps;
   tlStatuses = steps.map(()=>"pending");
   tlRunId = run_id;
@@ -302,9 +315,10 @@ async function doSend(offline=false){
   }
   const stepOptions = _collectStepOptions();
   const payload = offline
-    ? {name:selectedName, dst_ip:dst_ip||$("cfg_receiver_ip").value.trim()||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true}
+    ? {name:selectedName, dst_ip:dst_ip||$("cfg_receiver_ip").value.trim()||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true, no_marker: !!($("stealth_mode") && $("stealth_mode").checked)}
     : {name:selectedName, dst_ip, src_ip:$("src_ip").value.trim(), iface:$("iface").value.trim(),
        timeout:parseFloat($("timeout").value)||2.0, also_build_pcap:$("pcap").checked,
+       no_marker: !!($("stealth_mode") && $("stealth_mode").checked),
        ...(stepOptions ? {step_options: stepOptions} : {})};
   logln(`[${offline?"OFFLINE":"LIVE"}] ${selectedName} → ${dst_ip||"(offline)"}`, "log-info");
   // Launch timeline
@@ -350,6 +364,10 @@ async function doSend(offline=false){
       }
     }
     if(!offline) window.toast("Scenario fired", `${selectedName} · ${data.sent||"—"} packets`, "ok");
+    // Stealth mode: confirm techniques via TCP ACK evidence (no receiver marker needed)
+    if(data.confirmed_techniques && data.confirmed_techniques.length > 0){
+      data.confirmed_techniques.forEach(tech => tlConfirmStep(tech, data.run_id));
+    }
     setTimeout(loadHistory, 800);
     startFeedPoll();
     // If EVE tap is armed, notify it of the run_id
@@ -671,6 +689,9 @@ async function saveNetworkConfig(){
   const sender_callback_url = $("cfg_sender_callback_url").value.trim();
   const callback_token = $("cfg_callback_token").value.trim();
   const pull_enabled = $("cfg_pull_mode").checked;
+  // Mirror to scenario fields immediately — do not wait for API roundtrip
+  if(sender_ip)   $("src_ip").value = sender_ip;
+  if(receiver_ip) $("dst_ip").value = receiver_ip;
   $("net_status").textContent = "Saving…";
   $("net_status").style.color = "var(--muted)";
   try {

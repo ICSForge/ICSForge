@@ -1,18 +1,33 @@
 """ICSForge receiver blueprint — overview, receipts, callback, live feed."""
-from datetime import datetime, timezone
-
-import secrets
-
 import json
 import os
-import time
+import secrets
+from datetime import datetime, timezone
+
 from flask import Blueprint, Response, jsonify, request
 
 import icsforge.web.helpers as _h
 from icsforge.web.helpers import (
-    _bin_receipts, _default_receipts_path, _read_jsonl_tail, log,
-    notify_sse, subscribe_sse, unsubscribe_sse,
+    _bin_receipts,
+    _default_receipts_path,
+    _live_receipts,
+    _read_jsonl_tail,
+    notify_sse,
+    subscribe_sse,
+    unsubscribe_sse,
 )
+
+
+def _receipt_key(r: dict) -> tuple:
+    """Stable dedup key for a receipt — works across JSONL and in-memory sources."""
+    return (
+        r.get("run_id", ""),
+        r.get("@timestamp", ""),
+        r.get("technique", ""),
+        r.get("proto", ""),
+        r.get("src_ip", ""),
+        r.get("src_port", ""),
+    )
 
 bp = Blueprint("bp_receiver", __name__)
 
@@ -184,12 +199,18 @@ def api_receipts():
 # ── Run detail (single)
 @bp.route("/api/run")
 def api_run():
-    receipts_path = _default_receipts_path()
-    items = _read_jsonl_tail(receipts_path, limit=2000)
     run_id = (request.args.get("run_id") or "").strip()
     if not run_id:
         return jsonify({})
-    filtered = [r for r in items if r.get("run_id") == run_id]
+    receipts_path = _default_receipts_path()
+    filtered = [r for r in _read_jsonl_tail(receipts_path, limit=2000)
+                if r.get("run_id") == run_id]
+    # Merge live in-memory receipts (callback path)
+    seen = {_receipt_key(r) for r in filtered}
+    for r in _live_receipts:
+        if r.get("run_id") == run_id and _receipt_key(r) not in seen:
+            filtered.append(r)
+            seen.add(_receipt_key(r))
     if not filtered:
         return jsonify({})
     filtered.sort(key=lambda x: x.get("@timestamp") or "")
@@ -212,7 +233,14 @@ def api_run_detail():
     if not run_id:
         return jsonify({})
     receipts_path = _default_receipts_path()
-    items = [r for r in _read_jsonl_tail(receipts_path, limit=4000) if r.get("run_id") == run_id]
+    items = [r for r in _read_jsonl_tail(receipts_path, limit=4000)
+             if r.get("run_id") == run_id]
+    # Merge live in-memory receipts (callback path)
+    seen = {_receipt_key(r) for r in items}
+    for r in _live_receipts:
+        if r.get("run_id") == run_id and _receipt_key(r) not in seen:
+            items.append(r)
+            seen.add(_receipt_key(r))
     if not items:
         return jsonify({})
     items.sort(key=lambda x: x.get("@timestamp") or "")

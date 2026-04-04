@@ -1,4 +1,3 @@
-import re
 """
 ICSForge core — pure Python, zero scapy dependency.
 
@@ -11,6 +10,7 @@ import ipaddress
 import json
 import os
 import random
+import re
 import socket
 import struct
 import time
@@ -143,11 +143,11 @@ def dispatch_send(kind, target, event, fh_cache):
         raise ValueError(f"Unknown output kind '{kind}'")
 
 # ── Event model ───────────────────────────────────────────────────────
-def event_base(technique: str | None, source: str, **fields) -> dict:
+def event_base(technique: str | None, source: str, no_marker: bool = False, **fields) -> dict:
     ev = {
         "@timestamp":          now_iso(),
         "icsforge.synthetic":  True,
-        "icsforge.marker":     MARKER.decode("ascii"),
+        "icsforge.marker":     None if no_marker else MARKER.decode("ascii"),
         "mitre.ics.technique": technique,
         "event.source":        source,
     }

@@ -1,9 +1,11 @@
 
 import argparse
+import datetime as _dt
 import json
-import sqlite3
 import os
+import random as _rnd
 import signal
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -16,6 +18,7 @@ from icsforge.log import get_logger
 from icsforge.reports.network_validation import build_network_validation_report
 from icsforge.scenarios.engine import run_scenario
 from icsforge.state import RunRegistry, default_db_path
+from icsforge.web.helpers_io import _append_run_index
 
 log = get_logger(__name__)
 
@@ -32,8 +35,6 @@ def cmd_generate(args) -> int:
 
     # Generate a meaningful run_id (same convention as web generate_offline)
     # so artifacts are named T0855__unauth_command__2026-04-01__BRAVO instead of offline
-    import random as _rnd
-    import datetime as _dt
     _NATO = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL",
              "INDIA","JULIET","KILO","LIMA","MIKE","NOVEMBER","OSCAR","PAPA",
              "QUEBEC","ROMEO","SIERRA","TANGO","UNIFORM","VICTOR","WHISKEY",
@@ -45,7 +46,8 @@ def cmd_generate(args) -> int:
 
     res = run_scenario(args.file, args.name, args.outdir,
                        dst_ip=args.dst_ip, src_ip=args.src_ip,
-                       run_id=_run_id, build_pcap=True)
+                       run_id=_run_id, build_pcap=True,
+                       no_marker=getattr(args, "no_marker", False))
     log.info("Generate complete:\n%s", json.dumps(res, indent=2))
     return 0
 
@@ -74,12 +76,12 @@ def cmd_send(args) -> int:
         confirm_live_network=args.confirm_live_network,
         receiver_allowlist=allowlist,
         timeout=args.timeout,
+        no_marker=getattr(args, "no_marker", False),
     )
 
     # Use try/finally so the run registry is always updated,
     # even if the user interrupts (Ctrl+C) during ground-truth generation.
     gt: dict = {"events": None, "pcap": None}
-    interrupted = False
     try:
         gt = run_scenario(
             args.file,
@@ -100,7 +102,8 @@ def cmd_send(args) -> int:
             log.warning("PCAP was requested (--also-build-pcap) but was not generated")
         # Validate events file actually has content
         if events_path and os.path.exists(events_path):
-            event_count = sum(1 for _ in open(events_path, encoding="utf-8"))
+            with open(events_path, encoding="utf-8") as _events_f:
+                event_count = sum(1 for _ in _events_f)
             if event_count == 0:
                 log.warning(
                     "Ground-truth events file is EMPTY: %s\n"
@@ -114,7 +117,6 @@ def cmd_send(args) -> int:
             log.warning("Events file not found: %s", events_path)
     except KeyboardInterrupt:
         log.warning("Ground-truth generation interrupted — run will still be registered")
-        interrupted = True
     except Exception as exc:
         log.error("Ground-truth artifact generation failed: %s", exc)
 
@@ -132,8 +134,6 @@ def cmd_send(args) -> int:
         log.warning("SQLite registry failed for %s: %s — falling back to JSONL index", res["run_id"], exc)
     # Always write to JSONL run index (web UI fallback + visibility)
     try:
-        from icsforge.web.helpers_io import _append_run_index
-        import datetime as _dt
         _append_run_index({
             "run_id": res["run_id"],
             "scenario": args.name,
@@ -302,6 +302,8 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--outdir", default="out")
     g.add_argument("--dst-ip", default="198.51.100.42")
     g.add_argument("--src-ip", default="127.0.0.1")
+    g.add_argument("--no-marker", dest="no_marker", action="store_true",
+                   help="Stealth mode: generate PCAP with no synthetic tags.")
     g.set_defaults(func=cmd_generate)
 
     s = sub.add_parser("send", help="Send scenario traffic over the real network to an ICSForge Receiver")
@@ -315,6 +317,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--allowlist", help="Comma-separated allowlisted receiver IPs (defaults to dst-ip)")
     s.add_argument("--confirm-live-network", action="store_true", help="REQUIRED: enable live sending")
     s.add_argument("--also-build-pcap", action="store_true", help="Also build an offline PCAP alongside live sending")
+    s.add_argument("--no-marker", dest="no_marker", action="store_true",
+                   help="Stealth mode: omit ICSForge correlation tags — generates real protocol traffic indistinguishable from genuine devices. Receiver confirmation shows 0 but TCP ACK is used instead.")
     s.set_defaults(func=cmd_send)
 
     nv = sub.add_parser("net-validate", help="Correlate ground-truth events with receiver receipts and optional alerts")

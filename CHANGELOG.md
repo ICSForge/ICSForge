@@ -1,3 +1,860 @@
+## v0.57.5 (2026-04 — receipt consistency across all run endpoints + lint clean)
+
+### Fix 1: /api/run and /api/run_detail were still callback-blind
+
+The v0.57.4 fix applied the live-receipts merge only to `/api/run_full` and
+`/api/export`. `/api/run` and `/api/run_detail` in `bp_receiver.py` were
+still reading exclusively from `out/receipts.jsonl`, which is populated by
+the standalone receiver process but not by the sender callback path.
+
+For a live run using the callback path: `/api/receiver/live` showed 29 receipts,
+`/api/run_full` showed 29 receipts (fixed in v0.57.4), but `/api/run` and
+`/api/run_detail` still returned `{}` (empty).
+
+All four run-detail endpoints now merge both sources:
+- JSONL file (standalone receiver process)
+- `_live_receipts` deque (sender callback path)
+
+Verified: 10 live receipts → all four endpoints return `packets: 10`.
+
+### Fix 2: Stable receipt deduplication key
+
+The v0.57.4 dedup used `id(r)` — object identity — which is not stable across
+JSONL-parsed dicts and in-memory deque entries (different objects, same data).
+Replaced with a content-based tuple key:
+`(run_id, @timestamp, technique, proto, src_ip, src_port)`
+
+Dedup verified: adding 10 duplicate receipts keeps count at 10, not 20.
+
+### Fix 3: Import ordering in bp_runs.py (Ruff I001)
+
+The `_live_receipts` import was inserted in the wrong alphabetical position in
+v0.57.4, causing a Ruff I001 lint error. Import block is now correctly sorted.
+`bp_receiver.py` import block also sorted correctly.
+
+## v0.57.4 (2026-04 — bug fixes from external review of v0.57.3)
+
+### Fix 1: /api/run_full receipts always empty for live runs
+
+Root cause: live receipts arrive via the sender callback path
+(`POST /api/receiver/callback`) which stores them in `_live_receipts` — an
+in-memory deque in `helpers_sse.py`. The JSONL receipts file at
+`out/receipts.jsonl` is written only by the standalone receiver process.
+
+`/api/run_full` read only from the JSONL file. `_live_receipts` was checked
+by `/api/receiver/live` but not by `run_full`. So for a live run: packets=29,
+receiver/live=29, but run_full receipts=[].
+
+Fix: `api_run_full` and `api_export_run` now merge both sources:
+1. JSONL file (receipts from standalone receiver process)
+2. `_live_receipts` deque (receipts from sender callback path)
+
+Duplicates excluded via `id()` comparison. Result: run_full receipts_preview
+now correctly reflects all live receipts for the run.
+
+### Fix 2: Ruff lint — two unused imports in bp_scenarios.py
+
+- `import json` — unused since the variants endpoint was rewritten to derive
+  from scenarios.yml (no longer reads JSON from technique_variants.json)
+- `TECH_VARIANTS` — unused for the same reason
+
+Additionally, `import random as _rnd_off` was declared inside the
+`api_generate_offline` function body. Moved to module level as `import random
+as _rnd`. All references updated. No behaviour change.
+
+## v0.57.3 (2026-04 — bug fixes: matrix tiles, dst_ip propagation, campaign chains)
+
+### Bug 1: Matrix tile height — long names clipped (regression from v0.57.2)
+The v0.57.2 fix set a fixed `height: 52px` which clipped technique names like
+"Device Restart/Shutdown" and "Block Reporting Message". Reverted to `height: auto`
+with `min-height: 46px`. All technique names are now fully visible. The `-webkit-line-clamp`
+was also removed — it was the cause of the visible text truncation in the screenshot.
+
+### Bug 2: Destination IP not propagating from Network Settings
+Two changes to make the dst_ip field reliably reflect the Network Settings IP:
+
+1. `cfg_receiver_ip` now has an `oninput` handler that mirrors its value to `dst_ip`
+   in real time as the user types — before any Save button is clicked.
+2. `saveNetworkConfig()` now mirrors `receiver_ip → dst_ip` and `sender_ip → src_ip`
+   at the very top of the function before any `await`, so the field is updated
+   immediately rather than after a network roundtrip that could fail or delay.
+
+Previously the mirror happened after `await API("/api/config/network")` which is
+correct in theory but could be delayed or skipped if the network call path threw.
+Now it is unconditional and synchronous.
+
+### Bug 3: Campaign page — attack chains do not work
+Root cause: `/api/scenarios_grouped` did not include the `steps` array in chain
+scenario cards — only `step_count` (an integer). The campaign page `_runChain()`
+function reads `sc.steps` to render the step-by-step progress view. With `steps`
+absent, it got an empty array, rendered no rows, and the chain appeared to do nothing
+even though `/api/send` would have executed it.
+
+Fix: `/api/scenarios_grouped` now includes the full `steps` array for chain scenarios
+(non-chain scenarios still omit steps to keep the response small). All 11 chains
+verified: 5–10 steps each, correct proto/technique fields, send path returns 200.
+
+## v0.57.2 (2026-04 — UI fixes: sender, matrix, home page)
+
+### 7 UI fixes from review
+
+**1. Home page tagline**
+"ICSForge validates cybersecurity..." -> "ICSForge helps you to validate cybersecurity..."
+
+**2. Tactic group ordering (sender)**
+Privilege Escalation was last in the list. Corrected to ATT&CK for ICS position 4:
+Chains → Initial Access → Execution → Persistence → **Privilege Escalation** → Evasion
+→ Discovery → Lateral Movement → Collection → Command and Control
+→ Inhibit Response Function → Impair Process Control → Impact
+
+**3. Attack chains layout (sender)**
+Named chains (Industroyer2, Triton/TRISIS, Stuxnet-style, Water Treatment, OPC UA
+Espionage, EtherNet/IP MFG) now render as a prominent first row. Generic multi-protocol
+chains appear below with a "MULTI-PROTOCOL CHAINS" section label.
+
+**4. Confirm button text (sender)**
+"Confirm: synthetic traffic only — destination is a safe host in your OT environment"
+→ "Confirm: Destination is a safe host (receiver) in your environment"
+
+**5. Matrix column header duplicate removed**
+Each tactic column showed the name ("Initial Access") and the shortname
+("initial-access") below it. The shortname line is now removed — one clean label only.
+
+**6. Matrix tile text overlap fixed**
+- .mc-col: overflow changed from `visible` to `hidden` — tiles no longer bleed outside
+  their column bounds
+- .mt: added overflow:hidden to contain content within tile bounds
+- .mt-name: added -webkit-line-clamp:3 so long technique names truncate cleanly
+  instead of overflowing into adjacent tiles
+
+**7. Home page top techniques table**
+- Was: top 20 by scenario count, showing "Refs" column
+- Now: top 10 by protocol coverage breadth (most protocols covered), showing
+  "Protocols" (x/10 in green) and "Scenarios" columns
+- All top 10 currently show 10/10 protocol coverage — the table correctly
+  reflects the expansion work done across all batch releases
+
+## v0.57.2 (2026-04 — UI fixes across home, sender, and matrix pages)
+
+### 7 UI fixes
+
+**Fix 1: Home page tagline**
+"ICSForge validates cybersecurity..." →
+"ICSForge helps you to validate cybersecurity detection coverage..."
+
+**Fix 2: Sender tactic group order — Privilege Escalation position**
+Privilege Escalation was last in the sender scenario list. Corrected to match
+ATT&CK for ICS tactic order: Persistence → Privilege Escalation → Evasion.
+
+**Fix 3: Attack chains — named chains first, generic chains below**
+Named chains (Industroyer2, Triton, Stuxnet, Water Treatment, OPC UA Espionage,
+EtherNet/IP MFG) now render in the first row with their icons and labels.
+Generic multi-protocol chains (CHAIN__loss_of_availability, etc.) appear below
+with a "MULTI-PROTOCOL CHAINS" separator.
+
+**Fix 4: Confirm button text**
+"Confirm: synthetic traffic only — destination is a safe host in your OT environment"
+→ "Confirm: Destination is a safe host (receiver) in your environment"
+
+**Fix 5: Matrix column header — duplicate shortname removed**
+Each tactic column header showed the tactic name (e.g. "Initial Access") AND
+the kebab-case shortname (e.g. "initial-access") below it, making it appear
+duplicated. The shortname line is removed; column headers now show just the name.
+
+**Fix 6: Matrix tile text overflow**
+Technique tiles now have a fixed height (52px) with CSS -webkit-line-clamp: 3
+on the technique name. Long names (e.g. "Exploitation for Privilege Escalation")
+no longer overflow and overlap adjacent tiles.
+
+**Fix 7: Home page top techniques — correct data, top 10 only**
+Previously showed top 20 sorted by scenario count (a proxy for coverage).
+Now shows top 10 sorted by protocol coverage breadth (most protocols covered),
+with a "Protocols" column showing X/10 and a "Scenarios" column showing count.
+All 18 techniques at 10/10 coverage are sorted secondarily by scenario count.
+
+## v0.57.1 (2026-04 — matrix overlay and sender scenario visibility fixed)
+
+### Bug: technique variants were stale (matrix click-through broken)
+
+The `/api/technique/variants` endpoint read from `icsforge/data/technique_variants.json`,
+a static file maintained separately from `scenarios.yml`. This file was last updated
+many versions ago and only contained 2–3 variants per technique regardless of how
+many scenarios were actually added. When a user clicked a technique tile on the matrix
+page to see available scenarios, they saw only the old entries — all new scenarios
+from every expansion batch (v0.52–v0.57) were invisible.
+
+Fix: the endpoint now derives variants live from `scenarios.yml`:
+- Queries all scenarios matching the requested technique ID
+- Skips CHAIN__ scenarios (they cover multiple techniques)  
+- Returns `{id, label, proto, protocols, notes}` built from actual scenario metadata
+- Variant IDs are the scenario name with the `T0XXX__` prefix stripped, so the
+  send endpoint constructs the correct scenario name on lookup
+
+Result:
+- T0858 Change Operating Mode: was 2 variants, now 11 (all protocols)
+- T0892 Change Credential: was 0 variants, now 6
+- T0880 Loss of Safety: was 2 variants, now 11
+- T0855 Unauthorized Command: was 4 variants, now 14 (all 10 protocols)
+- All 68 techniques: 100% of scenario variants visible, all IDs resolve correctly
+
+`technique_variants.json` is now unused by the variants endpoint and will be
+removed in a future cleanup. The send path (`api/technique/send`) was already
+correctly looking up scenarios in `scenarios.yml`.
+
+### Verified
+- All 68 techniques: variants endpoint returns correct count
+- All variant IDs round-trip correctly through generate_offline
+- Matrix tile click -> variant select -> generate_offline: end-to-end PASS
+- Smoke test: 35/35
+- Syntax: clean
+
+## v0.57.0 (2026-04 — scenario expansion: 394 -> 434, 53.4% -> 59.3% coverage)
+
+### Batch 5 expansion: +40 scenarios across 10 techniques
+
+Techniques explicitly NOT expanded (domain filter applied):
+  T0842 Network Sniffing — passive, no packets generated. 1/10 ceiling.
+  T0820 Exploitation for Evasion — malformed-frame scenarios already exist for
+    modbus/enip/opcua/s7comm. No new protocols have equivalent malformed styles.
+  T0871 Execution through API — OPC UA call_method is the only OT network path.
+  T0807 CLI, T0853 Scripting — DNP3 file_open is the only OT network path.
+  T0834 Native API — S7comm native_cotp is the only OT network path.
+  T0837 Loss of Protection — modbus:protection_relay is the only equivalent.
+  T0864 Transient Cyber Asset — physical access. 1/10 ceiling.
+  T0872 Indicator Removal — endpoint. DNP3 clear_events is the only OT equiv.
+  T0884 Connection Proxy, T0890 Privilege Escalation — OPC UA specific. 1/10 ceiling.
+  T0895 Autorun Image — S7comm SDB0 is the only OT network equivalent.
+
+New scenarios added:
+  T0858 Change Operating Mode (+5: bacnet, iec61850, modbus, mqtt, profinet_dcp) -> 10/10
+  T0829 Loss of View (+5: bacnet, enip, iec61850, mqtt, profinet_dcp) -> 10/10
+  T0889 Modify Program (+5: dnp3, iec104, iec61850, modbus, profinet_dcp) -> 10/10
+  T0880 Loss of Safety (+4: bacnet, iec61850, opcua, profinet_dcp) -> 9/10
+  T0800 Firmware Update Mode (+4: dnp3, iec104, modbus, mqtt) -> 6/10
+  T0892 Change Credential (+4: dnp3, enip, iec104, s7comm) -> 6/10
+  T0891 Hardcoded Credentials (+4: bacnet, dnp3, enip, iec104) -> 6/10
+  T0828 Loss of Productivity (+4: bacnet, enip, mqtt, s7comm) -> 6/10
+  T0859 Valid Accounts (+3: enip, iec104, s7comm) -> 5/10
+  T0822 External Remote Services (+2: enip, s7comm) -> 4/10
+
+### New techniques at 10/10 protocol coverage
+T0858, T0829, T0889 — 18 techniques now at full coverage.
+
+### Coverage: 53.4% -> 59.3% (403/680 combinations)
+### Standalone scenarios: 423 + 11 chains = 434 total
+### All 423 standalone: 0 bad styles, 0 tactic mismatches, 0 mangled IDs
+
+## v0.56.3 (2026-04 — metadata alignment and alerts ingest policy)
+
+### Developer review findings from v0.56.2 — addressed
+
+Three substantive fixes based on a second extensive external review.
+
+**Fix 1: Local ATT&CK for ICS matrix file aligned with current MITRE list**
+
+The bundled `ics_attack_matrix.json` contained 97 total entries / 86 unique technique IDs
+from an older version of the framework. MITRE ATT&CK for ICS currently lists 83 techniques.
+The three extra IDs (T0841, T0875, T0876) were deprecated/invalid — removed.
+
+Matrix is now: 94 total entries (11 techniques appear in >1 tactic = intentional ATT&CK
+design), 83 unique technique IDs. Matches `technique_support.json` exactly — gap is zero.
+
+**Fix 2: /api/matrix_status now exposes matrix_info block**
+
+The response previously returned only `{run_id, status}`. Callers seeing 94 entries in
+the matrix file but 83 unique IDs were confused. New `matrix_info` field in the response:
+
+```json
+"matrix_info": {
+  "total_entries": 94,
+  "unique_technique_ids": 83,
+  "note": "total_entries > unique_technique_ids because some techniques appear under multiple tactics"
+}
+```
+
+The 11 techniques that appear in >1 tactic (e.g. T0856 Spoof Reporting under both
+Evasion and Impair Process Control; T0839 Module Firmware under both Persistence and
+Impair Process Control) are correct ATT&CK for ICS design, not a data error.
+
+**Fix 3: /api/alerts/ingest returns 400 for malformed `alert` field**
+
+After v0.56.1 fixed the 500 crash, the endpoint was accepting malformed `alert` values
+(string instead of object) and silently importing them with fallback placeholders.
+Policy decision: malformed alert structure is a caller bug and should be rejected clearly.
+
+Before: string alert field -> imported with `signature: "alert"` placeholder (200 OK)
+After:  string alert field -> `400 {"ok": false, "error": "Row N: 'alert' field must be
+         an object, got str"}`
+
+Valid alert objects continue to import normally (200 OK).
+
+### Findings not acted on
+
+**Webhook field name (`webhook_url`)**: intentional API design, documented in API surface.
+**Auth setup requires username**: intentional hardening, not a regression.
+**Developer note on T0841/T0875/T0876**: resolved by Fix 1 — removing the deprecated IDs
+  from the local matrix rather than adding them back to support.json.
+
+### Metadata state after v0.56.3
+| Source | Count | Notes |
+|--------|-------|-------|
+| MITRE ATT&CK for ICS (live) | 83 techniques | authoritative |
+| ics_attack_matrix.json unique IDs | 83 | now aligned |
+| ics_attack_matrix.json total entries | 94 | 11 multi-tactic techniques |
+| technique_support.json | 83 entries | aligned |
+| scenario step-level techniques | 72 | 11 host-only have no OT network scenarios |
+
+## v0.56.2 (2026-04 — correct invalid ATT&CK for ICS technique IDs)
+
+### Correction: T0841, T0875, T0876 are not valid ATT&CK for ICS technique IDs
+
+The external developer's Bug 3 report claimed these three IDs were missing from
+`technique_support.json`. The report compared against our bundled `ics_attack_matrix.json`,
+which is from an older version of the framework (97 techniques vs the current 83).
+
+The current MITRE ATT&CK for ICS (attack.mitre.org/techniques/ics/) lists exactly 83
+techniques. T0841, T0875, and T0876 do not appear in this list:
+- T0841 "Network Service Scanning" was from the pre-2021 collaborate.mitre.org era
+- T0875 "Change Program State" does not exist in the current framework
+- T0876 "Loss of Safety" is a duplicate of T0880 which is the current valid ID
+
+The v0.56.1 "fix" of adding these to technique_support.json was wrong and is reverted.
+
+### What was actually fixed
+
+17 scenario top-level technique fields and 39 step-level technique fields pointing to
+invalid IDs have been remapped to the correct current ATT&CK for ICS equivalents:
+
+- T0841 "Network Service Scanning" -> T0846 "Remote System Discovery"
+  (all network scanning scenarios now correctly filed under T0846)
+- T0875 "Change Program State" -> T0858 "Change Operating Mode"
+  (all PLC stop/start/mode scenarios now correctly filed under T0858)
+- T0876 "Loss of Safety" -> T0880 "Loss of Safety"
+  (same concept, T0880 is the current valid ID)
+
+Scenario keys renamed accordingly (e.g. T0841__network_scan__* -> T0846__network_scan__*).
+
+technique_support.json: 83 entries, exactly matching the current MITRE ATT&CK for ICS
+technique count. No fabricated IDs.
+
+### Coverage after remapping (unchanged total, IDs corrected)
+- T0846 Remote System Discovery: 10/10 protocols
+- T0858 Change Operating Mode:    5/10 protocols
+- T0880 Loss of Safety:           5/10 protocols
+
+## v0.56.1 (2026-04 — bug fixes from external developer review of v0.53.0)
+
+### Developer review findings — all addressed
+
+External developer performed a full end-to-end review from a clean tarball install:
+real web launcher, real receiver, live CLI sends, artifact verification, SQLite state,
+auth flow, webhook, alerts ingest, and scenario pack inspection.
+
+**Fix 1: `/api/alerts/ingest` 500 on malformed `alert` field (real runtime crash)**
+When a Suricata EVE JSONL row had `"alert": "some_string"` instead of
+`"alert": {...}`, the endpoint crashed with `AttributeError: 'str' object has
+no attribute 'get'`. Fixed: `isinstance(alert, dict)` guard applied before
+any `.get()` calls. Malformed rows now produce a clean empty-alert normalised
+record rather than a 500.
+
+**Fix 2: Remaining mangled top-level `technique` field**
+One chain scenario (`CHAIN__loss_of_availability__multi`) still had its technique
+field set to `'T0813 followed by S7comm CPU stop commands...'` from the yaml.dump
+width-wrapping bug fixed in v0.55.0. Repaired to `T0813`.
+
+**Fix 3: `technique_support.json` not aligned with ATT&CK ICS matrix**
+Three techniques covered by scenarios (T0841, T0875, T0876) were missing entries
+in `technique_support.json`. The file had 83 entries vs the matrix's 86. All three
+added with correct runnable classification and evidence descriptions. Files now
+align exactly: 86 entries each.
+
+**Fix 4: `/api/campaigns` returned 404**
+The campaigns list endpoint was only registered at `/api/campaigns/list`. Added
+`/api/campaigns` as a second route decorator on the same handler. Both paths now
+return 200.
+
+**Fix 5: Stealth mode events JSONL still contained `icsforge.marker: "ICSFORGE_SYNTH"`**
+In stealth mode (`--no-marker`), the generated PCAP correctly contained no
+ICSForge correlation tags. However, the events JSONL ground-truth file still
+wrote `icsforge.marker: "ICSFORGE_SYNTH"` — inconsistent with the wire traffic.
+Fixed: `event_base()` now accepts a `no_marker` parameter; when True,
+`icsforge.marker` is set to `None`. The `icsforge.synthetic: True` field is
+intentionally preserved (the events ARE synthetic regardless of marker mode).
+
+**Developer-noted items that are intentional / acknowledged:**
+- Auth setup requires `username` + `password` (hardening, not a bug; documented)
+- Alerts ingest is path-based and repo-constrained (power-user UX, acceptable)
+- `icsforge.synthetic: True` remains in stealth events (accurate metadata)
+
+## v0.56.0 (2026-04 — Scenario expansion: 355 -> 394, 46.9% -> 52.1% coverage)
+
+### No-nonsense expansion: 39 new scenarios across 13 techniques
+
+Every scenario was evaluated against a strict domain filter before being written:
+- Does the protocol genuinely reach the relevant device class?
+- Does the specific style produce traffic that represents the technique?
+- Is it meaningfully different from existing scenarios for the same technique?
+- Was it excluded only because it genuinely cannot be simulated via network traffic?
+
+Techniques explicitly NOT expanded (rationale documented):
+  T0842 Network Sniffing — passive activity; no packets emitted. 1/10 ceiling.
+  T0872 Indicator Removal — primarily endpoint. DNP3 clear_events is the only OT equivalent.
+  T0864 Transient Cyber Asset — physical access. PROFINET DCP hello is the only equivalent.
+  T0884 Connection Proxy, T0890 Privilege Escalation — OPC UA specific, no generic equivalents.
+  T0895 Autorun Image — S7comm SDB0 is the only protocol-native equivalent.
+  T0807 CLI, T0853 Scripting — DNP3 file transfer is the only OT network equivalent.
+  T0820 Exploitation for Evasion — requires deep protocol stack implementation; correct
+    as malformed/exception-probe (existing modbus/enip/opcua/s7comm scenarios cover this).
+
+New scenarios added:
+  T0816 Device Restart/Shutdown (+4: dnp3, iec104, modbus, mqtt) -> 8/10
+  T0815 Denial of View (+4: iec61850, modbus, s7comm, profinet_dcp) -> 8/10
+  T0801 Monitor Process State (+3: dnp3, enip, s7comm) -> 8/10
+  T0821 Modify Controller Tasking (+3: enip, opcua, dnp3) -> 4/10
+  T0806 Brute Force I/O (+3: dnp3, enip, s7comm) -> 4/10
+  T0838 Modify Alarm Settings (+4: bacnet, enip, iec61850, profinet_dcp) -> 10/10
+  T0839 Module Firmware (+3: enip, dnp3, iec104) -> 5/10
+  T0845 Program Upload (+3: enip, opcua, dnp3) -> 4/10
+  T0846 Remote System Discovery (+3: enip, modbus, opcua) -> 4/10
+  T0849 Masquerading (+3: dnp3, enip, s7comm) -> 8/10
+  T0875 Change Program State (+3: enip, iec104, opcua) -> 4/10
+  T0889 Modify Program (+3: enip, opcua, s7comm) -> 6/10
+  T0835 Manipulate I/O Image — already covered from previous batch
+
+New technique at 10/10: T0838 Modify Alarm Settings
+
+### Protocol gains
+EtherNet/IP: +9 (38->47), DNP3: +7 (38->45), OPC UA: +5 (37->42), S7comm: +4 (48->52)
+
+### Totals
+Standalone scenarios: 383 (+ 11 chains = 394)
+Techniques covered: 71/72
+Coverage: 46.9% -> 52.1% (370/710 combinations)
+Techniques at 10/10: 15
+Techniques at 8+/10: 25
+
+## v0.55.0 (2026-04 — Quality audit + genuine scenario expansion: 334 -> 355)
+
+### Quality audit: major correctness pass across all 314 standalone scenarios
+
+**Issue 1: 37 invalid style/protocol combinations (FIXED)**
+Scenarios written in earlier development sessions used style names that were
+invented or renamed: mqtt:connect (-> auto), mqtt:publish (-> publish_telemetry),
+mqtt:subscribe (-> subscribe_all), dnp3:app_read (-> read_class1),
+dnp3:data_link (-> delay_measure), dnp3:unsolicited (-> enable_unsolicited
+corrected further to spoof_response), s7comm:negotiate (-> szl_read),
+iec104:command (-> setpoint_float / double_command), modbus:device_id (-> report_block).
+All 37 were corrected to valid styles that the protocol builders actually implement.
+
+**Issue 2: enumerate_ied missing from iec61850.py (FIXED)**
+The enumerate_ied style was referenced in 9 IEC 61850 scenarios but the actual
+elif branch was never written into the protocol builder. All 9 scenarios used
+the fallback path (benign keep-alive GOOSE) instead of the intended test-mode
+probe. The style is now properly implemented.
+
+**Issue 3: 86 tactic mismatches against ATT&CK for ICS matrix (FIXED)**
+Many scenarios had tactically incorrect labels — some inherited from early
+development, others introduced by batch additions. Full ATT&CK for ICS matrix
+alignment enforced across all techniques:
+- T0813 Denial of Control -> Impact (not Inhibit Response Function)
+- T0832 Manipulation of View -> Impact (not Evasion / Inhibit Response Function)
+- T0856 Spoof Reporting -> Impair Process Control (not Inhibit Response Function)
+- T0848 Rogue Master -> Initial Access (not Lateral Movement)
+- T0812 Default Credentials -> Lateral Movement (not Initial Access)
+- T0877 I/O Image -> Collection (not Discovery)
+- T0868 Detect Operating Mode -> Collection (not Discovery)
+- T0882 Theft of Operational Information -> Impact (not Collection)
+- T0830 AitM -> Collection (not Lateral Movement)
+- All 86 fixed; 0 mismatches remain.
+
+**Issue 4: 65 mangled technique fields (FIXED)**
+yaml.dump(width=120) wrapped long description text into the technique field for
+65 scenarios, turning the technique from 'T0803' into 'T0803 PLC and starving
+legitimate master access.' Re-parsed all affected scenarios; technique fields
+are now strictly the 5-character IEC code. Switched to width=2000 to prevent
+recurrence.
+
+**Issue 5: 9 T0820 scenarios with wrong technique ID (DELETED)**
+T0820 in ATT&CK for ICS is "Exploitation for Evasion", not network connection
+enumeration. Nine 'T0820 network discovery' scenarios were mislabeled T0840
+duplicates. Deleted. T0840 Network Connection Enumeration remains at 10/10.
+
+**Issue 6: T0829 safety scenario misattributed (FIXED)**
+T0829__loss_of_protection__modbus_safety contained safety_write steps targeting
+SIS registers — that is T0876 Loss of Safety, not T0829 Loss of View. Renamed
+to T0876__loss_of_safety__modbus_sis and corrected description.
+
+**Issue 7: T0832 dnp3 used enable_unsolicited (FIXED)**
+enable_unsolicited turns ON change reporting — it does not inject false data.
+T0832 Manipulation of View requires actually spoofing values. Corrected to
+spoof_response which injects forged analog responses.
+
+### New genuine scenarios (+30 across 8 techniques)
+
+Added only where the protocol-technique combination is operationally meaningful:
+
+T0829 Loss of View (0->5/10): modbus flood, dnp3 disable_unsolicited, iec104 STOPDT,
+  opcua subscription delete, s7comm diagnostic flood
+T0827 Loss of Control (+3: bacnet, dnp3, enip): 3->6/10
+T0876 Loss of Safety (+3: dnp3, enip, iec104): 2->5/10
+T0881 Service Stop (+4: bacnet, dnp3, iec104, opcua): 2->6/10
+T0809 Data Destruction (+3: modbus, dnp3, enip): 3->6/10
+T0843 Program Download (+3: dnp3, enip, opcua): 3->6/10
+T0835 Manipulate I/O Image (+3: dnp3, enip, iec104): 2->5/10
+T0861 Point & Tag Identification (+3: dnp3, enip, iec104): 3->6/10
+T0802 Automated Collection (+3: dnp3, enip, iec104): 3->6/10
+
+### Scenario totals: 355 (344 standalone + 11 chains)
+### Coverage: 44.1% -> 46.9% (333/710 combinations)
+### All 344 standalone scenarios: 0 bad styles, 0 tactic mismatches, 0 mangled IDs
+
+## v0.54.0 (2026-04 — Scenario expansion: 275 → 334 scenarios, 36% → 44% coverage)
+
+### Coverage batch 3: +59 scenarios across 18 techniques
+
+Systematic fill of the highest-value remaining gaps, with heavy focus on
+BACnet, PROFINET, IEC 61850, and MQTT which were the least-covered protocols.
+
+**Techniques reaching 10/10 protocol coverage this batch:**
+T0813, T0820, T0826, T0831, T0832, T0836 (already), T0840, T0841, T0848,
+T0855, T0856, T0877, T0878, T0882, T0888 -- 15 techniques now at full coverage.
+
+**Techniques expanded:**
+- T0803 Block Command (+5: bacnet, enip, iec104, iec61850, s7comm) 2 -> 7/10
+- T0804 Block Reporting (+5: bacnet, enip, iec104, iec61850, s7comm) 2 -> 7/10
+- T0830 AitM (+3: bacnet, mqtt, s7comm) 6 -> 9/10
+- T0831 Manipulation of Control (+4: bacnet, enip, profinet_dcp, s7comm) -> 10/10
+- T0848 Rogue Master (+4: bacnet, iec61850, mqtt, profinet_dcp) -> 10/10
+- T0856 Spoof Reporting (+1: profinet_dcp) -> 10/10
+- T0812 Default Credentials (+2: bacnet, dnp3) -> 9/10
+- T0813 Denial of Control (+2: dnp3, iec104) -> 10/10
+- T0814 Denial of View (+2: bacnet, enip) -> 8/10
+- T0820 Network Discovery (+5: bacnet, enip, iec61850, mqtt, profinet_dcp) -> 10/10
+- T0826 Loss of Availability (+2: bacnet, profinet_dcp) -> 10/10
+- T0832 Manipulation of View (+2: bacnet, profinet_dcp) -> 10/10
+- T0868 Detect Op Mode (+3: bacnet, iec61850, mqtt) -> 8/10
+- T0869 Standard App Layer (+4: dnp3, iec104, iec61850, s7comm) -> 9/10
+- T0877 I/O Module Discovery (+4: bacnet, iec61850, mqtt, profinet_dcp) -> 10/10
+- T0878 Alarm Suppression (+4: bacnet, enip, mqtt, profinet_dcp) -> 10/10
+- T0882 Theft of Op Info (+3: iec61850, mqtt, profinet_dcp) -> 10/10
+- T0883 Internet Accessible (+4: bacnet, iec104, iec61850, s7comm) -> 8/10
+
+### Protocol gains this batch
+BACnet: +14 (17->31), IEC 61850: +9 (13->22), PROFINET: +9 (11->20),
+MQTT: +7 (22->29), S7comm: +6 (42->48), EtherNet/IP: +6 (26->32)
+
+### Scenario total: 334 (323 standalone + 11 attack chains)
+### Coverage: 35.8% -> 44.1% (313/710 technique-protocol combinations)
+
+## v0.53.0 (2026-04 — Scenario expansion: 179 → 275 scenarios, 25% → 36% coverage)
+
+### Coverage gap analysis and targeted expansion
+
+Systematic audit of all 72 ATT&CK for ICS techniques x 10 protocols:
+
+- Feasibility conclusion: 720 (72x10) is the theoretical max; realistic ceiling
+  is ~490-520 scenarios once host-only and protocol-specific techniques are excluded.
+  15 techniques are endpoint-only (no OT network footprint). ~20 are protocol-specific.
+  The remaining ~37 are protocol-independent and fully achievable across all 10 protocols.
+- This release: 179 -> 275 scenarios (+96 net). Coverage: 25.2% -> 35.8%.
+
+### New standalone scenarios (+45 across 14 techniques)
+
+T0832 Manipulation of View (+4: dnp3, iec104, s7comm, enip) -- now 8/10
+T0856 Spoof Reporting (+4: bacnet, modbus, s7comm, enip) -- now 9/10
+T0888 Remote System Info (+5: dnp3, iec104, mqtt, profinet_dcp, iec61850) -- now 10/10
+T0840 Network Connection Enum (+4: dnp3, iec104, s7comm, iec61850) -- now 10/10
+T0841 Network Scanning (+3: bacnet, iec61850, profinet_dcp) -- now 10/10
+T0830 AitM (+3: modbus, enip, iec104) -- now 6/10
+T0813 Denial of Control (+3: enip, profinet_dcp, opcua) -- now 8/10
+T0814 Denial of View (+2: opcua, s7comm)
+T0836 Modify Parameter (+2: dnp3, iec61850) -- now 10/10
+T0838 Modify Alarm Settings (+2: dnp3, s7comm)
+T0855 Unauthorized Command (+3: enip, opcua, profinet_dcp) -- now 10/10
+T0812 Default Credentials (+2: iec104, profinet_dcp) -- now 7/10
+T0820 Network Discovery (+4: opcua, s7comm, dnp3, iec104) -- now 5/10
+T0826 Loss of Availability (+2: opcua, iec61850)
+T0849 Masquerading (+2: iec61850, mqtt)
+
+### Techniques at full 10/10 protocol coverage
+T0840 Network Connection Enumeration
+T0841 Network Scanning
+T0855 Unauthorized Command
+T0836 Modify Parameter
+T0888 Remote System Info Discovery
+
+### New IEC 61850 style: enumerate_ied
+GOOSE frames with test=True flag to generic multicast for IED discovery
+without triggering protection actions. Used by T0840/T0841/T0888 scenarios.
+
+### Roadmap to ~490 scenarios (next iterations)
+T0803/T0804 Block Command/Reporting: 2/10, all protocols viable
+T0831 Manipulation of Control: expand remaining 5 protocols
+T0882 Theft of Operational Information: 7/10, needs mqtt/iec104/profinet
+T0800 Activate Firmware Update Mode: 2/10, applicable to s7comm/opcua/iec104
+
+## v0.52.0 (2026-04 — IEC 61850 GOOSE protocol and substation scenarios)
+
+### New protocol: IEC 61850 GOOSE
+
+IEC 61850 is the international standard for communication in electrical substations and
+smart grids. Its GOOSE (Generic Object-Oriented Substation Events) protocol is the
+time-critical Layer-2 multicast mechanism used for circuit breaker trip/close commands
+and protection relay events. GOOSE has no built-in authentication — any frame on the
+process bus VLAN with a higher stNum (state number) is accepted as authoritative by
+all receiving IEDs. This is the primary attack surface for substation cyber-physical
+attacks and was exploited in the 2015 Ukraine power grid attack.
+
+**Why IEC 61850 belongs in ICSForge:**
+- Deployed in power substations globally (Europe, North America, Asia-Pacific)
+- Critical infrastructure: a single GOOSE trip injection can open a live circuit breaker
+- Zero authentication in standard deployments (IEC 62351 rarely implemented in practice)
+- Parsed natively by Zeek, Dragos, Nozomi, Claroty, and all OT-aware NSMs
+- Distinctive EtherType 0x88B8 — immediately identifiable by Suricata and Wireshark
+- Required for power sector ICS coverage validation
+
+**Wire format (IEC 61850-8-1):**
+- EtherType: 0x88B8 (GOOSE)
+- DST MAC: 01:0C:CD:01:00:01 (protection multicast) or 01:0C:CD:01:00:00 (generic)
+- Header: APPID(2) + Length(2) + Reserved1(2) + Reserved2(2)
+- APDU: BER-encoded IECGoosePdu — all 12 required fields including gocbRef, datSet,
+  goID, UTC timestamp, stNum, sqNum, confRev, allData
+
+### New scenarios (4) — IEC 61850 techniques
+
+**T0855__unauth_command__iec61850_goose_trip** — Unauthorized Command Message
+Injects a forged GOOSE frame with stNum far above the legitimate IED's value. All
+subscribers accept it as the most recent state change and execute the circuit-breaker
+TRIP command. 5-step scenario replicates the real GOOSE retransmit burst pattern:
+initial injection followed by exponentially spaced retransmits (4ms, 8ms, 16ms, 1s).
+
+**T0856__spoof_reporting__iec61850_goose_meas** — Spoof Reporting Message
+Injects GOOSE with falsified FLOAT32 voltage and current values (0.0V — simulating
+a dead feeder). SCADA and receiving IEDs display incorrect grid state.
+
+**T0813__denial_of_control__iec61850_goose_replay** — Denial of Control
+Rapid GOOSE replay flood (100+ msg/s) with fixed stNum but incrementing sqNum.
+Saturates IED message queues; real protection events are delayed or lost.
+
+**T0830__aitm__iec61850_goose_relay** — Adversary-in-the-Middle
+Simulates AitM relay injection: captures a legitimate GOOSE, modifies allData
+(e.g., close→trip), re-injects with stNum = captured+1. Subscribers accept the
+attacker's frame over the legitimate publisher's.
+
+### Technical notes
+- L2 protocol (like PROFINET DCP): requires `--iface eth0` for live send (AF_PACKET)
+- GOOSE frames fully parseable by Wireshark (goose dissector), Zeek iec61850 analyzer,
+  and all OT NSM tools that inspect EtherType 0x88B8
+- Stealth mode works: no ICSFORGE tag in GOOSE frames when `--no-marker` is used
+- IED reference, GCB suffix, APPID, stNum, and voltage all configurable via UI params
+- T0855 and T0813 updated in technique_support.json: now classified as `runnable`
+
+### Scenario count
+175 → **179 scenarios** across 10 protocols
+
+### UI fixes (post-initial implementation review)
+
+- **Payload preview broken for IEC 61850**: `api_preview_payload` had a hardcoded
+  builder list that omitted `iec61850`. All four scenarios returned `proto=None`.
+  Fixed: added `iec61850` to builders, ports, L2 proto set, and marker encoding path.
+  Now returns `proto=iec61850`, `transport=L2/Ethernet`, correct EtherType `0x88B8`.
+- **Protocol badge**: `iec61850` was missing from the `PROTO_C` colour map in
+  `sender.js` — scenarios showed grey dots in the scenario list. Fixed: added
+  `iec61850: "#16a34a"` (power-sector green, distinct from the iec104 green).
+- **Port display**: L2 protocols have `port=0` — rendered as "L2/Ethernet 0" in
+  the hex dump meta. Fixed: port number only shown when non-zero.
+
+### Verified
+- All 179 scenarios generate without error
+- All 4 GOOSE styles: correct EtherType 0x88B8, DST multicast MACs, BER-encoded PDU
+- Smoke test: 35/35 PASS
+- Syntax: 0 errors
+
+## v0.51.0 (2026-04 — Stealth mode, Ruff cleanup, protocol authenticity)
+
+### New: Stealth mode — 100% real protocol traffic
+
+Every packet ICSForge generates normally embeds an `ICSFORGE_SYNTH|run-id|technique|step`
+correlation tag in the payload (enabling receiver confirmation). This makes packets
+detectably synthetic — a real Modbus FC03 read is 12 bytes; the tagged version is 57+.
+
+Stealth mode removes all tags. Packets are byte-for-bit identical to what genuine
+PLCs, RTUs, and engineering workstations generate. Validated:
+
+- Normal PCAP: 4781B · Stealth PCAP: 2562B (marker overhead fully eliminated)
+- `ICSFORGE` tag present in normal PCAP: True; in stealth PCAP: False
+- All 9 protocols produce structurally valid frames in both modes
+
+**Confirmation in stealth mode:** Instead of receiver marker detection, the sender
+tracks TCP ACK delivery per step. Any technique whose TCP connection completed
+without error is counted as network-confirmed and shown in the Live Attack Timeline.
+This is at least as meaningful as marker-based confirmation and requires no ICSForge
+receiver running.
+
+**Where to enable:**
+
+*Sender UI* — new `Stealth mode — real traffic, no synthetic tags` toggle in the
+Configuration card. When active it turns red and a `STEALTH` badge appears in the
+Live Attack Timeline header. Confirmation counts via TCP ACK automatically.
+
+*CLI:*
+```
+icsforge send     --name T0855__unauth_command__modbus --dst-ip 10.0.0.50 \
+                  --confirm-live-network --no-marker
+icsforge generate --name CHAIN__industroyer2__power_grid --outdir out/ --no-marker
+```
+
+*API:* `no_marker: true` in the body of `POST /api/send`, `POST /api/generate_offline`,
+`POST /api/technique/send`.
+
+### Protocol authenticity (all 9 protocols)
+
+All protocols produce structurally correct frames as verified by field parsing:
+- Modbus/TCP: valid MBAP (protocol=0, correct length) + correct function codes
+- DNP3: correct 0x0564 start bytes, CRC16 computed per 16-byte block per spec
+- IEC 60870-5-104: correct 0x68 APCI start, valid APDU type IDs
+- S7comm: correct TPKT version=3 + COTP + S7 protocol_id=0x32
+- EtherNet/IP: correct encapsulation commands (0x0063/0x006F), CIP service codes
+- BACnet/IP: correct BVLC 0x81, NPDU version=1, APDU type/service IDs
+- MQTT: valid CONNECT with protocol "MQTT" and level 4 (v3.1.1)
+- PROFINET DCP: FrameID 0xFEFE, service ID 0x05, AF_PACKET raw socket
+- OPC-UA: correct message type codes (HEL/OPN/MSG), valid length fields
+
+Live sends use real TCP/UDP OS sockets — the OS handles full TCP handshake.
+Zeek, Suricata, and OT-aware NSMs parse these as real protocol traffic.
+
+### Ruff cleanup (v0.50.8)
+
+External developer pass: import ordering, unused import removal, context manager
+fixes, `collections.abc.Callable` modernisation, `__all__` added to `helpers.py`.
+One genuine bug fixed: `_parse_node_numeric()` in `opcua.py` used `rnd` (local
+variable inside `build_payload`) instead of `random`.
+
+### Bug fixes across v0.50.x
+
+- `CampaignRunner` was never imported in `bp_campaigns.py` — campaigns never worked
+- Timeline "0 confirmed" race: isTempId pattern now accepts technique-only matching
+- Matrix overlay showed nothing for campaign/chain runs (events file has no
+  `mitre.ics.technique`; meta.techniques fallback added)
+- Coverage report `run_full` techniques from events file, not just receipts
+- `api_generate_offline` always assigns meaningful run_id and registers in SQLite
+- `toggleConfirm()` and `toggleStealth()` were called but never defined in HTML
+- T0890 OPC-UA crash: `_parse_node_numeric()` handles `ns=2;i=1001` format
+- `fire_webhook` missing import in `bp_config.py` (test_webhook always 500)
+- Credentials now in `out/.credentials.json` — reset on reinstall (was `~/.icsforge/`)
+- Matrix overlay light-theme: technique name no longer turns white
+
+### Verified
+- Syntax: 0 errors across all 58 Python files
+- App startup: 67 routes (56 API)
+- Smoke test: 35/35 PASS
+- All 175 scenarios generate without error
+- All 9 protocols: structurally valid frames confirmed by field parsing
+- Auth: setup, login, rate limiting, reinstall all correct
+- Stealth mode: PCAP clean, techniques tracked, TCP ACK confirmation working
+- All web pages: /, /sender, /matrix, /campaigns, /report, /tools
+- Clean tarball: 0 `__pycache__`, 0 `*.egg-info`, 0 `out/`
+
+## v0.50.9 (2026-04 — Stealth mode: real protocol traffic without synthetic tags)
+
+### New feature: Stealth mode / no-marker traffic generation
+
+By default, every ICSForge packet embeds a correlation tag
+(`ICSFORGE_SYNTH|run-id|technique|step`) in the payload so the receiver can
+confirm delivery. This makes packets detectably synthetic — a real Modbus FC03
+read is 12 bytes; the marked version is 57.
+
+Stealth mode omits the tag entirely. Packets are bit-for-bit identical to what a
+genuine PLC, RTU, or engineering workstation would generate. This is useful for:
+
+- IDS/NGFW/SIEM validation without triggering synthetic-traffic signatures
+- Red team exercises where traffic authenticity matters
+- Testing detection rules on real protocol frames
+- Generating reference PCAPs that match legitimate device captures
+
+**Trade-off:** With no marker, the ICSForge receiver has nothing to detect.
+Receiver confirmation will show 0. ATT&CK technique coverage is still tracked
+through the events file (the engine knows which techniques were sent regardless).
+
+#### Where to enable
+
+**Sender web UI** — new toggle button in the Configuration card:
+`○ Stealth mode — real traffic, no synthetic tags`
+When active, it turns red and a `STEALTH` badge appears in the Live Attack
+Timeline header.
+
+**CLI** — `--no-marker` flag on both `send` and `generate`:
+```
+icsforge send --name T0855__unauth_command__modbus --dst-ip 10.0.0.50 \
+    --confirm-live-network --no-marker
+
+icsforge generate --name CHAIN__industroyer2__power_grid \
+    --outdir out/stealth --no-marker
+```
+
+**API** — `no_marker: true` in the JSON body of:
+- `POST /api/send`
+- `POST /api/generate_offline`
+- `POST /api/technique/send` (matrix page)
+
+#### Implementation
+
+- `no_marker` parameter added to `run_scenario()` in `engine.py` and
+  `send_scenario_live()` in `sender.py` — all three protocol branches
+  (TCP, UDP, Profinet/L2) pass `b''` as the marker when enabled
+- All call sites in `bp_scenarios.py` forward the flag correctly
+- ATT&CK technique events are still written to the JSONL events file;
+  technique coverage reporting, matrix overlay, and the coverage report
+  all work identically in stealth mode
+
+#### Verified
+- Normal PCAP: 4695B  Stealth PCAP: 2526B (2169B marker overhead removed per scenario)
+- `ICSFORGE` tag present in normal PCAP: True; in stealth PCAP: False
+- Technique coverage identical in both modes: T0855 tracked in both
+- Chain runs (5 techniques, Industroyer2) — no tag, all techniques tracked
+- Smoke test: 35/35 PASS
+- Clean tarball: 0 `__pycache__`, 0 `*.egg-info`, 0 `out/`
+
+## v0.50.8 (2026-04 — Ruff cleanup pass)
+
+External developer Ruff cleanup applied across 22 files. No behavioural changes
+except one genuine bug fix.
+
+### Bug fix
+`opcua.py` — `_parse_node_numeric()` used `rnd.randint()` in its default-value
+fallback path. `rnd` is a local variable inside `build_payload()` and is not
+visible to the helper function defined outside it. Corrected to `random.randint()`.
+This was a latent F821 that would have caused a `NameError` if `_parse_node_numeric`
+were called with `val=None` (no `node_id` kwarg provided).
+
+### Additional fix (found during release testing)
+`api_generate_offline` only assigned a meaningful run_id when `build_pcap=True`.
+Without PCAP, runs silently fell back to `run_id="offline"` and were never
+registered in SQLite — so they never appeared in `/api/runs`, the matrix overlay
+dropdown, or the coverage report. Fixed: a run_id is now always generated and
+the run is always registered in SQLite regardless of whether PCAP is requested.
+
+### Code hygiene (no behaviour change)
+- Import ordering (I001) normalised alphabetically across all changed files
+- Deferred imports moved to module top (E402): `_rnd`, `_dt`, `_append_run_index`
+  in `cli.py`; `Path`, `re` in `bp_scenarios.py`; `yaml`, `send_scenario_live` in
+  `runner.py`
+- Unused imports removed (F401): `os` from `network_validation.py`, `json` from
+  `helpers_stats.py`, `os`/`log` from `bp_detections.py`, `json`/`tempfile` from
+  `test_auth.py`, `json`/`queue`/`threading` from `test_sse_campaigns.py`
+- Bare `open()` without context manager (SIM115) fixed in `cli.py`, `bp_campaigns.py`
+- `with suppress(Exception):` replaces `try/except pass` in `bp_campaigns.py`
+- `collections.abc.Callable` replaces deprecated `typing.Callable` in `eve/tap.py`
+- Redundant `"r"` mode removed from `open()` in `eve/tap.py`
+- `helpers.py` gains `__all__` declaring all intentional re-exports so Ruff treats
+  them as public API rather than unused imports
+
+### Verified
+- All Python files pass `py_compile` — zero syntax errors
+- App starts: 67 routes (56 API)
+- Smoke test: 35/35 PASS
+- Clean tarball: 0 `__pycache__`, 0 `*.egg-info`, 0 `out/`
+
 ## v0.50.6 (2026-04 — Sender layout, PCAP download, campaign registry, matrix, tools)
 
 ### Bugfix: credentials persisted across reinstalls

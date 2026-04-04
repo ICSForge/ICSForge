@@ -8,7 +8,7 @@
     <div style="max-width:760px">
       <h1 style="font-size:36px;margin-bottom:8px">OT/ICS Cybersecurity Coverage Validation Platform<br><span style="color:var(--brand)">ATT&amp;CK for ICS · Executed → Delivered → Detected</span></h1>
       <p class="muted" style="font-size:14px;line-height:1.6;max-width:600px">
-        ICSForge helps validating cybersecurity detection coverage across OT/ICS environments by generating realistic industrial network traffic aligned to ATT&CK for ICS v18.
+        ICSForge helps you to validate cybersecurity detection coverage across OT/ICS environments by generating realistic industrial network traffic aligned to ATT&CK for ICS v18.
         Fire live packets or generate PCAPs — then prove <b>Executed → Delivered → Detected</b> coverage across your OT environment.
       </p>
       <p class="muted" style="font-size:12px;margin-top:8px">
@@ -76,12 +76,13 @@
     <h2>Top Techniques by Coverage</h2>
     <div style="max-height:380px;overflow:auto">
       <table>
-        <thead><tr><th>ID</th><th>Technique</th><th>Refs</th></tr></thead>
+        <thead><tr><th>ID</th><th>Technique</th><th>Protocols</th><th>Scenarios</th></tr></thead>
         <tbody>
-          {% for t in top_techniques[:20] %}
+          {% for t in top_techniques[:10] %}
           <tr>
             <td><span class="mono badge" style="font-size:10px">{{ t.id }}</span></td>
             <td style="font-size:12px">{{ t.name }}</td>
+            <td style="font-size:12px;color:var(--good);font-weight:700">{{ t.protocol_count }}/10</td>
             <td style="font-size:12px;color:var(--muted)">{{ t.scenario_refs }}</td>
           </tr>
           {% endfor %}

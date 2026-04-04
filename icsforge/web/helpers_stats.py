@@ -1,5 +1,4 @@
 """ICSForge web helpers — receipt statistics and timeline binning."""
-import json
 from datetime import datetime
 
 

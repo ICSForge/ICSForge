@@ -1,22 +1,32 @@
 """ICSForge runs blueprint — run history, alerts, validation, export, PCAP, correlation."""
-import zipfile
+import json
+import os
 import time
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import json
-import os
 from flask import Blueprint, jsonify, request, send_file
 
-from icsforge.web.helpers import (
-    _alerts_path, _artifact_rel,
-    _bin_receipts, _default_receipts_path, _export_path, _is_safe_private_ip,
-    _load_run_index,
-    _read_json_lines, _read_jsonl_tail, _registry, _repo_root, _update_run_entry,
-    _validation_path, log,
-    build_network_validation_report, run_scenario,
-)
 from icsforge.detection.mapping import correlate_run
+from icsforge.web.helpers import (
+    _alerts_path,
+    _artifact_rel,
+    _bin_receipts,
+    _default_receipts_path,
+    _export_path,
+    _is_safe_private_ip,
+    _live_receipts,
+    _load_run_index,
+    _read_json_lines,
+    _read_jsonl_tail,
+    _registry,
+    _repo_root,
+    _update_run_entry,
+    _validation_path,
+    build_network_validation_report,
+    log,
+)
 
 bp = Blueprint("bp_runs", __name__)
 
@@ -47,6 +57,16 @@ def api_run_full():
         idx = next((x for x in _load_run_index() if x.get("run_id") == run_id), None) or {}
     receipts_path = _default_receipts_path()
     receipts = [r for r in _read_jsonl_tail(receipts_path, limit=4000) if r.get("run_id") == run_id]
+    # Also include live in-memory receipts (callback path, not written to JSONL)
+    def _rkey(r):
+        return (r.get("run_id",""), r.get("@timestamp",""),
+                r.get("technique",""), r.get("proto",""),
+                r.get("src_ip",""), r.get("src_port",""))
+    seen_keys = {_rkey(r) for r in receipts}
+    for r in _live_receipts:
+        if r.get("run_id") == run_id and _rkey(r) not in seen_keys:
+            receipts.append(r)
+            seen_keys.add(_rkey(r))
     receipts.sort(key=lambda x: x.get("@timestamp") or "")
     techs = sorted({r.get("technique") for r in receipts if r.get("technique")})
     # Fallback 1: read techniques from ground-truth events file (single-scenario and chain runs)
@@ -161,6 +181,10 @@ def api_export_run():
         idx = next((x for x in _load_run_index() if x.get("run_id") == run_id), None) or {}
     receipts_path = _default_receipts_path()
     receipts = [r for r in _read_jsonl_tail(receipts_path, limit=4000) if r.get("run_id") == run_id]
+    live_ids = {id(r) for r in receipts}
+    for r in _live_receipts:
+        if r.get("run_id") == run_id and id(r) not in live_ids:
+            receipts.append(r)
     receipts.sort(key=lambda x: x.get("@timestamp") or "")
     techs = sorted({r.get("technique") for r in receipts if r.get("technique")})
     val_path = _validation_path(run_id)
@@ -376,7 +400,12 @@ def api_alerts_ingest():
     norm = []
     for r in rows:
         if profile == "suricata_eve":
-            alert = r.get("alert") or {}
+            alert = r.get("alert")
+            if not isinstance(alert, dict):
+                return jsonify({
+                    "ok": False,
+                    "error": f"Row {len(norm)+1}: 'alert' field must be an object, got {type(alert).__name__}",
+                }), 400
             norm.append({
                 "ts": r.get("timestamp") or r.get("time") or r.get("event_timestamp"),
                 "signature": alert.get("signature") or r.get("signature") or "alert",

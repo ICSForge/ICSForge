@@ -1,19 +1,27 @@
 """ICSForge scenarios blueprint — scenario listing, preview, send, offline generation."""
+import os
+import random as _rnd
+import re as _re
+from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
+from pathlib import Path as _P
 
-from contextlib import suppress
-import json
-import os
 import yaml
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, jsonify, request
 
 from icsforge.web.helpers import (
-    _append_run_index, _load_matrix,
-    _canonical_scenarios_path, _list_packs,
-    _list_profiles, _load_yaml, _registry,
-    log, run_scenario, send_scenario_live,
-    MATRIX_SINGLETON_PACK, TECH_VARIANTS,
+    MATRIX_SINGLETON_PACK,
+    _append_run_index,
+    _canonical_scenarios_path,
+    _list_packs,
+    _list_profiles,
+    _load_matrix,
+    _load_yaml,
+    _registry,
+    log,
+    run_scenario,
+    send_scenario_live,
 )
 
 bp = Blueprint("bp_scenarios", __name__)
@@ -97,7 +105,7 @@ def api_preview_payload():
     tech = step.get("technique", "")
     marker = f"ICSFORGE:PREVIEW:{name[:20]}:{tech}:"
     try:
-        from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, mqtt, opcua, profinet_dcp, s7comm
+        from icsforge.protocols import bacnet, dnp3, enip, iec104, iec61850, modbus, mqtt, opcua, profinet_dcp, s7comm
         builders = {
             "modbus": modbus.build_payload,
             "dnp3": dnp3.build_payload,
@@ -108,16 +116,18 @@ def api_preview_payload():
             "profinet_dcp": profinet_dcp.build_payload,
             "mqtt": mqtt.build_payload,
             "bacnet": bacnet.build_payload,
+            "iec61850": iec61850.build_payload,
         }
         ports = {"modbus": 502, "dnp3": 20000, "s7comm": 102, "iec104": 2404,
                  "opcua": 4840, "enip": 44818, "profinet_dcp": 0,
-                 "mqtt": 1883, "bacnet": 47808}
+                 "mqtt": 1883, "bacnet": 47808, "iec61850": 0}
         # bacnet is UDP — note this in the display
         udp_protos = {"bacnet"}
+        l2_protos = {"profinet_dcp", "iec61850"}
         if proto not in builders:
             return jsonify({"error": f"Unknown proto: {proto}"}), 400
-        # profinet_dcp and bacnet expect bytes marker; TCP builders accept string
-        marker_b = marker.encode() if proto in ("profinet_dcp", "bacnet") else marker
+        # L2/raw-frame protos and UDP protos expect bytes marker
+        marker_b = marker.encode() if proto in ("profinet_dcp", "iec61850", "bacnet") else marker
         data = builders[proto](marker_b, style=style)
         width = 16
         lines = []
@@ -131,7 +141,7 @@ def api_preview_payload():
             "style": style,
             "technique": tech,
             "port": ports.get(proto, 0),
-            "transport": "UDP" if proto in udp_protos else "TCP",
+            "transport": "L2/Ethernet" if proto in l2_protos else ("UDP" if proto in udp_protos else "TCP"),
             "length": len(data),
             "step_index": step_idx,
             "step_count": len(steps),
@@ -173,7 +183,7 @@ def api_scenarios_grouped():
         else:
             group = "Other"
         groups.setdefault(group, [])
-        groups[group].append({
+        entry = {
             "id": sc_name,
             "title": sc.get("title", sc_name),
             "techniques": techs,
@@ -181,13 +191,18 @@ def api_scenarios_grouped():
             "protocols": protos,
             "is_chain": sc_name.startswith("CHAIN__"),
             "step_count": len(steps),
-        })
+        }
+        # Include full steps for chain scenarios so the campaign page
+        # can render the step-by-step progress view
+        if sc_name.startswith("CHAIN__"):
+            entry["steps"] = steps
+        groups[group].append(entry)
     order = ["\u26d3 Attack Chains",
-             "Initial Access", "Execution", "Persistence", "Evasion",
-             "Discovery", "Lateral Movement", "Collection",
+             "Initial Access", "Execution", "Persistence", "Privilege Escalation",
+             "Evasion", "Discovery", "Lateral Movement", "Collection",
              "Command and Control",
              "Inhibit Response Function", "Impair Process Control",
-             "Impact", "Privilege Escalation", "Other"]
+             "Impact", "Other"]
     sorted_groups = []
     seen = set()
     for g in order:
@@ -218,6 +233,7 @@ def api_send():
     also_build_pcap = bool(data.get("also_build_pcap"))
     iface = (data.get("iface") or "").strip() or None
     step_options = data.get("step_options") or None  # {proto: {key: val}}
+    no_marker = bool(data.get("no_marker"))
     if not name:
         return jsonify({"error": "Scenario name missing"}), 400
     if not dst_ip:
@@ -235,6 +251,7 @@ def api_send():
             receiver_allowlist=allow,
             timeout=timeout,
             step_options=step_options,
+            no_marker=no_marker,
         )
 
         # Create ground-truth artifacts (events jsonl + optional pcap)
@@ -246,6 +263,7 @@ def api_send():
             src_ip=src_ip,
             run_id=res["run_id"],
             build_pcap=also_build_pcap,
+            no_marker=no_marker,
         )
 
         # Index run for SOC Mode (legacy JSONL + enterprise DB)
@@ -295,13 +313,36 @@ def api_packs():
 # ── Technique variants
 @bp.route("/api/technique/variants")
 def api_technique_variants():
+    """Return all scenario variants for a technique, derived live from scenarios.yml."""
     technique = (request.args.get("technique") or "").strip()
     if not technique:
         return jsonify({"error": "technique required"}), 400
     try:
-        doc = json.loads(Path(TECH_VARIANTS).read_text(encoding="utf-8"))
-        v = (doc.get("variants") or {}).get(technique) or []
-        return jsonify({"technique": technique, "variants": v})
+        pack_path = _canonical_scenarios_path()
+        doc = _load_yaml(pack_path) or {}
+        scenarios = doc.get("scenarios") or {}
+        prefix = technique + "__"
+        variants = []
+        for name, sc in sorted(scenarios.items()):
+            # Skip chain/campaign scenarios — they cover multiple techniques
+            if name.startswith("CHAIN__"):
+                continue
+            # Match scenarios whose top-level technique == requested technique
+            if sc.get("technique") != technique:
+                continue
+            # Derive variant id: strip the "T0XXX__" prefix from scenario name
+            var_id = name[len(prefix):] if name.startswith(prefix) else name
+            # Derive proto: first proto seen in steps
+            protos = list({s.get("proto") for s in sc.get("steps", []) if s.get("proto")})
+            proto = protos[0] if len(protos) == 1 else ("+".join(sorted(protos)) if protos else "")
+            variants.append({
+                "id":    var_id,
+                "label": sc.get("title") or name,
+                "proto": proto,
+                "protocols": sorted(set(protos)),
+                "notes": (sc.get("description") or "")[:200],
+            })
+        return jsonify({"technique": technique, "variants": variants})
     except Exception as e:
         return jsonify({"error": f"variants load failed: {e}"}), 500
 
@@ -316,6 +357,7 @@ def api_technique_send():
     variant = (data.get("variant") or "").strip()
     dst_ip = (data.get("dst_ip") or "").strip()
     also_build_pcap = bool(data.get("also_build_pcap"))
+    no_marker = bool(data.get("no_marker"))
     timeout = float(data.get("timeout") or 2.0)
     allowlist = (data.get("allowlist") or "").strip()
     iface = (data.get("iface") or "").strip() or None
@@ -323,6 +365,7 @@ def api_technique_send():
     src_ip = (data.get("src_ip") or "127.0.0.1").strip()
     iface = (data.get("iface") or "").strip() or None
     src_ip = (data.get("src_ip") or "127.0.0.1").strip()
+    no_marker = bool(data.get("no_marker"))
 
     if not technique:
         return jsonify({"error": "technique required"}), 400
@@ -350,6 +393,7 @@ def api_technique_send():
             confirm_live_network=True,
             receiver_allowlist=([x.strip() for x in allowlist.split(',') if x.strip()] or [dst_ip]),
             timeout=timeout,
+            no_marker=no_marker,
         )
 
         gt = run_scenario(
@@ -360,6 +404,7 @@ def api_technique_send():
             src_ip=src_ip,
             run_id=res["run_id"],
             build_pcap=also_build_pcap,
+            no_marker=no_marker,
         )
 
         entry = {
@@ -402,30 +447,45 @@ def api_generate_offline():
     src_ip = (data.get("src_ip") or "127.0.0.1").strip()
     build_pcap = bool(data.get("build_pcap"))
     run_id = (data.get("run_id") or "").strip() or None
+    no_marker = bool(data.get("no_marker"))
     if not name:
         return jsonify({"error": "Scenario name missing"}), 400
 
-    # Generate a meaningful run_id for offline PCAPs so every file gets a unique name:
-    # e.g. T0855__unauth_command__modbus__2026-04-01__BRAVO
-    if not run_id and build_pcap:
-        import random as _rnd
+    # Always generate a meaningful run_id — unique name for every offline artifact
+    if not run_id:
         _NATO_W = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL",
                    "INDIA","JULIET","KILO","LIMA","MIKE","NOVEMBER","OSCAR","PAPA",
                    "QUEBEC","ROMEO","SIERRA","TANGO","UNIFORM","VICTOR","WHISKEY",
                    "XRAY","YANKEE","ZULU"]
         _date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         _word = _rnd.choice(_NATO_W)
-        # Build prefix: first two parts of scenario name (e.g. T0855__unauth_command)
         _parts = name.split("__")[:2]
-        _slug = "__".join(_parts)
-        run_id = f"{_slug}__{_date}__{_word}"
+        run_id = "__".join(_parts) + f"__{_date}__{_word}"
 
     try:
-        gt = run_scenario(pack, name, outdir, dst_ip=dst_ip, src_ip=src_ip, run_id=run_id, build_pcap=build_pcap, skip_intervals=True)
-        entry = {"run_id": gt.get("run_id") or run_id or "offline", "scenario": name, "pack": pack, "events": gt.get("events"), "pcap": gt.get("pcap"), "ts": datetime.now(timezone.utc).isoformat()+"Z"}
+        gt = run_scenario(pack, name, outdir, dst_ip=dst_ip, src_ip=src_ip,
+                          run_id=run_id, build_pcap=build_pcap, skip_intervals=True,
+                          no_marker=no_marker)
+        final_run_id = gt.get("run_id") or run_id
+        entry = {"run_id": final_run_id, "scenario": name, "pack": pack,
+                 "events": gt.get("events"), "pcap": gt.get("pcap"),
+                 "ts": datetime.now(timezone.utc).isoformat()+"Z"}
+        # Register in SQLite so /api/runs and matrix overlay include offline runs
+        try:
+            reg = _registry()
+            reg.upsert_run(final_run_id, scenario=name, pack=pack,
+                           dst_ip=dst_ip, src_ip=src_ip, iface=None,
+                           mode="offline", status="ok", meta={})
+            if gt.get("events"):
+                reg.add_artifact(final_run_id, "events", gt["events"])
+            if gt.get("pcap"):
+                reg.add_artifact(final_run_id, "pcap", gt["pcap"])
+        except Exception:
+            pass
         with suppress(OSError, ValueError):
             _append_run_index(entry)
-        return jsonify({"ok": True, "run_id": entry["run_id"], "events": gt.get("events"), "pcap": gt.get("pcap")})
+        return jsonify({"ok": True, "run_id": final_run_id,
+                        "events": gt.get("events"), "pcap": gt.get("pcap")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -465,6 +525,13 @@ def api_scenario_params():
             {"name": "unit_id", "label": "Unit ID", "type": "number", "default": 1, "help": "Modbus slave unit ID (1-247)"},
             {"name": "value", "label": "Write value", "type": "number", "default": 0, "help": "Value to write to register"},
         ],
+        "iec61850": [
+            {"name": "ied_ref",    "label": "IED Reference",   "type": "text",   "default": "IED1LD0/LLN0", "help": "Logical node reference (e.g. IED1LD0/LLN0)"},
+            {"name": "gcb_suffix", "label": "GCB Suffix",       "type": "text",   "default": "GCB01",        "help": "GOOSE control block suffix"},
+            {"name": "appid",      "label": "APPID (hex)",      "type": "text",   "default": "0x0004",       "help": "Application identifier (0x0000-0x3FFF)"},
+            {"name": "st_num",     "label": "stNum override",   "type": "number", "default": "",             "help": "State number (blank = random high value for attack)"},
+            {"name": "voltage",    "label": "Voltage (V)",      "type": "number", "default": "0.0",          "help": "Spoofed voltage for spoof_measurement style"},
+        ],
         "opcua": [
             {"name": "node_id", "label": "OPC UA Node ID", "type": "text", "default": "1001", "help": "Node identifier (numeric, e.g. 1001, or ns=2;i=1001)"},
             {"name": "value", "label": "Write value", "type": "text", "default": "42.0", "help": "Value to write"},
@@ -503,8 +570,6 @@ def api_pcap_upload():
     f = request.files.get("file")
     if not f or not f.filename:
         return jsonify({"error": "No file provided"}), 400
-    from pathlib import Path as _P
-    import re as _re
     safe_name = _re.sub(r"[^\w.\-]", "_", _P(f.filename).name)
     if not safe_name.endswith(".pcap") and not safe_name.endswith(".pcapng"):
         safe_name += ".pcap"

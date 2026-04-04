@@ -1,16 +1,20 @@
 """ICSForge reports blueprint — coverage report generation, download, matrix status."""
 import io
-from pathlib import Path
-
 import json
 import os
 from datetime import datetime
+from pathlib import Path
+
 from flask import Blueprint, jsonify, request, send_file
 
 from icsforge.reports.coverage import generate_report
 from icsforge.web.helpers import (
-    _canonical_scenarios_path, _list_packs, _load_matrix, _load_yaml,
-    _registry, _repo_root,
+    _canonical_scenarios_path,
+    _list_packs,
+    _load_matrix,
+    _load_yaml,
+    _registry,
+    _repo_root,
     log,
 )
 
@@ -234,4 +238,17 @@ def api_matrix_status():
                 "gap": tid in gaps,
                 "reason": sup_entry.get("reason", "") if sup_entry.get("class") != "unknown" else "",
             }
-    return jsonify({"run_id": run_id or None, "status": status})
+    # Build matrix summary — note: some techniques appear under multiple tactics
+    # (e.g. T0856 under Evasion AND Impair Process Control), so total matrix
+    # entries (94) > unique technique IDs (83). Both counts are intentional.
+    total_entries  = sum(len(tac.get("techniques", [])) for tac in mat.get("tactics", []))
+    unique_ids     = len({t["id"] for tac in mat.get("tactics", []) for t in tac.get("techniques", [])})
+    return jsonify({
+        "run_id": run_id or None,
+        "status": status,
+        "matrix_info": {
+            "total_entries": total_entries,
+            "unique_technique_ids": unique_ids,
+            "note": "total_entries > unique_technique_ids because some techniques appear under multiple tactics",
+        },
+    })

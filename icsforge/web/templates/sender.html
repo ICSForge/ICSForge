@@ -12,7 +12,7 @@
       </div>
       <div class="field" style="min-width:140px;margin:0">
         <label style="font-size:11px;margin-bottom:2px">Receiver IP (dst)</label>
-        <input id="cfg_receiver_ip" placeholder="e.g. 192.168.1.50" style="padding:6px 10px;font-size:13px">
+        <input id="cfg_receiver_ip" placeholder="e.g. 192.168.1.50" style="padding:6px 10px;font-size:13px" oninput="const v=this.value.trim();if(v){const d=document.getElementById('dst_ip');if(d)d.value=v;}">
       </div>
       <div class="field" style="min-width:80px;margin:0">
         <label style="font-size:11px;margin-bottom:2px">Receiver Port</label>
@@ -120,9 +120,22 @@
             background:var(--panel2);color:var(--muted);text-align:left;display:flex;align-items:center;
             gap:10px;transition:all .15s;font-family:var(--sans)">
           <span id="confirm_icon" style="font-size:16px;width:22px;text-align:center;flex-shrink:0">○</span>
-          <span>Confirm: synthetic traffic only — destination is a safe host in your OT environment</span>
+          <span>Confirm: Destination is a safe host (receiver) in your environment</span>
         </button>
         <input id="confirm" type="checkbox" style="display:none">
+      </div>
+      <!-- Stealth mode toggle -->
+      <div style="margin-top:10px">
+        <input id="stealth_mode" type="checkbox" style="display:none">
+        <button id="btn_stealth" type="button" onclick="toggleStealth()"
+          title="Omit ICSForge correlation tags from payloads. Traffic is bit-for-bit identical to real device traffic. Confirmation is via TCP ACK (network-layer delivery) instead of receiver marker detection. Useful for IDS/NGFW validation and red team exercises."
+          style="width:100%;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:700;
+            letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
+            background:var(--panel2);color:var(--muted);text-align:left;display:flex;align-items:center;
+            gap:10px;transition:all .15s;font-family:var(--sans)">
+          <span id="stealth_icon" style="font-size:16px;width:22px;text-align:center;flex-shrink:0">○</span>
+          <span>Stealth mode — real traffic, no synthetic tags</span>
+        </button>
       </div>
       <div class="row" style="margin-top:12px">
         <button id="btn_send" class="btn primary">▶ Run Live</button>
@@ -246,6 +259,7 @@
     <div class="card" id="timeline_card" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <h2 style="margin-bottom:0">Live Attack Timeline</h2>
+        <span id="tl_stealth_badge" style="display:none;font-size:10px;font-weight:700;color:var(--bad);border:1px solid var(--bad);border-radius:4px;padding:1px 6px;letter-spacing:.06em">STEALTH</span>
         <span id="tl_run_id" class="mono" style="font-size:10px;color:var(--muted)"></span>
       </div>
       <div id="tl_progress" style="height:3px;background:var(--border);border-radius:2px;margin-bottom:12px;overflow:hidden">
@@ -295,6 +309,40 @@ function togglePcapBtn(){
     btn.style.background="var(--panel2)";
     btn.style.color="var(--muted)";
     ico.textContent="○";
+  }
+}
+function toggleConfirm(){
+  const cb  = document.getElementById("confirm");
+  const btn = document.getElementById("confirm_btn");
+  const ico = document.getElementById("confirm_icon");
+  cb.checked = !cb.checked;
+  if(cb.checked){
+    btn.style.borderColor = "var(--good)";
+    btn.style.background  = "rgba(0,230,138,.08)";
+    btn.style.color       = "var(--good)";
+    ico.textContent = "✓";
+  } else {
+    btn.style.borderColor = "var(--border)";
+    btn.style.background  = "var(--panel2)";
+    btn.style.color       = "var(--muted)";
+    ico.textContent = "○";
+  }
+}
+function toggleStealth(){
+  const cb  = document.getElementById("stealth_mode");
+  const btn = document.getElementById("btn_stealth");
+  const ico = document.getElementById("stealth_icon");
+  cb.checked = !cb.checked;
+  if(cb.checked){
+    btn.style.borderColor = "var(--bad)";
+    btn.style.background  = "rgba(255,59,92,.08)";
+    btn.style.color       = "var(--bad)";
+    ico.textContent = "●";
+  } else {
+    btn.style.borderColor = "var(--border)";
+    btn.style.background  = "var(--panel2)";
+    btn.style.color       = "var(--muted)";
+    ico.textContent = "○";
   }
 }
 // Sync toggle button state when loadNetworkConfig restores pull_enabled

@@ -50,7 +50,6 @@
   <div class="mc-col">
     <div class="mc-head">
       <div class="mc-title">{{ tac.name }}</div>
-      <div class="mono" style="font-size:8px;color:var(--muted);margin-top:1px">{{ tac.shortname }}</div>
     </div>
     <div class="mc-body">
       {% for tech in tac.techniques %}
@@ -134,7 +133,7 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: var(--shadow3);
   min-width: 110px;
 }
@@ -171,7 +170,7 @@
   background: var(--panel2);
   cursor: default;
   transition: all .09s;
-  min-height: 36px;
+  min-height: 46px;
   height: auto;
 }
 .mt-id {

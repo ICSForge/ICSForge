@@ -8,10 +8,8 @@ Covers:
   - /api/config/set_callback is auth-exempt (regression: was missing in v0.47)
   - Input validation on setup and login
 """
-import json
 import os
 import sys
-import tempfile
 
 import pytest
 

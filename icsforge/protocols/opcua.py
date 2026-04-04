@@ -65,7 +65,7 @@ def _request_header(req_handle: int = 1) -> bytes:
 def _parse_node_numeric(val, default=None) -> int:
     """Parse a NodeId value that may be 'ns=2;i=1001', '1001', or an int."""
     if val is None:
-        return default if default is not None else rnd.randint(1000, 9999)
+        return default if default is not None else random.randint(1000, 9999)
     if isinstance(val, int):
         return val
     s = str(val).strip()
@@ -79,7 +79,7 @@ def _parse_node_numeric(val, default=None) -> int:
     try:
         return int(s)
     except ValueError:
-        return default if default is not None else rnd.randint(1000, 9999)
+        return default if default is not None else random.randint(1000, 9999)
 
 def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
     """

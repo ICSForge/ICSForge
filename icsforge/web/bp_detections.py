@@ -1,14 +1,11 @@
 """ICSForge detections blueprint — Suricata/Sigma rule preview and download."""
 import io
 import zipfile
-
 from datetime import datetime, timezone
 
-import os
 from flask import Blueprint, jsonify, request, send_file
 
 from icsforge import __version__
-from icsforge.web.helpers import log
 from icsforge.detection.generator import generate_all
 
 bp = Blueprint("bp_detections", __name__)
