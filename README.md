@@ -7,7 +7,7 @@
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
-ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, GOOSE, PROFINET DCP)** which are aligned with **69 out of 83 unique techniques in MITRE ATT&CK for ICS (v18)** - without exploiting real systems or causing unsafe process impact - to help asset owners and defenders assessing the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identifying hidden gaps.
+ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP)** which are aligned with **67 of 83 unique techniques in MITRE ATT&CK for ICS v18 (80.7% coverage)** — without exploiting real systems or causing unsafe process impact — to help asset owners and defenders assess the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identify hidden gaps.
 
 ICSForge is developed with a **safe-by-design** approach, operating within a **Sender-Receiver architecture** and interacting only with the designated sender and receiver, without touching other OT devices.
 
@@ -22,7 +22,7 @@ ICSForge is developed with a **safe-by-design** approach, operating within a **S
 | **Runnable Scenarios** | 536 standalone + 11 named attack chains = 547 total |
 | **ATT&CK for ICS Techniques Implemented** | 67 unique technique IDs in scenario steps |
 | **ATT&CK for ICS Matrix** | 83 unique technique IDs (94 total entries — 11 appear under multiple tactics) |
-| **ATT&CK for ICS Matrix Coverage** | 82% (68 out of 83 technique) — 35 of 67 techniques at 10/10 protocols |
+| **ATT&CK for ICS Matrix Coverage** | 80.7% (67 out of 83 technique) — 35 of 67 techniques at 10/10 protocols |
 | **Detection Rules** | Auto-generated Suricata + Sigma rules per scenario |
 
 ---
