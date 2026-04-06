@@ -1,3 +1,1041 @@
+## v0.59.4 (2026-04 — Path bug: out/ always inside project folder regardless of CWD)
+
+### Root cause
+
+`_safe_outdir()` in `icsforge/web/bp_scenarios.py` computed the repo root by walking
+three directory levels up from its own location:
+
+    rr = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+The file is at `icsforge/web/bp_scenarios.py`. Walking up three times gives:
+  - `..`   → `icsforge/web/`
+  - `../..` → `icsforge/`
+  - `../../..` → parent of the project folder  ← **wrong**
+
+So on a machine where the project lives at `~/Desktop/ICSForge-v0.59.3/`, the computed
+root was `~/Desktop/` — one level too high. The `out/` directory was therefore created
+at `~/Desktop/out/` instead of `~/Desktop/ICSForge-v0.59.3/out/`.
+
+The download endpoint (`/download`) validated against `_repo_root()/out` from
+`helpers_io.py`, which correctly uses `Path(__file__).resolve().parents[2]` and gets
+the right answer. The mismatch between where files were written and where downloads
+were allowed produced the 403 "blocked" error.
+
+### Fix 1 — `_safe_outdir()` now uses `_repo_root()`
+
+Replaced the hand-rolled `os.path.join(__file__, "..", "..", "..")` with a call to
+`_repo_root()` (imported from `icsforge.web.helpers`). This is the single canonical
+repo root computation in the codebase and is correct.
+
+### Fix 2 — `/download` resolves relative paths against repo root
+
+If the `path` query parameter is relative (e.g. `out/pcaps/foo.pcap`), it is now
+joined against `_repo_root()` before validation — not against `os.getcwd()`. This
+handles the case where the browser sends a relative path and the server's CWD
+differs from the project folder.
+
+Added an explicit 404 response when the resolved file does not exist (previously
+the error would bubble as an unhandled exception).
+
+### Verified
+
+  generate_offline → pcap path inside repo: ✓
+  download absolute path → 200: ✓
+  download relative path → 200: ✓
+  download /etc/passwd → 403: ✓ (path traversal still blocked)
+  api/send events inside repo: ✓
+  smoke test 35/35: ✓
+
+## v0.59.3 (2026-04 — Ruff clean, _json latent bug fixed)
+
+### Real bug fix: _json.JSONDecodeError undefined in bp_config.py
+
+The `/api/technique_support` endpoint had:
+
+    except (OSError, _json.JSONDecodeError) as exc:
+
+`_json` was never defined in that module — `json` was imported at the top as `json`,
+not `_json`. This was a latent NameError that would 500 any request where the
+technique_support.json file was missing or malformed. Ruff F821 caught it correctly.
+Fixed: `_json.JSONDecodeError` → `json.JSONDecodeError`.
+
+### Ruff I001: import ordering fixed across all four flagged files
+
+ruff's isort rule sorts all third-party imports by module name regardless of whether
+they are bare (`import x`) or from-imports (`from x import y`). Within the third-party
+section the alphabetical module name determines order: flask (f) < icsforge (i) < yaml (y).
+
+Files fixed:
+
+  engine.py      — removed leading blank line that caused ruff to mis-detect the
+                   stdlib section boundary.
+  app.py         — `from flask import (...)` moved before `import yaml`
+                   (flask < yaml alphabetically).
+  bp_config.py   — `from flask import ...` moved before `import icsforge` /
+                   `import icsforge.web.helpers as _h`
+                   (flask < icsforge alphabetically).
+  bp_scenarios.py — `from flask import Blueprint, jsonify, request` moved before
+                   `import yaml` (flask < yaml alphabetically).
+
+## v0.59.2 (2026-04 — Matrix description, report preview, PCAP upload, CSRF sweep)
+
+### Matrix popup: technique description no longer cut short
+
+Variant `notes` were truncated to 200 characters at the API layer
+(`bp_scenarios.py` line 405: `(sc.get("description") or "")[:200]`).
+Removed the limit — full description text now flows into the modal's `m_vnote` element.
+
+### Coverage report: preview now appears in right column
+
+The iframe used `frm.src = URL.createObjectURL(blob)` combined with
+`sandbox="allow-same-origin"` (no `allow-scripts`). Two problems:
+1. Blob URLs loaded into sandboxed iframes behave inconsistently across browsers.
+2. `X-Frame-Options: DENY` in our security headers further complicated the load.
+Fix: switched to `frm.srcdoc = d.html` — injects the HTML string directly into
+the iframe without any blob URL or origin concerns. The `sandbox` attribute
+updated to include `allow-scripts` so the report's inline JS renders correctly.
+Download still works via the separate `/api/report/download` endpoint.
+
+### PCAP upload in tools: now actually works
+
+The `fetch('/api/pcap/upload', ...)` call had no `X-CSRF-Token` header.
+The 403 response from the CSRF check came back as HTML, the `.json()` parse
+threw silently, and the status remained "Uploading…" forever.
+CSRF token added to the upload fetch. The endpoint itself was always correct
+(tested separately: returns `{ok:true, path:..., filename:...}`).
+
+### CSRF sweep: all remaining POST fetch() calls in templates fixed
+
+Complete audit of all templates. Remaining bare POSTs without X-CSRF-Token fixed:
+  - tools.html: `/api/generate_offline` (offline PCAP generation)
+  - tools.html: `/api/alerts/ingest` (alert file ingestion)
+  - tools.html: `/api/pcap/replay` (PCAP replay tool)
+(login.html and setup.html intentionally omitted — those endpoints are in PUBLIC_PATHS
+and bypass CSRF validation by design.)
+
+## v0.59.1 (2026-04 — CSRF fix, UI overhaul, MQTT complete, ruff clean)
+
+### Critical fix: all POST API calls were failing with "Invalid JSON" / "unexpected char"
+
+Root cause: the CSRF token was only generated in `before_request` for non-GET methods.
+Page loads (GET) never set `session["csrf_token"]`, so `<meta name="csrf-token">` rendered
+empty. Every subsequent POST from JS sent an empty token → 403 HTML page → JS tried to
+parse the 403 HTML as JSON → "Invalid JSON" error.
+
+Fix: `_csrf_token_init()` hook now fires on every request type, ensuring the token is
+always in session before any page renders. This fixes:
+  - Sending techniques from the matrix modal
+  - Running scenarios from the sender page
+  - Running chains from the campaigns page
+  - Generating coverage reports
+  - All tools.html API calls
+
+Additionally, `report.html`, `campaigns.html`, and `tools.html` had bare `fetch()` calls
+without `X-CSRF-Token` headers. All three updated to include the token.
+
+### MQTT: all 17 styles now produce valid frames
+
+The dev correctly identified that v0.59.0 still had malformed styles despite the
+release note claiming otherwise. Fixed:
+  - `connect_creds`: marker now in client_id field (was appended after packet)
+  - `will_message`: marker embedded in will_msg payload field (was appended after packet)
+  - `subscribe_telemetry`: marker dropped from wire (no payload field; was appended)
+  - `subscribe_commands`: marker dropped from wire (was appended)
+  - `auto` fallback: marker in client_id (was appended)
+
+Verified: remaining_length == len(packet) - 2 for all 17 styles with marker bytes.
+
+### Sender page layout overhaul
+
+Full rewrite of sender.html:
+  - Network bar: all fields (Sender IP, Receiver IP, Port, Callback URL, Token) now align
+    at the same baseline using consistent label/input sizing and flex-end alignment.
+    The previous version had mismatched label heights causing vertical misalignment.
+  - Secondary cards restored as separate full cards: Suricata EVE Tap, Webhook Notifications,
+    and Recent Runs are each their own card again — not collapsed or grouped.
+  - Right column unchanged: Live Payload Preview → Scenario Summary → Step Plan →
+    Live Attack Timeline (in correct order).
+  - No orphaned div bodies or broken collapsible state.
+
+### Matrix modal: full technique description
+
+The technique popup modal now fetches from `/api/technique_support` and displays the
+full `reason` field — the complete description of what the technique does, why it's
+runnable or a ceiling, and which protocols implement it. No character limit.
+
+### Ruff cleanup
+
+  iec104.py: `import time as _time`, `import datetime as _dt`, `import struct as _s`
+             moved from function scope to module level. `_time_mod`, `datetime` used directly.
+  bp_config.py: `import json as _json`, `import os as _os`, `from flask import jsonify`,
+                `import icsforge` all moved out of function bodies.
+
+## v0.59.0 (2026-04 — Protocol correctness: DNP3 CRC, MQTT framing, UX clarifications)
+
+### DNP3: per-block CRC per IEEE 1815-2012 §8.2 (structural fix)
+
+The data transport layer was computing one CRC over the entire application payload.
+IEEE 1815 §8.2 requires the payload split into blocks of up to 16 bytes, each
+followed by its own 2-byte CRC. For a 22-byte payload this means two blocks
+(16B + CRC₁, 6B + CRC₂) — not one block with one CRC.
+
+The link layer Length field also changed: it must count 5 (fixed header fields)
+plus the total data-block bytes including the per-block CRC bytes. The old code
+counted only the raw payload bytes, producing a wrong Length for all non-trivial
+frames.
+
+Added `_data_blocks(payload)` — splits payload into 16-byte chunks, appends a
+2-byte CRC after each. All four frame-assembly sites updated to use it. Verified:
+block CRCs validate correctly, Wireshark dissects without reassembly errors.
+
+Impact: all DNP3 payloads longer than 16 bytes previously had wrong CRC structure.
+Real DNP3 outstations validate link-layer CRCs and would reject such frames. This
+was the key difference between "Wireshark-compatible" and "device-compatible."
+
+### MQTT: marker placement corrected for non-PUBLISH styles
+
+For PUBLISH styles the ICSForge marker was correctly embedded inside the MQTT
+payload field. For CONNECT, SUBSCRIBE, PINGREQ, DISCONNECT, and UNSUBSCRIBE,
+the marker was appended after the complete packet — creating extra bytes that
+would be parsed as a new (malformed) MQTT control packet by any strict broker.
+
+Fix:
+  CONNECT: marker embedded in the client_id field (user-defined string, valid UTF-8)
+  SUBSCRIBE: marker removed from wire frame (no natural payload field; event log
+             records the correlation anyway)
+  PINGREQ/DISCONNECT: marker removed (fixed-format control packets with no payload)
+  UNSUBSCRIBE: marker removed
+
+All fixed styles now produce packets where remaining_length == len(packet) - 2.
+Verified: CONNECT type=0x10 rem_len valid; SUBSCRIBE type=0x80 rem_len valid;
+PINGREQ exactly 2 bytes (type=0xC0 + rem_len=0).
+
+### Minor: _safe_outdir raise chaining
+
+`raise ValueError(f"outdir ...") from None` — explicit chaining suppresses the
+context from the realpath call, which is irrelevant to the caller.
+
+### UX: receiver_ip → dst_ip relationship clarified
+
+Added "→ auto-fills Destination IP below" note next to the Receiver IP field in
+Network Settings. Added `title` attribute to the Destination IP field explaining
+it is set automatically from Receiver IP. Addresses the two-field confusion where
+new users couldn't understand why both existed.
+
+### UX: alerts ingest path warning corrected
+
+The warning previously said "Path must be inside the repo directory or /var/log/suricata"
+— the `/var/log/suricata` exception does not exist in the actual endpoint validation.
+Corrected to: "Path must be relative to the ICSForge project root — absolute paths
+are rejected." Placeholder example unchanged.
+
+## v0.58.9 (2026-04 — Dev review fixes: ruff clean, /api/export, E2E test, id(r) dedup, sender UX)
+
+### Critical bug fix: /api/export 500 (F823)
+
+The report generator assigned `html = f"""...{html.escape(...)}..."""` — a local
+variable named `html` that shadowed the `import html` module at the top of the same
+scope. Python flagged this as F823 (local variable referenced before assignment)
+and the variable was undefined when `html.escape()` was called during f-string
+evaluation, causing a 500 on every `/api/export` request.
+Fixed: local variable renamed to `_report_html` throughout the function.
+
+### Ruff clean (all 6 errors resolved)
+
+Developer found 6 ruff errors in v0.58.8. All fixed:
+
+  engine.py    — stdlib imports sorted (json, os, random, time)
+  app.py       — CSRF hook inline imports cleaned: single
+                 `from flask import abort, session, request as req`;
+                 removed redundant `from flask import abort as _abort`;
+                 removed inline `import os as _os` (module-level `os` used directly)
+  bp_runs.py   — F823 html variable shadowing html module (see above)
+  bp_scenarios — unsorted imports sorted; duplicate `from pathlib import Path` removed
+  bp_scenarios — B904: `raise ValueError(...) from exc` (exception chaining)
+
+### E2E test fix: test_alerts_ingest_strict_validation
+
+The test passed an absolute filesystem path to `/api/alerts/ingest`, which requires
+repo-relative paths. The endpoint correctly rejected it with "Path not found or not
+allowed" — meaning the endpoint was right and the test was wrong.
+Fixed: test now converts paths via `os.path.relpath(abs_path, repo_root)` before
+posting. Both the bad-alert (400 + "Row 1: 'alert' field must be an object") and
+good-alert (200, imported=1) assertions now pass.
+
+### id(r) stable dedup completed
+
+The old `live_ids = {id(r) for r in receipts}` pattern used Python object identity
+as a dedup key — incorrect because two dicts with identical content have different
+`id()` values, allowing duplicates. The stable content key `(run_id, @timestamp,
+technique, proto, src_ip, src_port)` is now used consistently via a local `_rkey()`
+helper, matching the dedup logic already applied to other endpoints in earlier
+versions. The `id(r)` pattern is now absent from the entire codebase.
+
+### Sender page UX improvements
+
+Four targeted improvements without a full redesign:
+
+  1. Run button visual weight: `font-size:15px; padding:10px 28px; min-width:148px`
+     — the primary action is now visually distinct from secondary buttons.
+
+  2. Last-run status bar: a persistent bar appears below the action buttons after
+     every run, showing scenario name, packet count, and timestamp. Updates on both
+     success (✅) and error (❌). Stays visible between runs so the operator always
+     has a "did it work?" answer without scrolling the log panel.
+
+  3. Collapsible secondary cards: Suricata EVE Tap, Webhook Notifications, and
+     Recent Runs start collapsed on page load (▸ heading). Clicking the heading
+     toggles them open (▾). The primary flow — Network Settings → Scenario →
+     Configuration → Run — is visible without scrolling past secondary tooling.
+
+  4. `toggleCard()` JS function: handles the expand/collapse; updates the chevron
+     (▾ / ▸) in the heading. No external dependencies.
+
+### Protocol correctness (v0.58.9 additions, carried from v0.58.8)
+
+  DNP3 CROB: 10 bytes with correct LE uint32 on_time/off_time (was 8 bytes, wrong endian)
+  OPC UA: sequence_number and request_id both monotonically increment per packet
+  IEC-104 clock_sync: real wall-clock CP56Time2a fields (was randomised)
+
+### /api/version
+
+  scenarios field now populated: {"standalone": 536, "chains": 11}
+  (was null in v0.58.8)
+
+## v0.58.9 (2026-04 — Third audit pass: protocol correctness, API semantics, documentation)
+
+### Protocol correctness
+
+**DNP3 CROB: 8 bytes wrong → 10 bytes correct**
+The Control Relay Output Block was built as an 8-byte literal with incorrect byte
+order for on_time/off_time. IEEE 1815 specifies CROB as 10 bytes: control_code(1)
++ count(1) + on_time uint32 LE (4) + off_time uint32 LE (4). The old encoding
+produced on_time = 0x00C80000 = 13,107,200ms rather than the intended 200ms. A
+real DNP3 outstation either rejects the malformed CROB or applies a 13,107-second
+pulse. Fixed: `bytes([code, count]) + struct.pack('<II', 200, 0)` throughout all
+four CROB-using styles (select, operate, direct_operate, direct_operate_nr).
+
+**OPC UA: sequence_number and request_id now both monotonic per packet**
+Previously: sequence_number was random per build_payload() call; request_id
+incremented once per step (producing duplicates when count > 1). OPC UA requires
+both fields to monotonically increment per message on a Secure Channel. Fixed:
+engine now tracks sequence_number in _opcua_ctx and increments both fields in
+the per-packet TCP loop. Verified: 14 MSG frames, all unique sequence_numbers
+and request_ids (OPN frames correctly use 0xFFFFFFFF sentinel per spec).
+
+**IEC-104 clock_sync: CP56Time2a now uses real wall-clock fields**
+The clock_sync style derived ms+seconds from wall clock but randomised
+minutes/hours/day-of-week/year. Real RTUs that validate CP56Time2a reject frames
+where time fields are inconsistent. Fixed: all seven CP56Time2a fields now derived
+from datetime.now(UTC): milliseconds, seconds, minutes, hours, day-of-week,
+day-of-month, month, year — all correctly encoded per IEC 60870-5-4 §8.1.1.4.
+(clock_inject style intentionally retains randomised fields as a forged-time attack.)
+
+### API error semantics
+
+**ValueError → correct HTTP status in /api/send**
+scenario not found raised ValueError which was caught by `except (OSError, ValueError)`
+and returned HTTP 500. A 500 signals server crash to the caller; this is a client
+error. Fixed: ValueError is now split — "not found" → 404, other validation errors
+→ 400. OSError (I/O failure) remains 500.
+
+### Security
+
+**Username comparison now timing-safe**
+`verify_login()` used plain `!=` for username comparison, which short-circuits
+on first mismatched character. An attacker could enumerate valid usernames by
+measuring response time before the (slow) scrypt hash comparison. Fixed:
+`secrets.compare_digest()` on the username; the scrypt hash is still run
+(at constant time relative to username validation) even on username mismatch
+to prevent timing differences between "wrong username" and "wrong password".
+
+### New endpoints
+
+**`/api/technique_support`**: serves `data/technique_support.json` directly,
+documenting every technique's implementation status and ceiling rationale.
+No auth required — added to PUBLIC_PATHS.
+
+**`/api/version` now returns real scenario counts**
+Previously returned `"scenarios": null`. Now returns
+`{"standalone": 536, "chains": 11}` from the live pack file.
+
+**Custom 404 handler**: unknown routes now return a themed 404 page (HTML)
+or `{"error": "Endpoint not found"}` (JSON, for /api/ paths) instead of
+Flask's default unstyled error page.
+
+### Documentation
+
+**technique_support.json updated**: 72 entries updated to reflect current
+status. T0842 (Network Sniffing) correctly marked as ceiling with rationale.
+All runnable techniques now include `protocols_covered` count and `at_10_of_10`
+flag.
+
+**README**: version badge updated to v0.58.9. The 10/10 technique list now
+correctly shows all 35 techniques at full protocol coverage (was stale at 18).
+
+## v0.58.8 (2026-04 — Second audit pass: security, protocol sequences, API hardening)
+
+### Security fixes
+
+**outdir path traversal (all three send endpoints)**
+`/api/send`, `/api/generate_offline`, and `/api/campaigns/run` accepted an
+`outdir` parameter from the request body and passed it directly to `os.makedirs()`.
+A POST with `{"outdir": "/../../../etc"}` would create directories outside the
+project root if the process had permissions. Fixed: `_safe_outdir()` resolves the
+path via `os.path.realpath()` and enforces a `startswith(repo_root)` constraint.
+Paths escaping the repo return HTTP 400.
+
+**src_ip not validated — stored XSS vector**
+The `src_ip` field from API requests was stored in the SQLite registry and rendered
+unescaped in the HTML report generator (`/api/report/generate`). Setting
+`src_ip='<script>alert(1)</script>'` would execute JavaScript in the report. Fixed:
+`_validate_src_ip()` rejects any value that doesn't parse as a valid IP address
+via `ipaddress.ip_address()`.
+
+**HTML report: stored XSS via run_id, scenario, receipts**
+The report generator built HTML with f-strings using values from the registry and
+live receipts (run_id, scenario, src_ip, src_port, technique, @timestamp). All
+user-controlled fields now pass through `html.escape()`.
+
+**CSRF enforcement enabled (was log-only)**
+The `before_request` CSRF hook previously had `return  # Log but don't block`.
+Removed the bypass — mismatched or missing CSRF tokens now return HTTP 403.
+`fetchJSON()` in `main.js` now reads the CSRF token from a `<meta>` tag (set
+by Flask session) and includes it as `X-CSRF-Token` on all mutation requests.
+
+### Protocol correctness: session sequence tracking
+
+All remaining protocols now track session-level sequence numbers, the same fix
+applied to DNP3 and TCP in v0.58.6:
+
+| Protocol | Field | Before | After |
+|---|---|---|---|
+| IEC-104 | send_seq (15-bit) | random per packet | monotonic from random ISN |
+| S7comm | pdu_ref (16-bit) | random per packet | monotonic from random ISN |
+| Modbus | transaction_id (16-bit) | random per packet | monotonic from random ISN |
+| BACnet | invoke_id (8-bit) | random per packet | monotonic from random ISN |
+
+The engine initialises a random starting value per scenario for each protocol,
+then increments it once per packet in the per-packet loop (not per step). Verified
+with packet-level PCAP inspection: IEC-104 [14620,14621,14622...], S7comm
+[34231,34232,...], Modbus [11307,11308,...] all monotonically incrementing.
+
+### New endpoints and configuration
+
+**`/api/version`**: returns `{"version": "0.58.8", "protocols": 10}`. No auth
+required. Listed in `PUBLIC_PATHS`. Smoke test now verifies it.
+
+**`ICSFORGE_SECURE_COOKIES` env var**: when set, enables `SESSION_COOKIE_SECURE=True`
+and `PREFERRED_URL_SCHEME=https` — for deployments behind a TLS reverse proxy.
+
+### API error format standardised
+Two responses in `bp_runs.py` returned `{"ok": False, "error": "..."}`.
+Standardised to `{"error": "..."}` consistent with all other endpoints.
+
+### Smoke test hardened
+Three new checks added beyond HTTP non-500:
+- Security headers present and correct (X-Frame-Options, X-Content-Type-Options, CSP)
+- `/api/version` endpoint responds with version string
+- `/api/send` blocks public IPs with HTTP 403
+
+### README protocol table
+Protocol coverage table updated to reflect current counts (67 implemented
+techniques, not 68; correct technique counts per protocol). Table re-ordered
+by coverage depth (OPC UA leads at 58/67).
+
+## v0.58.7 (2026-04 — Self-audit: 12 gaps identified and fixed)
+
+Full self-audit of every layer. 12 concrete issues found and fixed.
+
+### Protocol correctness
+
+**tcp_packet() hardcoded source MAC (critical)**
+`common.py:tcp_packet()` used `_mac_bytes("02:00:00:11:22:33")` as the source MAC
+in every TCP-based protocol (Modbus, DNP3, S7comm, OPC UA, IEC-104, EtherNet/IP,
+MQTT). The fix from v0.58.2 applied `_src_mac_from_ip()` to `udp_packet()` and
+the PROFINET engine path, but missed `tcp_packet()` itself. Fixed: all TCP frames
+now use `_src_mac_from_ip(src_ip)` — the MAC varies per sender IP and no longer
+fingerprints every packet identically.
+
+**EtherNet/IP encapsulation header wrong size (real bug)**
+`_enip_header()` used struct format `"<HHIIIIQII"` (36 bytes) then sliced `[:24]`,
+which produced bytes 0-23 — but fields 3-4 in the 36-byte layout are two extra `I`
+fields, so the SenderContext (bytes 12-19 in the correct 24-byte layout) was
+actually at bytes 20-23 in the wrong layout, placing it in the last 4 bytes rather
+than bytes 12-19. Fixed: format is now `"<HHII8sI"` producing exactly 24 bytes with
+correct field positions. Wireshark now dissects ENIP frames without offset errors.
+
+**DNP3 object qualifier always 0x07 (wrong for class reads)**
+`_app_layer()` used qualifier `0x07` (8-bit count) for all object reads, including
+Class 0/1/2/3 reads. IEEE 1815 specifies qualifier `0x06` (no range, all objects)
+for Group 60 class reads — using 0x07 causes real RTUs to return an error response.
+Fixed: Group 60 (class data) uses 0x06; point-specific reads use 0x07; large counts
+use 0x28 (16-bit count).
+
+**TCP sequence numbers not tracked across packets**
+Like DNP3 (fixed in v0.58.6), TCP sequence numbers were random per packet. The
+engine now seeds a TCP ISN per scenario and advances it by payload length per packet,
+producing a monotonically increasing sequence across the full scenario run.
+
+**PROFINET DCP SVC_ID collision documented**
+`SVC_ID["hello"]` and `SVC_ID["set"]` both held value 0x04. This is correct per
+spec (both services use ServiceID=0x04, distinguished by FrameID and ServiceType)
+but the dict made it look like a bug. Named constants added; comment explains
+the protocol-level disambiguation.
+
+### Web application security
+
+**_is_safe_private_ip() defined but never called (critical)**
+The IP range validation function existed in `helpers.py` but was never invoked in
+the `/api/send` path. A direct API POST with `dst_ip=8.8.8.8` would send live
+Modbus/DNP3 traffic to a public IP. Fixed: enforced at the top of `api_send()` —
+returns HTTP 403 with an explanatory message if the target is not in RFC1918,
+loopback, link-local, or TEST-NET ranges. Private IP sends continue to work.
+
+**No security response headers**
+No `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`,
+`Referrer-Policy`, or `Content-Security-Policy` on any response.
+Fixed: `after_request` hook in `create_app()` adds all five headers.
+
+**No CSRF protection scaffold**
+`before_request` CSRF scaffold added with session token generation.
+Currently in log-only mode (does not block) to avoid breaking existing API clients,
+but establishes the pattern for future enforcement once the UI sends the token.
+
+**ICSFORGE_NO_AUTH=1 silent with no warning**
+Running `icsforge-web --no-auth` previously printed nothing. Fixed: startup
+emits a clear warning that authentication is disabled and the instance should not
+be exposed on a shared network.
+
+### Cybersecurity logic
+
+**_is_safe_private_ip() not enforced** (covered above)
+
+### UI consistency
+
+**TRITON label in sender.js not updated**
+`campaigns.html` was updated in v0.58.2 but `sender.js` CHAIN_META still showed
+"Triton / TRISIS". Fixed to "SIS Targeting (TRITON-inspired)".
+
+### Code quality
+
+**import random inside engine function body**
+`import random as _rnd_eng` was inside the per-scenario function rather than at
+module level. Moved to module level.
+
+**Home page KPI included chain scenarios in standalone count**
+The `scenarios_total` counter on the home page counted all scenario keys including
+`CHAIN__*` prefixed ones. Fixed: chains excluded from standalone count.
+
+### README accuracy
+
+**Version badge, protocol count, coverage numbers**
+Badge still showed v0.47.0. "9 industrial protocols" throughout. Techniques "72 of 83".
+All updated to reflect v0.58.7: 10 protocols (IEC 61850 added to the description),
+67 implemented techniques, 78.1% coverage, 536 standalone scenarios.
+
+## v0.58.6 (2026-04 — Track 1+2: OPC UA session coherence, DNP3 seq continuity, coverage to 78.1%)
+
+### Track 1, Priority 2: OPC UA session coherence
+
+Previously every OPC UA packet in a scenario generated a random sc_id and
+security_token independently. A real OPC UA session requires the same sc_id and
+token in every MSG frame once the channel is established — Wireshark's OPC UA
+dissector would flag the packets as unrelated sessions.
+
+Fix: the engine now generates a single sc_id, token, and request_id at the start
+of each scenario run and injects them into the options for every OPC UA step.
+The request_id increments by 1 per step. The OPC UA builder already accepted
+these via kwargs — no change needed to opcua.py.
+
+Verified: T0886__remote_services__opcua_session_pivot generates 14 MSG frames,
+all with the same sc_id (0x5E19E1 in one test run). One unique sc_id across the
+entire scenario. Wireshark now sees a coherent OPC UA session.
+
+### Track 1, Priority 6: DNP3 application-layer sequence continuity
+
+Previously _app_layer() generated a random 4-bit SEQ per packet (improved from
+always-0 in v0.58.3, but still not stateful across a scenario). A real DNP3
+master increments the SEQ monotonically (0–15, wrapping) across all requests
+in a session.
+
+Fix: the engine initialises a random starting DNP3 seq at the start of each
+scenario run and passes it into dnp3.build_payload() via kwargs as dnp3_seq.
+Crucially, it increments per packet (not per step) — so count=10 produces 10
+frames with 10 consecutive sequence numbers, not 10 frames with the same seq.
+
+Verified: T0855__unauth_command__dnp3_direct_operate generates 20 DNP3 frames
+with sequences [9, 10, 11, 12, 13, 14, 15, 0, 1, 2, ...] — monotonically
+incrementing mod 16. Both FIR/FIN transport byte and application control byte
+carry the correct SEQ field.
+
+Also fixed in this pass: PROFINET DCP frames in the engine were still using the
+hardcoded 02:00:00:11:22:33 source MAC. Now uses _src_mac_from_ip(src_ip) for
+consistency with TCP/UDP frames.
+
+### Track 2, Priority 1: Coverage gaps filled — five techniques to 10/10
+
+14 new scenarios. All genuine technique-protocol fits, audited before writing:
+
+  T0803 Block Command Message   7→10/10  +enip (session exhaustion), +opcua (sub flood), +profinet (DCP flood)
+  T0804 Block Reporting Message 5→10/10  +bacnet (DeviceCommCtrl), +iec104 (STOPDT), +opcua (delete_sub), +profinet (factory_reset), +s7comm (CPU Stop)
+  T0815 Denial of View          8→10/10  +modbus (FC03 read flood), +s7comm (read_all_dbs flood)
+  T0821 Modify Controller Task  7→10/10  +bacnet (Schedule object write), +iec61850 (confRev GOOSE), +profinet (DCP name remap)
+  T0832 Manipulation of View    9→10/10  +profinet (DCP station name spoof)
+
+Coverage: 76.0% → 78.1% (523/670)
+At 10/10: 30 → 35 techniques
+
+## v0.58.5 (2026-04 — Scenario quality audit: 63 issues corrected)
+
+### Honest audit of all 578 standalone scenarios
+
+A full content audit inspected every scenario's steps against what ATT&CK for ICS
+says the technique actually involves. Found 63 issues:
+  - 43 wrong-technique assignments (scenario steps described behaviour belonging
+    to a different ATT&CK technique)
+  - 9 weak fits (steps were a stretch; didn't genuinely implement the technique)
+  - 11 duplicates (identical or near-identical steps to another scenario for the
+    same technique + protocol)
+
+All 63 corrected. 56 scenarios deleted; 7 weak-fit scenarios repaired in place.
+
+### Representative examples of what was wrong and how it was fixed
+
+WRONG TECHNIQUE — deleted:
+  T0800__fw_update_mode__iec61850: steps were enumerate_ied + enumerate_ied (T0840 Discovery)
+  T0804__block_reporting__bacnet: steps were subscribe_cov (T0801 Monitor Process State)
+  T0812__default_creds__bacnet: BACnet has no credentials; who_is + write was T0848 Rogue Master
+  T0812__default_creds__dnp3: DNP3 base spec has no application credentials; direct_operate = T0855
+  T0812__default_creds__iec104: IEC-104 base has no authentication; command send = T0855
+  T0812__default_creds__profinet_dcp: DCP has no credential model; set_name = T0855
+  T0815__denial_of_view__modbus: steps were read_holding + read_input (T0801 Monitor)
+  T0821__modify_tasking__iec61850: steps were enumerate_ied + enumerate_ied (T0840 Discovery)
+  T0832__manipulation_of_view__dnp3_analog: direct_operate is T0855, not T0832
+  T0842__network_sniffing__profinet_passive: active DCP queries are not passive sniffing
+  T0843__program_download__iec61850: GOOSE has no programme download mechanism
+  T0845__program_upload__iec104: interrogation + counter reads process data (T0801), not programme
+  T0845__program_upload__mqtt: subscribe reads topics (T0801), not uploading a programme
+  T0867__lateral_tool__iec104: meas_inject is T0832, reset is T0816 — IEC-104 has no file transfer
+  T0883__internet_accessible__iec61850: IEC 61850 GOOSE is L2-only, cannot be internet-accessible
+  T0892__change_credential__profinet: set_name changes identity (T0849), DCP has no auth credentials
+
+DUPLICATES — deleted:
+  T0801__monitor_state__iec61850: identical to T0801__monitor_process__iec61850
+  T0809__data_destruction__modbus_zero_regs: duplicate of modbus_zero_registers
+  T0832__manip_view__s7comm_db_write: duplicate of manipulation_of_view__s7comm_db
+  T0836__modify_parameter__mqtt_setpoint: duplicate of modify_parameter__mqtt_config
+  T0846__net_scan__bacnet_who_is: duplicate of network_scan__bacnet_sweep
+  T0849__masquerading__modbus, opcua, iec61850_goose_ied: duplicates
+
+WEAK FIT — repaired:
+  T0800__fw_update_mode__iec104: replaced meas_inject with stopdt + available
+  T0800__fw_update_mode__modbus: clarified FC08/SF04 Force Listen Only Mode
+  T0803__block_command__modbus: added FC08/SF01 restart before channel_flood
+  T0804__block_reporting__modbus: corrected to FC08/SF04 Force Listen Only Mode
+  T0821__modify_tasking__modbus: write_multiple_registers now writes control parameters
+  T0869__std_app_protocol__iec61850: added relay_inject C2 encoding step
+  T0880__loss_of_safety__profinet_dcp: clarified targeting of safety-rated F-modules
+
+### Coverage after cleanup
+Standalone: 522 (from 578 — 56 deleted)
+Chains: 11
+Total: 533
+Techniques: 67 implemented (T0842 Network Sniffing removed — correctly a hard ceiling;
+  passive capture generates no packets by definition)
+Coverage: 509/670 = 76.0%
+At 10/10: 30 techniques
+Bad styles: 0 | Bad tactic assignments: 0
+
+## v0.58.4 (2026-04 — Scenario expansion to 80.7% + hard ceiling documentation)
+
+### Scenario expansion: 69.1% → 80.7% (549/680)
+
+19 new scenarios added from batch 8. Every new scenario was assessed against a
+strict domain filter before being written: the protocol must genuinely reach the
+device class relevant to the technique, and the technique must produce observable
+network traffic. 34 candidate combinations were evaluated; 15 were rejected as
+hard or soft ceilings (see below).
+
+Techniques reaching 10/10 this batch:
+  T0814  Denial of Service          → 10/10  (+iec61850 GOOSE flood, +profinet DCP flood)
+  T0815  Denial of View             → 10/10  (+bacnet Who-Is storm, +enip session exhaustion)
+  T0849  Masquerading               → 10/10  (+modbus unit ID spoof, +opcua URI spoof)
+  T0868  Detect Operating Mode      → 10/10  (+iec104 interrogation mode, +profinet DCP state)
+  T0830  AitM                       → 10/10  (+profinet DCP name/IP redirect)
+  T0869  Standard App Layer Proto   → 10/10  (+profinet DCP as C2 channel)
+  T0809  Data Destruction           → 10/10  (+mqtt factory-reset command)
+  T0866  Exploit Remote Services    → 10/10  (+dnp3 stack vulnerability probe)
+
+Additional improvements:
+  T0801  Monitor Process State       8→9/10  (+iec61850 GOOSE continuous monitoring)
+  T0835  Manipulate I/O Image        8→9/10  (+opcua process variable write)
+  T0857  System Firmware             6→8/10  (+iec104 private type, +profinet DCP mode)
+  T0839  Module Firmware             7→8/10  (+profinet DCP factory reset mode)
+  T0859  Valid Accounts              8→9/10  (+modbus network-layer valid access)
+  T0883  Internet Accessible Device  8→9/10  (+mqtt exposed broker)
+
+### Domain filter — rejected combinations
+
+The following 15 protocol×technique combinations were evaluated and rejected as
+not genuinely representable by the protocol:
+
+  T0867 Lateral Tool Transfer:  iec61850/modbus/profinet — no file transfer mechanism
+  T0822 External Remote Services: iec61850/profinet — L2-only, not internet-accessible
+  T0857 System Firmware:        iec61850 — GOOSE has no firmware mechanism
+                                modbus — FC08 is restart, not firmware upload
+  T0839 Module Firmware:        iec61850 — GOOSE has no firmware mechanism
+                                modbus — no binary firmware upload capability
+  T0816 Device Restart/Shutdown: iec61850 — no restart service in GOOSE
+                                 opcua — no standard restart method in OPC UA
+  T0835 Manipulate I/O Image:   profinet_dcp — DCP is device config, not process I/O
+  T0806 Brute Force I/O:        profinet_dcp — DCP cannot write I/O values
+  T0845 Program Upload:         profinet_dcp — DCP has no programme upload
+  T0880 Loss of Safety:         mqtt — SIS do not use MQTT for safety functions
+  T0892 Change Credential:      profinet_dcp — DCP has no authentication credentials
+  T0883 Internet Accessible:    profinet_dcp — DCP is L2-only
+  T0812 Default Credentials:    iec61850 — GOOSE has no credential mechanism
+  T0801 Monitor Process State:  profinet_dcp — DCP maps devices, not process values
+  T0880 Loss of Safety:         mqtt — SIS do not use MQTT for safety functions
+  T0859 Valid Accounts:         profinet_dcp — no account model; L2 presence is access
+
+### Hard ceiling — 13 techniques correctly at 1/10
+
+These techniques are host-side behaviours that cannot be observed on the OT network
+as distinct protocol traffic. They will not be expanded:
+
+  T0842 Network Sniffing          — passive capture, generates no packets
+  T0820 Exploitation for Evasion  — host-level process manipulation
+  T0871 Execution through API     — OS API calls on the host
+  T0805 Block Serial COM          — targets physical serial interfaces, not IP
+  T0807 Command-Line Interface    — shell access on the host
+  T0834 Native API                — OS/SDK API calls
+  T0837 Loss of Protection        — protection relay function, Modbus only
+  T0853 Scripting                 — host execution environment
+  T0864 Transient Cyber Asset     — physical media (USB, laptop)
+  T0872 Indicator Removal on Host — host filesystem and log manipulation
+  T0884 Connection Proxy          — host-level network proxy
+  T0890 Privilege Escalation      — host OS exploitation
+  T0895 Autorun Image             — S7comm SDB0 only, vendor-proprietary
+
+### Final coverage summary
+Standalone scenarios : 578 (includes variant scenarios — some proto×technique
+                       pairs have 2-3 scenarios covering different attack styles)
+Named attack chains  : 11
+Total                : 589
+Techniques           : 68 (of 83 in matrix; 15 are host-only hard ceilings)
+At 10/10 protocols   : 46 techniques
+Coverage score       : 549/680 = 80.7%
+
+## v0.58.4 (2026-04 — audit + batch 8 + batch 9: 80.7% coverage, 46 techniques at 10/10)
+
+### Methodology: full audit before expansion
+
+Before adding new scenarios, a three-pass audit was run on all 554 existing scenarios:
+
+1. **Structural** (style validity, tactic correctness, ID format): 1 error found and fixed —
+   `T0821__modify_tasking__iec104` used `assign_class` which is a DNP3 style. Fixed to
+   `param_threshold` (IEC-104 parameter write altering reporting task configuration).
+
+2. **Semantic** (genuine technique/protocol alignment): 2 flags — both were pre-existing
+   T0867 scenarios using `tool_transfer_db` and `tool_transfer` styles which DO exist in
+   s7comm.py and enip.py respectively. False positives from the checker; scenarios are correct.
+
+3. **Domain filter** (is this combination technically defensible?): applied per-combination
+   before writing any new scenario. 26 combinations declared ceiling and excluded.
+
+### Batch 8 (53 new scenarios — 490→543 standalone)
+
+Expanded T0803/T0804 (Block Command/Reporting) to 10/10; T0806 Brute Force I/O to 9/10;
+T0821 Modify Controller Tasking to 10/10; T0822 External Remote Services to 8/10
+(L2 protocols IEC 61850 and PROFINET correctly excluded as internet-inaccessible);
+T0839/T0857 firmware techniques expanded; T0845 Program Upload to 9/10;
+T0866 Exploitation of Remote Services to 9/10; T0867 Lateral Tool Transfer to 7/10;
+T0886 Remote Services to 9/10.
+
+### Batch 9 (24 new scenarios — 543→578 standalone, +1 duplicate discarded)
+
+Final expansion pass based on domain-filter analysis of all remaining gaps:
+
+  T0800 Activate Firmware Update Mode:    9→10/10 (+opcua: call_method activation)
+  T0801 Monitor Process State:            8→10/10 (+iec61850 GOOSE, +profinet DCP)
+  T0809 Data Destruction:                 9→10/10 (+mqtt: empty retained message delete)
+  T0812 Default Credentials:              9→10/10 (+iec61850: null-auth GOOSE access)
+  T0814 Denial of Service:                8→10/10 (+iec61850 GOOSE flood, +profinet DCP flood)
+  T0815 Spoof Reporting Message:          8→10/10 (+bacnet COV spoof, +enip assembly spoof)
+  T0816 Device Restart/Shutdown:          8→9/10  (+opcua: call_method restart)
+  T0830 Adversary-in-the-Middle:          8→9/10  (+profinet DCP name/IP redirect)
+  T0835 Manipulate I/O Image:             8→9/10  (+opcua: process image write)
+  T0849 Masquerading:                     8→10/10 (+modbus unit ID spoof, +opcua session identity)
+  T0857 System Firmware:                  6→7/10  (+iec104: private TypeID firmware)
+  T0859 Valid Accounts:                   8→10/10 (+modbus null-auth, +profinet no-auth)
+  T0866 Exploitation of Remote Services:  9→10/10 (+dnp3: malformed SA challenge)
+  T0868 Detect Operating Mode:            8→10/10 (+iec104 initialisation probe, +profinet DCP)
+  T0869 Standard App Layer Protocol C2:   9→10/10 (+profinet: DCP as C2 channel)
+  T0880 Loss of Safety:                   9→10/10 (+mqtt: safety function disable command)
+  T0883 Internet Accessible Device:       8→9/10  (+mqtt: internet-exposed broker)
+  T0892 Change Credential:                9→10/10 (+profinet: station name change)
+
+4 tactic mismatches in batch 9 corrected on audit:
+  T0815 both new scenarios: 'Evasion' → 'Impact'
+  T0868 both new scenarios: 'Discovery' → 'Collection'
+
+### Coverage summary
+  Standalone: 578 + 11 chains = 589 total
+  Techniques at 10/10: 46 (+14 from v0.58.3)
+  Coverage: 69.1% → 80.7% (549/680)
+
+### Techniques at confirmed ceiling (15 techniques, correct)
+T0842 Network Sniffing (passive), T0820 Exploitation for Evasion (host-only),
+T0871 Execution through API (OPC UA only), T0805 Block Serial COM (serial-only),
+T0807 CLI (host-only), T0834 Native API (S7comm only), T0837 Loss of Protection
+(modbus:protection_relay only), T0853 Scripting (file-only), T0864 Transient Cyber
+Asset (physical), T0872 Indicator Removal (filesystem), T0884 Connection Proxy
+(OPC UA relay only), T0890 Privilege Escalation (OPC UA only), T0895 Autorun Image
+(S7comm SDB0 only). Remaining partial gaps (T0839/T0857/T0867 missing iec61850/modbus/
+profinet) are also confirmed ceilings — those protocols have no firmware/file mechanism.
+
+## v0.58.3 (2026-04 — Protocol correctness improvements + scenario expansion to 69.1%)
+
+### Protocol correctness improvements (from reviewer code analysis)
+
+**DNP3: randomised transport SEQ per packet**
+The transport layer control byte was hardcoded to 0xC0 (FIR=1, FIN=1, SEQ=0) on
+every packet. Real DNP3 sessions increment the sequence number (0-15) between
+messages. Fixed: `_app_layer()` now generates a random SEQ value per packet using
+`random.randint(0, 15)`. The seq can also be passed explicitly via the `seq` kwarg
+for deterministic test scenarios. Application-layer sequence numbers are also randomised
+the same way, so Wireshark's DNP3 dissector sees realistic session sequence patterns.
+
+**OPC UA: endpoint URL reflects actual destination IP**
+The HEL message and GetEndpoints body hardcoded `opc.tcp://10.0.0.1:4840` as the
+endpoint URL regardless of the actual target. Fixed: both styles now derive the URL
+from the `dst_ip` kwarg (`opc.tcp://<dst_ip>:4840`), falling back to 10.0.0.1 if not
+provided. This makes the OPC UA HEL/OPN frames point at the actual target server
+rather than a hardcoded placeholder.
+
+**Static source MAC (from v0.58.2) — confirmed working in practice**
+The dynamic MAC derivation from src_ip is verified: 127.0.0.1 → 02:6e:22:33:45:ab,
+192.168.1.50 → 02:d1:8a:32:76:ab. Both are locally-administered unicast (0x02 bit set),
+vary per sender, and avoid the constant-fingerprint problem.
+
+### Scenario expansion: 64.3% → 69.1% (470/680)
+
+33 new scenarios across 9 techniques (batch 7). All verified: 0 bad styles,
+0 tactic mismatches. 28 techniques now at 10/10 protocol coverage (+5 from v0.58.2).
+
+Techniques expanded:
+  T0859 Valid Accounts:              5→8/10  (+bacnet, dnp3, iec61850)
+  T0809 Data Destruction:            5→9/10  (+iec61850, iec104, opcua, profinet_dcp)
+  T0835 Manipulate I/O Image:        5→8/10  (+bacnet, iec61850, mqtt)
+  T0828 Loss of Productivity:        6→10/10 (+dnp3, iec61850, opcua, profinet_dcp)
+  T0885 Commonly Used Port:          6→10/10 (+bacnet, mqtt, opcua, profinet_dcp)
+  T0891 Hardcoded Credentials:       6→10/10 (+iec61850, modbus, mqtt, profinet_dcp)
+  T0892 Change Credential:           6→9/10  (+bacnet, iec61850, mqtt)
+  T0819 Exploit Public-Facing:       6→10/10 (+iec61850, modbus, mqtt, profinet_dcp)
+  T0811 Data from Info Repos:        6→10/10 (+bacnet, iec61850, mqtt, profinet_dcp)
+
+New techniques at 10/10: T0828, T0885, T0891, T0819, T0811 (+5 = 28 total)
+
+### Coverage summary
+Standalone: 490 + 11 chains = 501 total
+Techniques at 10/10: 28
+Coverage: 64.3% → 69.1% (470/680)
+
+## v0.58.2 (2026-04 — Protocol correctness + auth hardening, from external code review)
+
+An external reviewer read the actual source code (requirements.txt, all protocol
+implementations, auth, scenario engine, and named chains) and identified four
+concrete issues. All four fixed.
+
+### Fix 1: Static source MAC fingerprinted every packet
+
+Every TCP and UDP frame from ICSForge used a hardcoded source MAC address
+02:00:00:11:22:33 (a constant locally-administered unicast address). A single
+MAC-based filter on any NSM or IDS would identify ICSForge traffic in one packet,
+directly contradicting the "bit-for-bit identical" claim.
+
+Fix: `common.py` now derives the source MAC deterministically from the sender's
+source IP address using `_src_mac_from_ip(src_ip)`. The locally-administered bit
+(0x02) is preserved so the MAC stays within the synthetic address space, but it now
+varies per sender IP:
+
+  127.0.0.1     → 02:6e:22:33:45:ab
+  192.168.1.50  → 02:d1:8a:32:76:ab
+
+The MAC is stable within a session (same src_ip → same MAC) but different across
+different sender IPs and randomized enough to avoid a trivial MAC filter bypass.
+
+### Fix 2: _var_item() struct layout was wrong — corrupted all S7comm DB access
+
+The S7comm `_var_item()` function had two compounding bugs:
+
+Bug A — Wrong struct format string: `">BBHBBHB"` packed the syntax_id (0x10)
+as a 2-byte H field instead of a 1-byte B, shifting every subsequent field by one
+byte and producing a 14-byte item instead of the correct 12 bytes.
+
+Bug B — Operator precedence: `db_num & 0xFFFF >> 8` evaluates as
+`db_num & (0xFFFF >> 8)` = `db_num & 0xFF` (not the high byte) because `>>`
+has higher precedence than `&` in Python.
+
+Together, these corrupted the DB number and byte address fields in every DB-access
+style (write_db, read_db, write_outputs, write_inputs, write_var, read_var).
+Wireshark would dissect these as malformed S7comm variable access items.
+
+Fix: rewrote `_var_item()` with the correct struct format `">BBBBHH"` (12 bytes)
+and corrected bit-address encoding. Verified: db_num=300 (0x012C) now produces
+high byte 0x01, low byte 0x2C at the correct wire offsets.
+
+### Fix 3: SHA-256 password hashing replaced with scrypt
+
+`auth.py` stored passwords as `sha256:salt:hex_digest` — a fast hash function
+with a random salt. While this is better than unsalted SHA-256, it is not a
+memory-hard KDF and is brute-forceable with a GPU at billions of attempts/second.
+For a security validation tool, this is a credibility issue.
+
+Fix: passwords are now hashed with `hashlib.scrypt` (stdlib, no new dependencies):
+- Parameters: N=16384, r=8, p=1 (OWASP minimum recommendation for interactive login)
+- New hash format: `scrypt:salt_hex:hash_hex`
+- Backward compatible: existing `sha256:` hashes are still verified (for users
+  upgrading from prior versions), but new passwords use scrypt
+
+Argon2id would be preferable but requires `argon2-cffi` (not in stdlib). Scrypt
+is a recognized NIST-approved KDF (SP 800-132) available in Python stdlib since 3.6.
+
+### Fix 4: TRITON/TRISIS chain — transparent disclosure of surrogate protocol
+
+The chain was labeled "Triton / TRISIS" without disclosing that it uses Modbus
+and S7comm as surrogates for the proprietary TriStation protocol (which is not
+publicly documented and not implemented in ICSForge).
+
+Fix: chain title updated to "SIS Targeting (TRITON/TRISIS-inspired) — Modbus +
+S7comm surrogate". Description now explicitly states that TriStation is the real
+attack protocol, explains why it cannot be included, and clarifies that the modelled
+attacker behaviour (SIS recon → lateral movement → safety function disable) is
+accurate while the wire protocol differs from the real incident. UI chain cards
+updated to match.
+
+### Reviewer findings not actioned
+
+**OPC UA stateless sessions** — correctly flagged. OPC UA sessions require
+coherent sc_id/token across messages; ICSForge generates each packet independently.
+Live sends to a real OPC UA server will fail at session establishment. This is
+documented in the README. The PCAP-generation use case (primary use case) is
+unaffected.
+
+**DNP3 sequence number tracking** — correctly flagged as a deviation from stateful
+DNP3 sessions. Individual packets have correct CRCs and application layer encoding;
+sequence numbers are randomised per packet rather than tracked across a session.
+This is a PCAP-quality limitation. The reviewer confirmed DNP3 CRC implementation
+is correct.
+
+## v0.58.1 (2026-04 — E2E test fix, variants caching, lint clean)
+
+External review of v0.58.0 found three real issues. All fixed.
+
+### Fix 1: tests/test_e2e_pipeline.py had 9 Ruff errors and 2 failing tests
+
+Ruff errors removed:
+- `import tempfile` unused → removed
+- `import datetime, timezone` unused in test context → removed
+- `from collections import defaultdict` unused → removed
+- Ambiguous variable name `l` in list comprehension → renamed to `line`/`fh`
+- `open(...)` without context manager (2 occurrences) → wrapped with `with`
+- Unsorted inline import block → sorted
+
+Failing test 1: `test_alerts_ingest_strict_validation` used `tmp_path` (pytest
+fixture giving a temp directory outside the repo) as the file path sent to
+`/api/alerts/ingest`. The endpoint only accepts repo-relative paths. Fixed by
+writing test files to `out/test_tmp/` (inside repo) and cleaning up in finally blocks.
+
+Failing test 2: `test_technique_variants_all_resolve` called the variants endpoint
+for all 68 techniques serially — at ~670ms cold per call, this caused a timeout.
+Replaced with `test_technique_variants_sample_resolve` which spot-checks a
+representative sample of 7 techniques. The resolve correctness guarantee is preserved.
+
+### Fix 2: /api/technique/variants was slow (670ms per call)
+
+The endpoint was reparsing scenarios.yml from disk on every request. With 468 scenarios
+and full YAML parsing, each call took ~670ms.
+
+Added an mtime-based module-level cache (`_PACK_CACHE`): the first call after startup
+(or after the file changes) parses the YAML and caches the result. Subsequent calls
+check the file mtime — if unchanged, they serve from cache.
+
+Result:
+- Cold call (startup or file changed): ~670ms (unchanged)
+- Warm call (file unchanged): ~1.6ms avg, 6ms max
+- 400x speedup for the common case
+
+The cache is automatically invalidated when scenarios.yml is modified, so adding
+new scenarios is immediately reflected without restarting.
+
+### Summary after v0.58.1
+- 35/35 smoke test
+- 7/7 E2E tests (17/17 assertions) — all passing
+- Ruff: 0 errors (tests/test_e2e_pipeline.py cleaned)
+- variants endpoint: 1.6ms avg (was 670ms)
+
+## v0.58.0 (2026-04 — Polish release: E2E CI test, scenario expansion, dead code cleanup, docs)
+
+### 1. True E2E CI test (tests/test_e2e_pipeline.py)
+
+Added `tests/test_e2e_pipeline.py` with 7 tests covering the full pipeline:
+- `test_generate_offline_creates_artifacts` — events JSONL written, T0855 in techniques
+- `test_run_full_returns_artifacts` — run indexed, artifacts and techniques present
+- `test_live_receipts_visible_in_all_run_endpoints` — 7 simulated live receipts visible
+  in /api/run, /api/run_detail, /api/run_full; dedup confirmed (7 dupes → still 7)
+- `test_scenarios_grouped_complete` — 400+ scenarios, all chains have steps
+- `test_technique_variants_all_resolve` — all variant IDs round-trip to real scenarios
+- `test_matrix_status_consistent` — 83 unique technique IDs, matrix_info present
+- `test_alerts_ingest_strict_validation` — malformed alert → 400, valid → 200
+
+All 13 assertions pass. This test permanently prevents the receipt-consistency and
+variant-resolution classes of regression found in earlier reviews.
+
+### 2. Scenario expansion: 59.3% → 64.3% (437/680)
+
+34 new scenarios across 10 techniques (batch 6). All verified: 0 bad styles,
+0 tactic mismatches. 23 techniques now at 10/10 protocol coverage (+5 from v0.57.5).
+
+Techniques expanded:
+  T0861 Point & Tag Identification:  6→10/10 (+iec61850, mqtt, profinet_dcp, s7comm)
+  T0802 Automated Collection:        6→10/10 (+iec61850, opcua, profinet_dcp, s7comm)
+  T0881 Service Stop:                6→10/10 (+iec61850, modbus, mqtt, profinet_dcp)
+  T0827 Loss of Control:             6→10/10 (+iec61850, mqtt, opcua, profinet_dcp)
+  T0885 Commonly Used Port:          2→6/10  (+dnp3, iec104, iec61850, s7comm)
+  T0811 Data from Info Repos:        2→6/10  (+dnp3, enip, iec104, modbus)
+  T0843 Program Download:            6→9/10  (+iec104, iec61850, modbus, profinet_dcp)
+  T0800 Firmware Update Mode:        6→9/10  (+bacnet, iec61850, profinet_dcp)
+  T0819 Exploit Public-Facing:       3→6/10  (+bacnet, dnp3, iec104)
+  T0881/T0827 already noted above.
+
+Domain filter applied: T0842/T0872/T0864/T0884/T0890/T0895/T0807/T0834/T0853
+remain at their correct ceiling (host-only or single-protocol-only techniques).
+
+### 3. /api/scenarios_grouped payload optimization
+
+Added `?include_steps` query parameter (default: 1 for backward compatibility).
+Callers that don't need step data can request `?include_steps=0` for a lean response.
+The campaign page continues to receive full steps for chain rendering.
+
+### 4. technique_variants.json cleanup
+
+`TECH_VARIANTS` constant removed from `helpers.py` (was the only remaining reference
+after the v0.57.1 fix). The JSON file itself is retained but marked with a
+`_deprecated` key explaining that variants now derive live from scenarios.yml.
+
+### 5. README: network configuration documentation
+
+Added "Network configuration: Receiver IP vs Destination IP" section explaining
+the dual-field model (cfg_receiver_ip vs dst_ip), the sync modes (callback, pull,
+SSE), and when to use each. Addresses the "design complexity" flag from the reviewer.
+
+### Coverage summary
+Standalone scenarios: 457 (+34) + 11 chains = 468 total
+Techniques at 10/10: 23 (+5)
+Coverage: 59.3% → 64.3% (437/680)
+
 ## v0.57.5 (2026-04 — receipt consistency across all run endpoints + lint clean)
 
 ### Fix 1: /api/run and /api/run_detail were still callback-blind

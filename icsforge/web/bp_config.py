@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
-
+import icsforge
 import icsforge.web.helpers as _h
 from icsforge import __version__
 from icsforge.web.helpers import (
@@ -245,6 +245,37 @@ def api_selftest():
 
 
 # ── Health API
+
+@bp.route("/api/version")
+def api_version():
+    """Return running version. No auth required."""
+    from icsforge.web.helpers import _canonical_scenarios_path, _load_yaml
+    try:
+        doc = _load_yaml(_canonical_scenarios_path()) or {}
+        sc = doc.get("scenarios") or {}
+        standalone = sum(1 for k in sc if not k.startswith("CHAIN__"))
+        chains = sum(1 for k in sc if k.startswith("CHAIN__"))
+    except Exception:
+        standalone = chains = None
+    return jsonify({
+        "version": getattr(icsforge, "__version__", "unknown"),
+        "protocols": 10,
+        "scenarios": {"standalone": standalone, "chains": chains},
+    })
+
+
+@bp.route("/api/technique_support")
+def api_technique_support():
+    """Return technique_support.json — documents ceilings and rationale."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(here, "..", "data", "technique_support.json")
+    try:
+        with open(data_path, encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except (OSError, json.JSONDecodeError) as exc:
+        return jsonify({"error": str(exc)}), 500
+
 @bp.route("/api/health")
 def api_health():
     rr = _repo_root()

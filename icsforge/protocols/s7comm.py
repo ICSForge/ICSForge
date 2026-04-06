@@ -66,20 +66,32 @@ def _s7_job_header(pdu_ref: int, param_len: int, data_len: int = 0) -> bytes:
 
 def _var_item(area: int, db_num: int, byte_addr: int, bit_addr: int = 0,
               length: int = 1, tsize: int = TSIZE_WORD) -> bytes:
-    """S7 variable addressing item (12 bytes)."""
-    return struct.pack(">BBHBBHB",
-        0x12,          # item spec
-        0x0A,          # item length
-        0x10,          # syntax id = S7ANY
-        tsize,
-        length & 0xFFFF >> 8, length & 0xFF,
-        db_num & 0xFFFF >> 8,
+    """
+    S7 variable addressing item — exactly 12 bytes.
+    Wire format (S7ANY syntax):
+      [0]    item_spec  = 0x12
+      [1]    item_len   = 0x0A  (10 more bytes follow)
+      [2]    syntax_id  = 0x10  (S7ANY)
+      [3]    tsize      (transport size: TSIZE_BIT/BYTE/WORD/DWORD)
+      [4-5]  length     (big-endian, number of elements)
+      [6-7]  db_num     (big-endian, 0 for non-DB areas)
+      [8]    area       (0x81=inputs, 0x82=outputs, 0x83=M, 0x84=DB, ...)
+      [9-11] bit_addr   (bit address: byte_offset*8 + bit, packed in 3 bytes)
+    """
+    # Bit address: byte_addr * 8 + bit_addr, encoded big-endian in 3 bytes
+    bit_offset = byte_addr * 8 + bit_addr
+    return struct.pack(">BBBBHH",
+        0x12,           # item spec
+        0x0A,           # item length (10 bytes follow)
+        0x10,           # syntax id = S7ANY
+        tsize & 0xFF,
+        length & 0xFFFF,
+        db_num & 0xFFFF,
     ) + bytes([
-        db_num & 0xFF,
         area & 0xFF,
-        (byte_addr >> 11) & 0xFF,
-        (byte_addr >> 3)  & 0xFF,
-        ((byte_addr & 0x07) << 5) | (bit_addr & 0x07),
+        (bit_offset >> 16) & 0xFF,
+        (bit_offset >>  8) & 0xFF,
+        bit_offset         & 0xFF,
     ])
 
 
@@ -108,7 +120,8 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
       write_outputs      FC05 area=OUTPUTS — T0876 Loss of Safety
     """
     rnd     = random.Random(kwargs.get("seed"))
-    pdu_ref = rnd.randint(1, 0xFFFF)
+    # Monotonic PDU reference from engine; None → random per packet
+    pdu_ref = (int(kwargs.get("s7_pdu_ref")) & 0xFFFF) if kwargs.get("s7_pdu_ref") is not None else rnd.randint(1, 0xFFFF)
     mb      = marker_bytes(marker)
 
     if style == "setup":

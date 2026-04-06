@@ -29,7 +29,8 @@ def build_payload(marker: str, style: str = "read_holding", **kwargs) -> bytes:
       exception_probe      (FC03 illegal addr, T0820)
     """
     rnd  = random.Random(kwargs.get("seed"))
-    tid  = int(kwargs.get("transaction_id", rnd.randint(0, 0xFFFF)))
+    # Prefer modbus_tid from engine (monotonic); fall back to explicit transaction_id; then random
+    tid  = int(kwargs.get("modbus_tid") or kwargs.get("transaction_id") or rnd.randint(0, 0xFFFF)) & 0xFFFF
     unit = int(kwargs.get("unit_id", rnd.randint(1, 247))) & 0xFF
     mb   = marker_bytes(marker)
 

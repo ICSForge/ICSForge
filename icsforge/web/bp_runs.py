@@ -1,4 +1,5 @@
 """ICSForge runs blueprint — run history, alerts, validation, export, PCAP, correlation."""
+import html
 import json
 import os
 import time
@@ -181,9 +182,12 @@ def api_export_run():
         idx = next((x for x in _load_run_index() if x.get("run_id") == run_id), None) or {}
     receipts_path = _default_receipts_path()
     receipts = [r for r in _read_jsonl_tail(receipts_path, limit=4000) if r.get("run_id") == run_id]
-    live_ids = {id(r) for r in receipts}
+    def _rkey(r):
+        return (r.get("run_id",""), r.get("@timestamp",""), r.get("technique",""),
+                r.get("proto",""), r.get("src_ip",""), str(r.get("src_port","")))
+    live_keys = {_rkey(r) for r in receipts}
     for r in _live_receipts:
-        if r.get("run_id") == run_id and id(r) not in live_ids:
+        if r.get("run_id") == run_id and _rkey(r) not in live_keys:
             receipts.append(r)
     receipts.sort(key=lambda x: x.get("@timestamp") or "")
     techs = sorted({r.get("technique") for r in receipts if r.get("technique")})
@@ -195,7 +199,7 @@ def api_export_run():
         except (OSError, json.JSONDecodeError) as exc:
             log.debug("Could not load validation file %s: %s", val_path, exc)
 
-    html = f"""<!doctype html>
+    _report_html = f"""<!doctype html>
 <html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>ICSForge Report {run_id}</title>
 <style>
@@ -208,7 +212,7 @@ table{{width:100%;border-collapse:collapse}} td,th{{text-align:left;padding:8px;
 pre{{white-space:pre-wrap;background:#f2f4f8;border:1px solid #e5e7eb;border-radius:16px;padding:12px}}
 </style></head><body><div class='wrap'>
 <div class='card'><h1>ICSForge SOC Validation Report</h1>
-<div class='muted'>run_id: <span class='mono'>{run_id}</span> &bull; scenario: {idx.get('scenario','-')} &bull; generated: {datetime.now(timezone.utc).isoformat()}Z</div>
+<div class='muted'>run_id: <span class='mono'>{html.escape(str(run_id))}</span> &bull; scenario: {html.escape(str(idx.get('scenario','-')))} &bull; generated: {datetime.now(timezone.utc).isoformat()}Z</div>
 </div>
 <div class='card'><h2>Summary</h2>
 <div class='muted'>Packets received: <b>{len(receipts)}</b></div>
@@ -220,17 +224,17 @@ PCAP: <span class='mono'>{next((a.get('path') for a in idx.get('artifacts',[]) i
 </div>
 <div class='card'><h2>Delivery Evidence (last 20 receipts)</h2>
 <table><thead><tr><th>Time</th><th>Proto</th><th>Src</th><th>Technique</th><th>Bytes</th></tr></thead><tbody>
-{''.join([f"<tr><td class='mono'>{(r.get('@timestamp') or '')}</td><td>{r.get('receiver.proto','')}</td><td class='mono'>{r.get('src_ip','')}:{r.get('src_port','')}</td><td class='mono'>{r.get('technique','')}</td><td class='mono'>{r.get('bytes','')}</td></tr>" for r in receipts[-20:]])}
+{''.join([f"<tr><td class='mono'>{html.escape(str(r.get('@timestamp') or ''))}</td><td>{html.escape(str(r.get('receiver.proto','') or ''))}</td><td class='mono'>{html.escape(str(r.get('src_ip','') or ''))}:{html.escape(str(r.get('src_port','') or ''))}</td><td class='mono'>{html.escape(str(r.get('technique','') or ''))}</td><td class='mono'>{html.escape(str(r.get('bytes','') or ''))}</td></tr>" for r in receipts[-20:]])}
 </tbody></table></div>
 <div class='card'><h2>Validation</h2>
 <pre class='mono'>{json.dumps(validation, indent=2) if validation else 'Run validation from SOC Mode to populate this section.'}</pre>
 </div>
-<div class='muted' style='margin:20px 0'>ICSForge &bull; GPLv3 &bull; Enterprise OT/ICS Telemetry Lab</div>
+<div class='muted' style='margin:20px 0'>ICSForge &bull; GPLv3 &bull; OT/ICS security coverage validation platform</div>
 </div></body></html>"""
 
     out_path = _export_path(run_id)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    Path(out_path).write_text(html, encoding="utf-8")
+    Path(out_path).write_text(_report_html, encoding="utf-8")
     return jsonify({"ok": True, "path": out_path, "download_url": f"/download?path={out_path}"})
 
 
@@ -351,9 +355,15 @@ def api_download():
     if not path:
         return jsonify({"error": "path required"}), 400
     rr = _repo_root()
+    # If path is relative, resolve it against repo root (not CWD)
+    if not os.path.isabs(path):
+        path = os.path.join(rr, path)
     real = os.path.realpath(path)
-    if not real.startswith(os.path.realpath(os.path.join(rr, "out"))):
+    allowed = os.path.realpath(os.path.join(rr, "out"))
+    if not real.startswith(allowed):
         return jsonify({"error": "blocked"}), 403
+    if not os.path.exists(real):
+        return jsonify({"error": "file not found"}), 404
     return send_file(real, as_attachment=True)
 
 
@@ -391,11 +401,11 @@ def api_alerts_ingest():
     run_id = (data.get("run_id") or "").strip()
     profile = (data.get("profile") or "suricata_eve").strip()
     if not path:
-        return jsonify({"ok": False, "error": "Missing path"}), 400
+        return jsonify({"error": "Missing path"}), 400
     rr = os.path.realpath(_repo_root())
     p = os.path.realpath(os.path.join(rr, path.lstrip("/")))
     if not p.startswith(rr) or not os.path.exists(p):
-        return jsonify({"ok": False, "error": "Path not found or not allowed"}), 400
+        return jsonify({"error": "Path not found or not allowed"}), 400
     rows = _read_json_lines(p)
     norm = []
     for r in rows:

@@ -53,7 +53,20 @@ window.drawSparkline = function(canvas, points){
   ctx.stroke();
 };
 
+// Read CSRF token from meta tag (set by Flask session)
+window._csrfToken = () => {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.getAttribute('content') : '';
+};
+
 window.fetchJSON = async function(url, opts){
+  // Inject CSRF token on all state-mutating requests
+  if (opts && opts.method && opts.method !== 'GET' && opts.method !== 'HEAD') {
+    opts.headers = opts.headers || {};
+    if (typeof opts.headers === 'object' && !(opts.headers instanceof Headers)) {
+      opts.headers['X-CSRF-Token'] = window._csrfToken();
+    }
+  }
   const res = await fetch(url, opts || {});
   let data = null;
   try { data = await res.json(); } catch(e) { data = { error: "Invalid JSON" }; }

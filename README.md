@@ -1,9 +1,9 @@
 
-[//]: [![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
+[![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.57.5-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
+[![Version](https://img.shields.io/badge/version-0.59.4-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
@@ -14,16 +14,15 @@ ICSForge is developed with a **safe-by-design** approach, operating within a **S
 > Most ICS security tools promise coverage - ICSForge lets you **prove it**.
 ---
 
-## Key Numbers (v0.57.5)
+## Key Numbers (v0.59.4)
 
 | Metric | Value |
 |---|---|
-| **Protocols** | 10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, GOOSE, PROFINET DCP)|
-| **Runnable Scenarios** | 434 standalone + 11 named attack chains |
-| **ATT&CK for ICS Techniques Implemented** | 69 unique technique IDs in scenario steps |
-| **ATT&CK for ICS Matrix** | 83 unique technique IDs (94 total entries — 11 appear in multiple tactics) |
-| **ATT&CK for ICS Matrix Coverage** | 83% (69 out of 83 technique) |
-| **Techniques at Full Coverage** | 18 techniques covered across all 10 protocols |
+| **Protocols** | 10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP) |
+| **Runnable Scenarios** | 536 standalone + 11 named attack chains = 547 total |
+| **ATT&CK for ICS Techniques Implemented** | 67 unique technique IDs in scenario steps |
+| **ATT&CK for ICS Matrix** | 83 unique technique IDs (94 total entries — 11 appear under multiple tactics) |
+| **ATT&CK for ICS Matrix Coverage** | 82% (68 out of 83 technique) — 35 of 67 techniques at 10/10 protocols |
 | **Detection Rules** | Auto-generated Suricata + Sigma rules per scenario |
 
 ---
@@ -87,16 +86,9 @@ docker compose up
 
 ### Authentication
 
-On first launch, ICSForge prompts you to create an admin account. All subsequent access requires login.
+On first launch, ICSForge prompts you to create an admin account. All subsequent access requires login. Credentials are stored with scrypt KDF (N=16384, file mode 0600).
 
-```bash
-# Disable auth for local/lab development only
-ICSFORGE_NO_AUTH=1 python -m icsforge.web
-```
-
-Credentials are stored in `~/.icsforge/credentials.json` (SHA-256 + salt, file mode 0600).
-
-**Always-public endpoints** (no auth required): `/api/health` (monitoring), `/api/receiver/callback` (receiver→sender receipts), `/api/config/set_callback` (sender→receiver registration). When `callback_token` is configured, the callback endpoint also requires `X-ICSForge-Callback-Token`.
+**Always-public endpoints** (no auth required): `/api/health`, `/api/version`, `/api/technique_support`, `/api/receiver/callback`, `/api/config/set_callback`. When `callback_token` is configured, the callback endpoint also requires `X-ICSForge-Callback-Token`.
 
 ## Network Configuration: Receiver IP vs Destination IP
 
@@ -104,7 +96,7 @@ ICSForge uses two related but distinct IP concepts in the sender UI:
 
 **Receiver IP (Network Settings panel)** — the IP of the machine running `icsforge receiver`. Setting this via Network Settings saves the address to persistent config and attempts to register a callback URL with the receiver so it can push receipts back to the sender automatically.
 
-**Destination IP (Configuration panel)** — the IP written into generated packet headers as the target address. Auto-populated from Receiver IP when you click Save & Connect, but can be overridden independently. For example: if testing against a real PLC you may want `dst_ip` = the PLC's IP while the receiver runs on a different monitoring host.
+**Destination IP (Configuration panel)** — the IP written into generated packet headers as the target address. Auto-populated from Receiver IP when you click Save & Connect, but can be overridden independently.
 
 **Sync modes:**
 
@@ -152,24 +144,24 @@ icsforge send --name T0855__unauth_command__modbus \
 ---
 ## Protocol Coverage
 
-| Protocol | Port | Styles | Techniques (of 69) |
+| Protocol | Port | Styles | Techniques (of 67) |
 |---|---|---|---|
-| S7comm (Siemens) | TCP/102 | 36 | 54/69 |
-| EtherNet/IP (Allen-Bradley) | TCP/44818 | 23 | 52/69 |
-| DNP3 | TCP/20000 | 22 | 48/69 |
-| Modbus/TCP | TCP/502 | 29 | 43/69 |
-| OPC UA | TCP/4840 | 30 | 42/69 |
-| IEC-104 | TCP/2404 | 24 | 41/69 |
-| BACnet/IP | UDP/47808 | 16 | 38/69 |
-| MQTT | TCP/1883 | 16 | 33/69 |
-| IEC 61850 GOOSE | L2/EtherType 0x88B8 | 5 | 27/69 |
-| PROFINET DCP | L2/EtherType 0x8892 | 8 | 25/69 |
+| OPC UA | TCP/4840 | 30 | 58/67 |
+| DNP3 | TCP/20000 | 22 | 57/67 |
+| S7comm (Siemens) | TCP/102 | 36 | 56/67 |
+| EtherNet/IP (Allen-Bradley) | TCP/44818 | 23 | 55/67 |
+| Modbus/TCP | TCP/502 | 29 | 54/67 |
+| BACnet/IP | UDP/47808 | 16 | 54/67 |
+| MQTT | TCP/1883 | 16 | 52/67 |
+| IEC-104 | TCP/2404 | 24 | 51/67 |
+| PROFINET DCP | L2/EtherType 0x8892 | 8 | 44/67 |
+| IEC 61850 GOOSE | L2/EtherType 0x88B8 | 5 | 42/67 |
 
 **IEC 61850 GOOSE** and **PROFINET DCP** are Layer 2 protocols — they require a raw socket interface (`--l2-iface eth0`) for live sends. PCAP and offline generation work without a network interface.
 
 ### Techniques at Full Coverage (10/10 protocols)
 
-T0813, T0826, T0829, T0831, T0832, T0836, T0838, T0840, T0846, T0848, T0855, T0856, T0858, T0877, T0878, T0882, T0888, T0889 — **18 techniques** fully covered across all 10 protocols. 
+T0802, T0803, T0804, T0811, T0813, T0814, T0815, T0819, T0821, T0826, T0827, T0828, T0829, T0830, T0831, T0832, T0840, T0846, T0848, T0855, T0856, T0858, T0859, T0861, T0866, T0868, T0869, T0877, T0881, T0882, T0885, T0886, T0888, T0889, T0891 — **35 techniques** fully covered across all 10 protocols.
 
 ---
 
@@ -183,12 +175,12 @@ Scenarios are defined in `icsforge/scenarios/scenarios.yml`.
 
 | Type | Count | Description |
 |---|---|---|
-| Standalone scenarios | 423 | Single-technique, single-protocol runs |
+| Standalone scenarios | 536 | Single-technique, single-protocol runs |
 | Named attack chains | 11 | Multi-step sequences modelling real campaigns |
 
 **Named attack chains** include:
 - **Industroyer2** — Ukraine 2022 power grid attack (IEC-104 + S7comm)
-- **Triton / TRISIS** — Safety system targeting (SIS) modelling the 2017 Saudi petrochemical incident
+- **SIS Targeting (TRITON-inspired)** — Safety system targeting (SIS), Modbus + S7comm surrogate
 - **Stuxnet-style** — Siemens PLC programme manipulation
 - **Water Treatment** — Oldsmar-style setpoint tampering (Modbus + IEC-104)
 - **OPC UA Espionage** — Silent data exfiltration via OPC UA sessions
@@ -203,7 +195,7 @@ Scenarios are defined in `icsforge/scenarios/scenarios.yml`.
 
 ## What Techniques Are Covered
 
-ICSForge implements 69 of 83 ATT&CK for ICS techniques at the network-observable level. The remaining 14 are correctly classified as host-only or require physical access — they are documented in `icsforge/data/technique_support.json` with explicit rationale.
+ICSForge implements 67 of 83 ATT&CK for ICS techniques at the network-observable level. The remaining 16 are correctly classified as host-only, require physical access, or generate no network-observable packets — they are documented in `icsforge/data/technique_support.json` with explicit rationale per technique, and also exposed via `/api/technique_support`.
 
 **ATT&CK matrix counts explained:**
 - 83 unique technique IDs in the matrix
@@ -237,8 +229,9 @@ ICSForge implements 69 of 83 ATT&CK for ICS techniques at the network-observable
 | `/api/run` | GET | Receipt count + techniques for a run (`?run_id=`) |
 | `/api/run_detail` | GET | Full receipt histogram for a run (`?run_id=`) |
 | `/api/run_full` | GET | Complete run detail: artifacts, receipts, techniques (`?run_id=`) |
+| `/api/export` | GET | Generate and download HTML report for a run (`?run_id=`) |
 
-All three run-detail endpoints (`/api/run`, `/api/run_detail`, `/api/run_full`) merge both receipt sources — the JSONL file written by the standalone receiver process and the in-memory callback receipts — using a stable content-based deduplication key.
+All three run-detail endpoints (`/api/run`, `/api/run_detail`, `/api/run_full`) merge both receipt sources — the JSONL file written by the standalone receiver process and the in-memory callback receipts — using a stable content-based deduplication key `(run_id, @timestamp, technique, proto, src_ip, src_port)`.
 
 ### Scenarios and matrix
 
@@ -247,9 +240,12 @@ All three run-detail endpoints (`/api/run`, `/api/run_detail`, `/api/run_full`) 
 | `/api/scenarios` | GET | All scenario names |
 | `/api/scenarios_grouped` | GET | Scenarios grouped by ATT&CK tactic (add `?include_steps=0` for lean payload) |
 | `/api/technique/variants` | GET | All runnable variants for a technique (`?technique=T0855`) |
+| `/api/technique/send` | POST | Fire a single technique variant by ID |
 | `/api/matrix_status` | GET | Per-technique coverage status + `matrix_info` counts |
+| `/api/preview` | GET | Scenario metadata preview (`?name=`) |
+| `/api/preview_payload` | GET | Live hex dump of protocol bytes for a scenario step (`?name=&step=&no_marker=`) |
 
-### Configuration
+### Configuration and discovery
 
 | Endpoint | Method | Description |
 |---|---|---|
@@ -257,17 +253,22 @@ All three run-detail endpoints (`/api/run`, `/api/run_detail`, `/api/run_full`) 
 | `/api/config/receiver_ip` | POST | Set receiver IP and attempt callback registration |
 | `/api/receiver/live` | GET | In-memory live receipts (last 500) |
 | `/api/receiver/callback` | POST | Receipt ingest from receiver (used by receiver process) |
+| `/api/version` | GET | Running version, protocol count, scenario counts (no auth required) |
+| `/api/technique_support` | GET | Full technique support metadata: implementation status and ceiling rationale (no auth required) |
+| `/api/health` | GET | Health check (no auth required) |
 
 ### Detection and reporting
 
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/detections/download` | GET | Download Suricata + Sigma rules |
-| `/api/report/generate` | POST | Generate coverage report for a run |
-| `/api/report/download` | POST | Download generated report |
-| `/api/alerts/ingest` | POST | Import Suricata EVE JSONL for correlation (`{"path": "...", "profile": "suricata_eve"}`) |
+| `/api/report/generate` | POST | Generate coverage report HTML for a run |
+| `/api/report/download` | POST | Download generated report as HTML file |
+| `/api/alerts/ingest` | POST | Import Suricata EVE JSONL for correlation (`{"path": "out/alerts/eve.json", "profile": "suricata_eve"}`) |
+| `/api/pcap/upload` | POST | Upload a PCAP file to the server for replay |
+| `/api/pcap/replay` | POST | Replay a PCAP against a destination IP |
 
-Note: `/api/alerts/ingest` requires the `path` to be inside the repo directory and returns `400` with a row-specific error message for malformed `alert` fields.
+Note: `/api/alerts/ingest` requires `path` to be **relative to the ICSForge project root** (e.g. `out/alerts/suricata_eve.json`) — absolute paths are rejected. Returns `400` with a row-specific error for malformed `alert` fields.
 
 ---
 
@@ -294,15 +295,27 @@ Standard mode embeds `ICSFORGE_SYNTH|run_id|technique|step` bytes in every packe
 icsforge send --name T0855__unauth_command__modbus \
   --dst-ip 192.168.1.50 --confirm-live-network --no-marker
 
-# Web UI: toggle "Stealth" before clicking Send
+# Web UI: toggle "Stealth mode" before clicking Run Live
 ```
 
 In stealth mode:
 - **PCAP:** contains zero ICSForge-identifying bytes — bit-for-bit identical to real device traffic
+- **Live payload preview:** updates immediately when stealth is toggled — shows marker-free hex
 - **Events JSONL:** `icsforge.marker` is `null`; `icsforge.synthetic: true` is preserved (accurate ground-truth metadata)
 - **Delivery confirmation:** switches from marker detection to TCP ACK
 
 Use stealth mode for IDS/NGFW validation exercises where the marker would trivially identify the test traffic.
+
+---
+
+## Security Model
+
+- **Destination IP enforcement:** `/api/send` only accepts RFC1918, loopback, link-local, and TEST-NET addresses — public IPs return HTTP 403. The CLI `--confirm-live-network` flag is required for any live send regardless.
+- **Path traversal protection:** `outdir` and alert ingest `path` parameters are validated against the project root via `os.path.realpath()`.
+- **CSRF protection:** All state-mutating API endpoints require `X-CSRF-Token` header matching the session token.
+- **Security headers:** `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy`, `Referrer-Policy` on all responses.
+- **Password storage:** scrypt KDF (N=16384, r=8, p=1, dklen=32) with random salt.
+- **Rate limiting:** 5 login attempts per 60 seconds per IP; 5-minute lockout.
 
 ---
 
@@ -320,10 +333,10 @@ python scripts/smoke_test.py    # 35/35 quick sanity check
 
 ```
 tests/
-├── test_web_api.py         — API endpoint tests (19 tests)
+├── test_web_api.py         — API endpoint tests
 ├── test_auth.py            — Auth flow and rate limiting
 ├── test_sse_campaigns.py   — Campaign SSE streaming
-└── test_e2e_pipeline.py    — End-to-end pipeline integration
+└── test_e2e_pipeline.py    — End-to-end pipeline integration (7 tests)
 ```
 
 ---
@@ -334,8 +347,9 @@ tests/
 - Not a PLC hacking tool — it does not modify real device state
 - Not a malware platform — it generates synthetic traffic only
 - Not a process-impact simulator — safe-by-design for OT environments
+- Not a full protocol-faithful emulator — it generates realistic synthetic traffic optimised for detection validation, not device interoperability testing
 
-ICSForge is **defender-first**, **safe by design** and **honest about what each technique requires**, and explicit about which techniques cannot be simulated over the network.
+ICSForge is **defender-first**, **safe by design**, and **honest about what each technique requires** — explicit about which techniques cannot be simulated over the network and why.
 
 ---
 
@@ -349,9 +363,11 @@ icsforge send --name T0855__unauth_command__iec61850 \
 ```
 Offline PCAP generation (`icsforge generate`) works without an interface.
 
-**MQTT** requires a broker at the destination IP (default port 1883). ICSForge generates all MQTT traffic types including connect, publish, subscribe, will messages, and disconnect.
+**MQTT** generates all packet types including CONNECT (with credentials and Will message), PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, and DISCONNECT. All 17 styles produce spec-valid frames with correct `remaining_length` encoding. Requires a broker at the destination IP (default port 1883).
 
-**OPC UA** scenarios run against a standard OPC UA server endpoint on TCP/4840.
+**DNP3** implements correct per-block CRC per IEEE 1815-2012 §8.2 — the transport layer payload is split into 16-byte blocks, each followed by its own 2-byte CRC, matching what real DNP3 outstations expect at the link layer.
+
+**OPC UA** sessions are coherent within a scenario run — all MSG frames share the same `sc_id` and `security_token`, with monotonically incrementing `sequence_number` and `request_id` per packet.
 
 ---
 

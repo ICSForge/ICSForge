@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:center;padding:48px 24px;max-width:480px;margin:64px auto">
+  <div style="font-size:48px;margin-bottom:16px">🔍</div>
+  <h2 style="margin:0 0 8px 0">Page not found</h2>
+  <p class="muted">The path <code>{{ request.path }}</code> doesn't exist.</p>
+  <a href="/" class="btn primary" style="margin-top:16px;display:inline-block">← Back to sender</a>
+</div>
+{% endblock %}

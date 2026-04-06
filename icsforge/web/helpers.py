@@ -73,7 +73,6 @@ __all__ = [
 # ATT&CK for ICS matrix data paths (bundled)
 MATRIX_JSON_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ics_attack_matrix.json")
 MATRIX_SINGLETON_PACK = os.path.join(os.path.dirname(__file__), "..", "scenarios", "scenarios.yml")
-TECH_VARIANTS = os.path.join(os.path.dirname(__file__), "..", "data", "technique_variants.json")
 
 
 def _load_matrix() -> dict:

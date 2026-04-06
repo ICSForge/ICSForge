@@ -34,7 +34,7 @@ async function loadGroups(){
 /* ── Chain cards ────────────────────────────────────────────── */
 const CHAIN_META = {
   CHAIN__industroyer2__power_grid:   {icon:"⚡",label:"Industroyer2",sub:"Ukraine 2022 · IEC-104 + S7comm"},
-  CHAIN__triton__safety_system:      {icon:"☢",label:"Triton / TRISIS",sub:"Safety system targeting · SIS"},
+  CHAIN__triton__safety_system:      {icon:"☢",label:"SIS Targeting (TRITON-inspired)",sub:"Modbus+S7comm surrogate · SIS disable pattern"},
   CHAIN__stuxnet__siemens_plc:       {icon:"⚙",label:"Stuxnet-style",sub:"Siemens PLC · Program manipulation"},
   CHAIN__water_treatment_tampering:  {icon:"💧",label:"Water Treatment",sub:"Oldsmar-style · Setpoint tampering"},
   CHAIN__industrial_espionage__opcua:{icon:"🕵",label:"OPC UA Espionage",sub:"Silent exfil via OPC UA sessions"},
@@ -158,7 +158,8 @@ async function loadHexDump(name, stepIdx){
   $("hex_dump").innerHTML = '<span style="color:#475569">Loading…</span>';
   $("hex_meta").innerHTML = "";
   $("hex_nav").style.display = "none";
-  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}`);
+  const stealth = !!(document.getElementById("stealth_mode") && document.getElementById("stealth_mode").checked);
+  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}${stealth?"&no_marker=1":""}`);
   if(data.error){$("hex_dump").innerHTML=`<span style="color:var(--bad)">${escHtml(data.error)}</span>`;return;}
   const lines = (data.hexdump||"").split("\n").map(line=>{
     const m = line.match(/^([0-9a-f]{4})  ([ 0-9a-f]{47})  (.+)$/);
@@ -336,13 +337,37 @@ async function doSend(offline=false){
     if(data.error){
       statuses.fill("err"); renderStepPlan(steps,statuses);
       tlMarkError();
-      logln("[ERROR] "+data.error,"log-err"); window.toast("Error",data.error,"err"); return;
+      logln("[ERROR] "+data.error,"log-err"); window.toast("Error",data.error,"err");
+      (function(){
+        const bar=document.getElementById("last_run_bar");
+        const icon=document.getElementById("last_run_icon");
+        const text=document.getElementById("last_run_text");
+        const ts=document.getElementById("last_run_ts");
+        if(!bar) return;
+        bar.style.display="flex"; icon.textContent="❌";
+        text.textContent=data.error.substring(0,80);
+        ts.textContent=new Date().toLocaleTimeString();
+      })();
+      return;
     }
     statuses.fill("ok"); renderStepPlan(steps,statuses);
     // Update timeline runId to the real one from server so SSE can match
     if(data.run_id) tlRunId = data.run_id;
     tlMarkDelivered();
     logln(`[OK] run_id=${data.run_id}  sent=${data.sent||"—"}`,"log-ok");
+    // Update last-run status bar
+    (function(){
+      const bar = document.getElementById("last_run_bar");
+      const icon = document.getElementById("last_run_icon");
+      const text = document.getElementById("last_run_text");
+      const ts   = document.getElementById("last_run_ts");
+      if(!bar) return;
+      bar.style.display = "flex";
+      icon.textContent = "✅";
+      const name = (payload.name||"").replace(/^.*?__/,"").replace(/__/g," · ");
+      text.textContent = `${name} — ${data.sent||0} packets sent`;
+      ts.textContent = new Date().toLocaleTimeString();
+    })();
     if(data.pcap){
       logln(`  pcap   → ${data.pcap}`,"log-info");
       // Trigger browser download for offline PCAP generation
@@ -803,3 +828,17 @@ window.disarmEveTap = async function(){
   const count = r.matches?.length||0;
   window.toast("EVE tap stopped", `${count} detection${count===1?"":"s"} matched`, "ok");
 };
+
+// ── Collapsible secondary cards ─────────────────────────────────────────────
+window.toggleCard = function(bodyId, heading) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  const collapsed = body.style.display === "none";
+  body.style.display = collapsed ? "" : "none";
+  // Update the chevron in the heading
+  if (heading) {
+    heading.textContent = heading.textContent.replace(/^[▾▸] /, (collapsed ? "▾ " : "▸ "));
+  }
+};
+
+// Secondary cards remain visible by default

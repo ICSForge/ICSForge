@@ -5,15 +5,16 @@ import re as _re
 from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
-from pathlib import Path as _P
 
-import yaml
 from flask import Blueprint, jsonify, request
+import yaml
 
 from icsforge.web.helpers import (
     MATRIX_SINGLETON_PACK,
+    _repo_root,
     _append_run_index,
     _canonical_scenarios_path,
+    _is_safe_private_ip,
     _list_packs,
     _list_profiles,
     _load_matrix,
@@ -24,7 +25,49 @@ from icsforge.web.helpers import (
     send_scenario_live,
 )
 
+
+# ── Input validation helpers ──────────────────────────────────────────────────
+
+def _safe_outdir(raw: str) -> str:
+    """Resolve outdir to a path inside the repo root. Rejects path traversal."""
+    rr = os.path.realpath(_repo_root())
+    cleaned = (raw or "out").strip().lstrip("/\\")
+    candidate = os.path.realpath(os.path.join(rr, cleaned))
+    if not candidate.startswith(rr):
+        raise ValueError(f"outdir {raw!r} resolves outside the project directory") from None
+    return candidate
+
+
+def _validate_src_ip(raw: str) -> str:
+    """Validate src_ip is a well-formed IP address (prevents XSS via stored values)."""
+    import ipaddress as _ip
+    try:
+        _ip.ip_address((raw or "127.0.0.1").strip())
+        return (raw or "127.0.0.1").strip()
+    except ValueError as exc:
+        raise ValueError(f"src_ip {raw!r} is not a valid IP address") from exc
+
 bp = Blueprint("bp_scenarios", __name__)
+
+# ── Scenario pack cache (avoid reparsing on every variants request) ────────
+_PACK_CACHE: dict = {}   # {"path": path, "mtime": mtime, "doc": doc}
+
+
+def _load_scenarios_cached() -> dict:
+    """Load scenarios.yml with mtime-based cache invalidation."""
+    import os as _os
+    path = _canonical_scenarios_path()
+    try:
+        mtime = _os.path.getmtime(path)
+    except OSError:
+        return {}
+    cached = _PACK_CACHE.get("doc")
+    if cached is not None and _PACK_CACHE.get("path") == path and _PACK_CACHE.get("mtime") == mtime:
+        return cached
+    doc = _load_yaml(path) or {}
+    _PACK_CACHE.update({"path": path, "mtime": mtime, "doc": doc})
+    return doc
+
 
 
 # ── Scenario listing
@@ -103,7 +146,8 @@ def api_preview_payload():
     proto = step.get("proto")
     style = step.get("style", "auto")
     tech = step.get("technique", "")
-    marker = f"ICSFORGE:PREVIEW:{name[:20]}:{tech}:"
+    no_marker = request.args.get("no_marker") in ("1","true","yes")
+    marker = "" if no_marker else f"ICSFORGE:PREVIEW:{name[:20]}:{tech}:"
     try:
         from icsforge.protocols import bacnet, dnp3, enip, iec104, iec61850, modbus, mqtt, opcua, profinet_dcp, s7comm
         builders = {
@@ -161,6 +205,7 @@ def api_scenarios_grouped():
     real = _canonical_scenarios_path()
     if not os.path.exists(real):
         return jsonify({"groups": []}), 404
+    include_steps = request.args.get("include_steps", "1") == "1"
     doc = _load_yaml(real)
     scenarios = doc.get("scenarios") or {}
     mat = _load_matrix()
@@ -192,9 +237,8 @@ def api_scenarios_grouped():
             "is_chain": sc_name.startswith("CHAIN__"),
             "step_count": len(steps),
         }
-        # Include full steps for chain scenarios so the campaign page
-        # can render the step-by-step progress view
-        if sc_name.startswith("CHAIN__"):
+        # Include full steps when requested (needed by campaign page for chain rendering)
+        if include_steps and sc_name.startswith("CHAIN__"):
             entry["steps"] = steps
         groups[group].append(entry)
     order = ["\u26d3 Attack Chains",
@@ -226,8 +270,14 @@ def api_send():
     pack = _canonical_scenarios_path()
     name = data.get("name")
     dst_ip = (data.get("dst_ip") or "").strip()
-    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
-    outdir = (data.get("outdir") or "out").strip()
+    try:
+        src_ip = _validate_src_ip(data.get("src_ip") or "127.0.0.1")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    try:
+        outdir = _safe_outdir(data.get("outdir") or "out")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     allowlist = (data.get("allowlist") or "").strip()
     timeout = float(data.get("timeout") or 2.0)
     also_build_pcap = bool(data.get("also_build_pcap"))
@@ -238,6 +288,12 @@ def api_send():
         return jsonify({"error": "Scenario name missing"}), 400
     if not dst_ip:
         return jsonify({"error": "Destination IP missing"}), 400
+    if not _is_safe_private_ip(dst_ip):
+        return jsonify({"error": (
+            f"Destination IP {dst_ip!r} is not a private/safe address. "
+            "ICSForge only sends to RFC1918, loopback, link-local, and TEST-NET ranges. "
+            "Use --confirm-live-network on the CLI for intentional public sends."
+        )}), 403
 
     allow = [x.strip() for x in allowlist.split(",") if x.strip()] or [dst_ip]
 
@@ -297,8 +353,14 @@ def api_send():
                 "warnings": res.get("warnings", []),
             }
         )
-    except (OSError, ValueError) as exc:
-        log.error("Send scenario failed: %s", exc)
+    except ValueError as exc:
+        msg = str(exc)
+        log.error("Send scenario failed: %s", msg)
+        if "not found" in msg.lower():
+            return jsonify({"error": msg}), 404
+        return jsonify({"error": msg}), 400
+    except OSError as exc:
+        log.error("Send I/O error: %s", exc)
         return jsonify({"error": str(exc)}), 500
 
 
@@ -318,8 +380,7 @@ def api_technique_variants():
     if not technique:
         return jsonify({"error": "technique required"}), 400
     try:
-        pack_path = _canonical_scenarios_path()
-        doc = _load_yaml(pack_path) or {}
+        doc = _load_scenarios_cached()
         scenarios = doc.get("scenarios") or {}
         prefix = technique + "__"
         variants = []
@@ -340,7 +401,7 @@ def api_technique_variants():
                 "label": sc.get("title") or name,
                 "proto": proto,
                 "protocols": sorted(set(protos)),
-                "notes": (sc.get("description") or "")[:200],
+                "notes": (sc.get("description") or ""),
             })
         return jsonify({"technique": technique, "variants": variants})
     except Exception as e:
@@ -361,10 +422,19 @@ def api_technique_send():
     timeout = float(data.get("timeout") or 2.0)
     allowlist = (data.get("allowlist") or "").strip()
     iface = (data.get("iface") or "").strip() or None
-    outdir = (data.get("outdir") or "out").strip()
-    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
+    try:
+        outdir = _safe_outdir(data.get("outdir") or "out")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    try:
+        src_ip = _validate_src_ip(data.get("src_ip") or "127.0.0.1")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     iface = (data.get("iface") or "").strip() or None
-    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
+    try:
+        src_ip = _validate_src_ip(data.get("src_ip") or "127.0.0.1")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     no_marker = bool(data.get("no_marker"))
 
     if not technique:
@@ -442,9 +512,15 @@ def api_generate_offline():
     data = request.get_json(force=True) or {}
     pack = _canonical_scenarios_path()
     name = (data.get("name") or "").strip()
-    outdir = (data.get("outdir") or "out").strip()
+    try:
+        outdir = _safe_outdir(data.get("outdir") or "out")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     dst_ip = (data.get("dst_ip") or "198.51.100.42").strip()
-    src_ip = (data.get("src_ip") or "127.0.0.1").strip()
+    try:
+        src_ip = _validate_src_ip(data.get("src_ip") or "127.0.0.1")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     build_pcap = bool(data.get("build_pcap"))
     run_id = (data.get("run_id") or "").strip() or None
     no_marker = bool(data.get("no_marker"))
@@ -570,7 +646,7 @@ def api_pcap_upload():
     f = request.files.get("file")
     if not f or not f.filename:
         return jsonify({"error": "No file provided"}), 400
-    safe_name = _re.sub(r"[^\w.\-]", "_", _P(f.filename).name)
+    safe_name = _re.sub(r"[^\w.\-]", "_", Path(f.filename).name)
     if not safe_name.endswith(".pcap") and not safe_name.endswith(".pcapng"):
         safe_name += ".pcap"
     dest = os.path.join(upload_dir, safe_name)

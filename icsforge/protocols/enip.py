@@ -49,16 +49,20 @@ CLASS = {
 
 
 def _enip_header(cmd: int, session: int, data: bytes, sender_ctx: bytes = b"ICShdr\x00\x00") -> bytes:
-    """EtherNet/IP encapsulation header (24 bytes)."""
-    return struct.pack("<HHIIIIQII",
-        cmd,             # Command
-        len(data),       # Length
-        session,         # Session handle
-        0,               # Status
-        # SenderContext: 8 bytes
-        struct.unpack("<Q", sender_ctx[:8])[0],
-        0,               # Options
-    )[:24]  # exactly 24 bytes
+    """EtherNet/IP encapsulation header — exactly 24 bytes per vol. 2 §2-4.2.
+
+    Command(2) + Length(2) + SessionHandle(4) + Status(4) +
+    SenderContext(8) + Options(4) = 24 bytes
+    """
+    ctx = (sender_ctx + b"\x00" * 8)[:8]  # pad/trim to 8 bytes
+    return struct.pack("<HHII8sI",
+        cmd,        # Command
+        len(data),  # Length of data following header
+        session,    # Session handle (0 before RegisterSession)
+        0,          # Status (0 = success in request)
+        ctx,        # SenderContext (8 bytes, echoed in response)
+        0,          # Options (must be 0)
+    )
 
 
 def _cip_path(class_id: int, instance: int = 1, attr: int = 0) -> bytes:
@@ -346,7 +350,6 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
     else:
         # Fallback: list_identity
         data = mb
-        hdr  = struct.pack("<HHIIIIQII",
-            CMD["list_identity"], len(data), 0, 0,
-            struct.unpack("<Q", ctx)[0], 0)[:24]
+        hdr  = struct.pack("<HHII8sI",
+            CMD["list_identity"], len(data), 0, 0, ctx, 0)
         return hdr + data

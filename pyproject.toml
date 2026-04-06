@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "icsforge"
 dynamic = ["version"]
-description = "OT/ICS Cybersecurity Coverage Validation Framework — MITRE ATT&CK for ICS aligned"
+description = "OT/ICS security coverage validation platform — MITRE ATT&CK for ICS aligned"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.10"
 authors = [
     {name = "ICSForge Contributors"},
 ]
-keywords = ["ics", "ot", "scada", "cybersecurity", "mitre-attack", "pcap", "modbus", "dnp3", "s7comm", "iec104", "opcua", "enip", "profinet"]
+keywords = ["ics", "ot", "scada", "cybersecurity", "mitre-attack", "pcap", "modbus", "dnp3", "s7comm", "iec104", "iec61850-goose", "bacnet", "mqtt", "opcua", "enip", "profinet"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

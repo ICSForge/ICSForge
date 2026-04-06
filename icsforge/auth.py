@@ -59,18 +59,26 @@ def _cred_path():
     return os.path.join(project_root, "out", ".credentials.json")
 
 
-def _hash_password(pw):
-    salt = secrets.token_hex(16)
-    h = hashlib.sha256((salt + pw).encode()).hexdigest()
-    return f"sha256:{salt}:{h}"
+def _hash_password(pw: str) -> str:
+    """Hash a password with scrypt (N=2^14, r=8, p=1) — memory-hard KDF."""
+    salt = os.urandom(16)
+    h = hashlib.scrypt(pw.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
+    return f"scrypt:{salt.hex()}:{h.hex()}"
 
 
-def _verify_password(pw, stored):
-    if not stored.startswith("sha256:"):
-        return False
-    _, salt, expected = stored.split(":", 2)
-    actual = hashlib.sha256((salt + pw).encode()).hexdigest()
-    return secrets.compare_digest(actual, expected)
+def _verify_password(pw: str, stored: str) -> bool:
+    """Verify a password against a stored hash. Supports scrypt and legacy sha256."""
+    if stored.startswith("scrypt:"):
+        _, salt_hex, expected_hex = stored.split(":", 2)
+        salt = bytes.fromhex(salt_hex)
+        actual = hashlib.scrypt(pw.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
+        return secrets.compare_digest(actual, bytes.fromhex(expected_hex))
+    if stored.startswith("sha256:"):
+        # Legacy: verify then re-hash with scrypt on next write
+        _, salt, expected = stored.split(":", 2)
+        actual = hashlib.sha256((salt + pw).encode()).hexdigest()
+        return secrets.compare_digest(actual, expected)
+    return False
 
 
 def credentials_exist():
@@ -116,7 +124,12 @@ def verify_login(username, password):
     try:
         with open(p) as f:
             data = json.load(f)
-        if data.get("username") != username:
+        stored_user = data.get("username") or ""
+        # Use compare_digest to avoid username timing oracle
+        if not secrets.compare_digest(stored_user.encode(), username.encode()):
+            # Still run password hash to avoid timing difference between
+            # "wrong username" and "wrong password" — consume similar time
+            _verify_password(password, data.get("password_hash", ""))
             return False
         return _verify_password(password, data.get("password_hash", ""))
     except Exception:

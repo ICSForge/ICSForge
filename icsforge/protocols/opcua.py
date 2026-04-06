@@ -122,12 +122,14 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return _sym_header() + _seq_header() + _node_id(svc_id) + _request_header() + svc_payload
 
     if style == "hello":
-        endpoint = kwargs.get("endpoint", "opc.tcp://10.0.0.1:4840").encode()
+        dst = kwargs.get("dst_ip", "10.0.0.1")
+        endpoint = kwargs.get("endpoint", f"opc.tcp://{dst}:4840").encode()
         body = struct.pack("<IIIII", 0, 65536, 65536, 0, len(endpoint)) + endpoint + mb
         return _opc_header(MSG_HEL, b"F", body)
 
     elif style == "get_endpoints":
-        ep_url  = kwargs.get("endpoint", "opc.tcp://10.0.0.1:4840").encode()
+        dst    = kwargs.get("dst_ip", "10.0.0.1")
+        ep_url = kwargs.get("endpoint", f"opc.tcp://{dst}:4840").encode()
         payload = struct.pack("<I", len(ep_url)) + ep_url + mb
         body    = _msg_body(SVC["GetEndpoints"], payload)
         return _opc_header(MSG_MSG, b"F", body)

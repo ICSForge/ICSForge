@@ -8,11 +8,20 @@ from icsforge.core import MARKER
 from .common import ether_frame
 
 # DCP Service IDs
+# DCP Service IDs per PROFINET spec IEC 61158-6-10
+# Note: Hello and Set both use ServiceID=0x04 — they are distinguished
+# by FrameID (0xFEFD=Hello, 0xFEFE=Set/Get request) and ServiceType.
+SVC_ID_IDENTIFY = 0x05  # Identify: broadcast device discovery
+SVC_ID_GET      = 0x03  # Get: read a parameter block
+SVC_ID_SET      = 0x04  # Set: write a parameter block
+SVC_ID_HELLO    = 0x04  # Hello: device announcement (same as Set; FrameID differs)
+
+# Backward-compat table (used in build_payload style dispatch)
 SVC_ID = {
-    "identify": 0x05,
-    "hello":    0x04,
-    "get":      0x03,
-    "set":      0x04,  # Note: same ID as hello, differentiated by type
+    "identify": SVC_ID_IDENTIFY,
+    "hello":    SVC_ID_HELLO,
+    "get":      SVC_ID_GET,
+    "set":      SVC_ID_SET,
 }
 
 # DCP Service Types

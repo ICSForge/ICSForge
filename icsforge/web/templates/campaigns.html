@@ -178,7 +178,7 @@ fetch('/api/scenarios_grouped').then(r=>r.json()).then(d=>{
 
 const CHAIN_META = {
   CHAIN__industroyer2__power_grid:          {icon:'⚡', label:'Industroyer2',          sub:'Ukraine 2022 · IEC-104 + S7comm'},
-  CHAIN__triton__safety_system:             {icon:'☢',  label:'Triton / TRISIS',        sub:'Safety system targeting · SIS'},
+  CHAIN__triton__safety_system:             {icon:'☢',  label:'SIS Targeting (TRITON-inspired)',        sub:'Modbus+S7comm surrogate · SIS disable pattern'},
   CHAIN__stuxnet__siemens_plc:              {icon:'⚙',  label:'Stuxnet-style',          sub:'Siemens PLC · Program manipulation'},
   CHAIN__water_treatment_tampering:         {icon:'💧', label:'Water Treatment',         sub:'Oldsmar-style · Setpoint tampering'},
   CHAIN__industrial_espionage__opcua:       {icon:'🕵', label:'OPC UA Espionage',        sub:'Silent exfil via OPC UA sessions'},
@@ -342,7 +342,7 @@ function _runChain() {
   // Mark all steps as active then done via /api/send
   fetch('/api/send', {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','X-CSRF-Token':(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
     body: JSON.stringify({
       name: _selId,
       dst_ip: dst,
@@ -408,7 +408,7 @@ function _runCampaign() {
 
   fetch('/api/campaigns/run', {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','X-CSRF-Token':(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
     body: JSON.stringify({campaign_id:_selId, dst_ip:dst, iface:iface||null})
   }).then(res=>{
     const reader  = res.body.getReader();
@@ -484,7 +484,7 @@ function _campaignEnded(){
 
 function abortCampaign(){
   if(!_currentRunId) return;
-  fetch('/api/campaigns/abort',{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch('/api/campaigns/abort',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
     body:JSON.stringify({run_id:_currentRunId})});
 }
 

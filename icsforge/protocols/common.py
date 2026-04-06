@@ -50,19 +50,20 @@ def marker_bytes(marker: str) -> bytes:
     return b"ICSFORGE:" + mb + b":"
 
 
-def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes) -> bytes:
+def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes,
+               src_mac: bytes | None = None, tcp_seq: int | None = None) -> bytes:
     """
     Build a complete Ethernet II + IPv4 + TCP frame as raw bytes.
 
     MAC addressing:
-      src 02:00:00:11:22:33  (synthetic sender, locally-administered)
+      src derived from src_ip via _src_mac_from_ip() (locally-administered, varies per sender)
       dst ff:ff:ff:ff:ff:ff  (broadcast; receiver ignores MAC layer)
     Ethernet type: 0x0800 (IPv4)
     IP + TCP checksums are computed correctly (Wireshark-valid).
     """
     rnd   = random.Random()
     sport = rnd.randint(1024, 65535)
-    seq   = rnd.randint(0, 0xFFFF_FFFF)
+    seq   = (tcp_seq if tcp_seq is not None else rnd.randint(0, 0xFFFF_FFFF)) & 0xFFFF_FFFF
 
     # ── TCP header (checksum placeholder = 0) ────────────────────
     # offset=5 (20 bytes header), flags PSH|ACK = 0x18
@@ -90,12 +91,29 @@ def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes) -> bytes:
     ip_hdr = ip_hdr[:10] + struct.pack(">H", _ip_csum(ip_hdr)) + ip_hdr[12:]
 
     # ── Ethernet II frame ─────────────────────────────────────────
-    eth   = _mac_bytes("ff:ff:ff:ff:ff:ff") + _mac_bytes("02:00:00:11:22:33") + struct.pack(">H", 0x0800)
+    _smac = src_mac if src_mac is not None else _src_mac_from_ip(src_ip)
+    eth   = _mac_bytes("ff:ff:ff:ff:ff:ff") + _smac + struct.pack(">H", 0x0800)
     frame = eth + ip_hdr + tcp_seg
     if len(frame) < 60:
         frame += b"\x00" * (60 - len(frame))
     return frame
 
+
+
+def _src_mac_from_ip(src_ip: str) -> bytes:
+    """
+    Derive a locally-administered, unicast source MAC from the sender IP.
+    The second byte is forced to 0x02 (locally administered, unicast).
+    Using the IP bytes makes the MAC vary per sender while remaining
+    deterministic within a run — avoids the constant 02:00:00:11:22:33
+    fingerprint that would identify ICSForge in a single packet capture.
+    """
+    try:
+        b = socket.inet_aton(src_ip)
+    except OSError:
+        b = b"\x7f\x00\x00\x01"
+    # 02:XX:XX:XX:XX:XX — locally administered unicast
+    return bytes([0x02, b[0] ^ 0x11, b[1] ^ 0x22, b[2] ^ 0x33, b[3] ^ 0x44, 0xAB])
 
 def ether_frame(src_mac: str, dst_mac: str, ethertype: int, payload: bytes) -> bytes:
     """Build a raw Ethernet II frame as bytes (no scapy)."""
@@ -105,7 +123,7 @@ def ether_frame(src_mac: str, dst_mac: str, ethertype: int, payload: bytes) -> b
     return frame
 
 
-def udp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes, sport: int = 0) -> bytes:
+def udp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes, sport: int = 0, src_mac: bytes | None = None) -> bytes:
     """
     Build a complete Ethernet II + IPv4 + UDP frame as raw bytes.
 
@@ -153,7 +171,8 @@ def udp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes, sport: int 
     ip_hdr = ip_hdr[:10] + struct.pack(">H", _ip_csum(ip_hdr)) + ip_hdr[12:]
 
     # ── Ethernet II frame ─────────────────────────────────────────
-    eth = _mac_bytes("ff:ff:ff:ff:ff:ff") + _mac_bytes("02:00:00:11:22:33") + struct.pack(">H", 0x0800)
+    _smac = src_mac if src_mac is not None else _src_mac_from_ip(src_ip)
+    eth = _mac_bytes("ff:ff:ff:ff:ff:ff") + _smac + struct.pack(">H", 0x0800)
     frame = eth + ip_hdr + udp_seg
     if len(frame) < 60:
         frame += b"\x00" * (60 - len(frame))

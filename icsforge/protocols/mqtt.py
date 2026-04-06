@@ -192,23 +192,32 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
 
     # ── CONNECT variants ────────────────────────────────────────────
     if style in ("auto", "connect"):
-        return _connect(cid, keep_alive=rnd.randint(30, 120)) + mb
+        # Embed marker in client_id — valid MQTT field, won't corrupt framing
+        marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+        cid_marked = cid + ("-" + marker_str if marker_str else "")
+        return _connect(cid_marked, keep_alive=rnd.randint(30, 120))
 
     if style == "connect_creds":
         users = ["admin", "operator", "engineer", "scada", "root", "mqtt"]
         pwds = ["admin", "password", "1234", "scada", "", "operator123"]
-        return _connect(cid, username=rnd.choice(users),
-                        password=rnd.choice(pwds), keep_alive=30) + mb
+        marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+        cid_marked = cid + ("-" + marker_str if marker_str else "")
+        return _connect(cid_marked, username=rnd.choice(users),
+                        password=rnd.choice(pwds), keep_alive=30)
 
     if style == "connect_anonymous":
-        return _connect(cid, username="", password="", clean=True) + mb
+        marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+        cid_marked = cid + ("-" + marker_str if marker_str else "")
+        return _connect(cid_marked, username="", password="", clean=True)
 
     if style == "will_message":
         topic = rnd.choice(ALARM_TOPICS)
         will = b'{"status":"offline","unexpected":true}'
-        return _connect(cid, will_topic=topic, will_msg=will,
+        # Embed marker in will_msg payload field — valid MQTT binary field
+        will_with_marker = will + (b" " + mb if mb else b"")
+        return _connect(cid, will_topic=topic, will_msg=will_with_marker,
                         will_qos=QOS_1, will_retain=True,
-                        keep_alive=rnd.randint(15, 45)) + mb
+                        keep_alive=rnd.randint(15, 45))
 
     # ── PUBLISH variants ────────────────────────────────────────────
     if style == "publish_command":
@@ -275,28 +284,30 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
     # ── SUBSCRIBE variants ──────────────────────────────────────────
     if style == "subscribe_telemetry":
         topics = rnd.sample(SENSOR_TOPICS, min(3, len(SENSOR_TOPICS)))
-        return _subscribe(topics, qos=QOS_1, rnd=rnd) + mb
+        return _subscribe(topics, qos=QOS_1, rnd=rnd)  # marker not embeddable in SUBSCRIBE
 
     if style == "subscribe_commands":
         topics = rnd.sample(COMMAND_TOPICS, min(2, len(COMMAND_TOPICS)))
-        return _subscribe(topics, qos=QOS_1, rnd=rnd) + mb
+        return _subscribe(topics, qos=QOS_1, rnd=rnd)  # marker not embeddable in SUBSCRIBE
 
     if style == "subscribe_all":
-        return _subscribe(["#"], qos=QOS_0, rnd=rnd) + mb
+        return _subscribe(["#"], qos=QOS_0, rnd=rnd)  # marker not embeddable in SUBSCRIBE
 
     # ── Other ───────────────────────────────────────────────────────
     if style == "unsubscribe":
         topics = rnd.sample(SENSOR_TOPICS, 2)
-        return _unsubscribe(topics, rnd=rnd) + mb
+        return _unsubscribe(topics, rnd=rnd)  # marker not embeddable in UNSUBSCRIBE
 
     if style == "pingreq":
-        return _pingreq() + mb
+        return _pingreq()  # PINGREQ has no payload field for marker
 
     if style == "disconnect":
-        return _disconnect() + mb
+        return _disconnect()  # DISCONNECT has no payload field for marker
 
     # Fallback
-    return _connect(cid, keep_alive=60) + mb
+    marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+    cid_marked = cid + ("-" + marker_str if marker_str else "")
+    return _connect(cid_marked, keep_alive=60)
 
 
 STYLES = [

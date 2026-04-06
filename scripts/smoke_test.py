@@ -67,6 +67,60 @@ def check_launcher():
     print(f"  {FAIL}  main() function not found in app.py")
     return False
 
+
+def check_security_headers(app):
+    """Verify security headers are present on all responses."""
+    with app.test_client() as c:
+        r = c.get("/")
+        headers = {
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff",
+        }
+        ok = True
+        for header, value in headers.items():
+            actual = r.headers.get(header)
+            if actual == value:
+                print(f"  {PASS}  Security header {header}: {value}")
+            else:
+                print(f"  {FAIL}  Security header {header}: got {actual!r}, expected {value!r}")
+                ok = False
+        csp = r.headers.get("Content-Security-Policy")
+        if csp:
+            print(f"  {PASS}  Content-Security-Policy present")
+        else:
+            print(f"  {FAIL}  Content-Security-Policy missing")
+            ok = False
+        return ok
+
+
+def check_version_endpoint(app):
+    """Verify /api/version returns correct structure."""
+    with app.test_client() as c:
+        r = c.get("/api/version")
+        if r.status_code != 200:
+            print(f"  {FAIL}  /api/version returned {r.status_code}")
+            return False
+        d = r.get_json() or {}
+        if "version" in d and d["version"] != "unknown":
+            print(f"  {PASS}  /api/version → {d['version']}")
+            return True
+        print(f"  {FAIL}  /api/version missing version field")
+        return False
+
+
+def check_ip_enforcement(app):
+    """Verify /api/send blocks public IPs."""
+    import json
+    with app.test_client() as c:
+        r = c.post("/api/send",
+            data=json.dumps({"name": "T0855__unauth_command__modbus", "dst_ip": "8.8.8.8"}),
+            content_type="application/json")
+        if r.status_code == 403:
+            print(f"  {PASS}  /api/send blocks public IP with 403")
+            return True
+        print(f"  {FAIL}  /api/send with public IP returned {r.status_code}, expected 403")
+        return False
+
 def run_smoke(verbose: bool = False) -> int:
     app = create_app()
     app.config["TESTING"] = True
@@ -78,6 +132,12 @@ def run_smoke(verbose: bool = False) -> int:
         return 1
     if not check_engine_signature():
         return 1
+    if not check_security_headers(app):
+        failures += 1
+    if not check_version_endpoint(app):
+        failures += 1
+    if not check_ip_enforcement(app):
+        failures += 1
 
     with tempfile.TemporaryDirectory() as tmpdir:
         eve_file = os.path.join(tmpdir, "eve.json")

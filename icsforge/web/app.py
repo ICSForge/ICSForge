@@ -19,7 +19,6 @@ from contextlib import suppress
 from datetime import timedelta
 from pathlib import Path
 
-import yaml
 from flask import (
     Blueprint,
     Flask,
@@ -28,6 +27,7 @@ from flask import (
     request,
     url_for,
 )
+import yaml
 
 from icsforge import __version__
 from icsforge.log import configure as configure_logging
@@ -97,7 +97,8 @@ def index():
     for p in packs:
         doc = _load_yaml(p) or {}
         sc = (doc.get("scenarios") or {})
-        scenarios_total += len(sc)
+        # Count standalone scenarios only (exclude CHAIN__ prefixed ones for KPI)
+        scenarios_total += sum(1 for k in sc if not k.startswith("CHAIN__"))
 
         p_protos = set()
         p_techs = set()
@@ -152,7 +153,7 @@ def index():
     return render_template(
         "index.html",
         title="ICSForge",
-        subtitle="Enterprise OT/ICS Telemetry Lab",
+        subtitle="OT/ICS security coverage validation platform",
         env_label="LOCAL",
         version=__version__,
         active_tab=True,
@@ -319,6 +320,10 @@ def create_app() -> Flask:
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=12)
+    # Enable Secure cookies if explicitly configured (e.g. behind TLS reverse proxy)
+    if os.environ.get("ICSFORGE_SECURE_COOKIES"):
+        app.config["SESSION_COOKIE_SECURE"] = True
+        app.config["PREFERRED_URL_SCHEME"] = "https"
 
     # Register main blueprint (pages)
     app.register_blueprint(web)
@@ -344,6 +349,66 @@ def create_app() -> Flask:
     from icsforge.auth import init_auth
     init_auth(app)
 
+
+
+    # ── Custom 404 handler ──────────────────────────────────────────────────
+    @app.errorhandler(404)
+    def _not_found(e):
+        from flask import request as req
+        if req.path.startswith("/api/"):
+            from flask import jsonify as _jfy
+            return _jfy({"error": "Endpoint not found"}), 404
+        return render_template("404.html"), 404
+
+    # ── Security headers ────────────────────────────────────────────────────
+    @app.after_request
+    def _security_headers(response):
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Permissive CSP — the UI uses inline scripts and CDN resources
+        response.headers["Content-Security-Policy"] = (
+            "default-src \'self\'; "
+            "script-src \'self\' \'unsafe-inline\'; "
+            "style-src \'self\' \'unsafe-inline\'; "
+            "img-src \'self\' data:; "
+            "connect-src \'self\'"
+        )
+        return response
+
+    # ── CSRF token: generate on every request so GET page loads populate the meta tag
+    @app.before_request
+    def _csrf_token_init():
+        from flask import session
+        if "csrf_token" not in session:
+            session["csrf_token"] = secrets.token_hex(32)
+
+    # ── CSRF protection: validate on all state-mutating requests ────────────
+    @app.before_request
+    def _csrf_protect():
+        from flask import abort, session, request as req
+        if req.method in ("GET", "HEAD", "OPTIONS"):
+            return
+        # Skip CSRF for public API paths (callback, health, static)
+        path = req.path
+        skip = ("/api/receiver/callback", "/api/config/set_callback",
+                "/api/health", "/api/auth/")
+        if any(path.startswith(s) for s in skip) or path.startswith("/static/"):
+            return
+        # Skip if auth is disabled
+        if os.environ.get("ICSFORGE_NO_AUTH"):
+            return
+        # Validate token from header or form
+        supplied = (req.headers.get("X-CSRF-Token") or
+                    (req.get_json(silent=True) or {}).get("_csrf") or
+                    req.form.get("_csrf") or "")
+        if not supplied or not secrets.compare_digest(supplied, session["csrf_token"]):
+            # CSRF token missing or invalid — block the request
+            log.warning("CSRF token mismatch for %s %s from %s",
+                        req.method, req.path, req.remote_addr)
+            abort(403)
+
     return app
 
 def main():
@@ -361,6 +426,12 @@ def main():
     configure_logging(level="DEBUG" if args.debug else args.log_level)
     if args.no_auth:
         os.environ["ICSFORGE_NO_AUTH"] = "1"
+        import warnings
+        warnings.warn(
+            "\n⚠  ICSFORGE_NO_AUTH=1 — authentication is DISABLED. "
+            "Do not expose this instance on a shared network.\n",
+            stacklevel=1
+        )
 
     # Use the full app factory — registers all API blueprints and auth
     app = create_app()

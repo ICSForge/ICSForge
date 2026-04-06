@@ -1,6 +1,8 @@
 # ICSForge IEC-60870-5-104 payload builder — upgraded for ATT&CK realism
+import datetime
 import random
 import struct
+import time as _time_mod
 
 from .common import marker_bytes
 
@@ -104,6 +106,8 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
       inhibit_alarm      P_AC_NA_1 with deactivation COT — T0878
     """
     rnd  = random.Random(kwargs.get("seed"))
+    # Monotonic send sequence from engine; None → random per packet
+    _iec104_seq: int | None = (int(kwargs.get("iec104_seq")) & 0x7FFF) if kwargs.get("iec104_seq") is not None else None
     ca   = int(kwargs.get("ca",  rnd.randint(1, 10))) & 0xFFFF
     ioa  = int(kwargs.get("ioa", rnd.randint(1, 100)))
     mb   = marker_bytes(marker)
@@ -170,16 +174,16 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
         asdu = _asdu(TYPE["counter_interr"], COT["activation"], ca, 0, data)
 
     elif style == "clock_sync":
-        # 7-byte CP56Time2a time tag (can be forged — T0849)
-        import time as _time
-        ts   = int(_time.time() * 1000) & 0xFFFFFFFFFF
+        # 7-byte CP56Time2a: real wall-clock time per IEC 60870-5-4 §8.1.1.4
+        _now = datetime.datetime.now(datetime.timezone.utc)
+        _ms  = _now.second * 1000 + _now.microsecond // 1000
         t7   = struct.pack("<HBBBBB",
-            ts & 0xFFFF,
-            (ts >> 16) & 0x3F,
-            rnd.randint(0, 59),
-            rnd.randint(0, 23),
-            rnd.randint(1, 7),
-            rnd.randint(0, 99),
+            _ms & 0xFFFF,                           # milliseconds (0-59999)
+            _now.minute & 0x3F,                     # minutes (0-59)
+            _now.hour & 0x1F,                       # hours (0-23)
+            (_now.isoweekday() << 5) | _now.day,    # day-of-week(3) + day(5)
+            _now.month & 0x0F,                      # month (1-12)
+            _now.year % 100,                        # year (0-99)
         )
         data = t7 + mb
         asdu = _asdu(TYPE["clock_sync"], COT["activation"], ca, 0, data)
@@ -226,8 +230,7 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
     elif style == "meas_inject":
         # M_ME_NC_1 (float measurement) injected from attacker — T0856 Spoof Reporting Message
         # Attacker sends fake measurement values upstream toward SCADA
-        import struct as _s
-        val  = _s.pack("<f", float(kwargs.get("value", rnd.uniform(10.0, 100.0))))
+        val  = struct.pack("<f", float(kwargs.get("value", rnd.uniform(10.0, 100.0))))
         qds  = bytes([0x00])  # QDS = good quality
         data = val + qds + mb
         asdu = _asdu(TYPE["meas_mv"], COT["spontaneous"], ca, ioa, data)
@@ -245,8 +248,7 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
 
     elif style == "clock_inject":
         # C_CS_NA_1 with wrong timestamp — T0849 Masquerading (clock manipulation)
-        import time as _time
-        ts = int(_time.time() * 1000) & 0xFFFFFFFFFFFF
+        ts = int(_time_mod.time() * 1000) & 0xFFFFFFFFFFFF
         cp56 = ts.to_bytes(7, "little")
         data = cp56 + mb
         asdu = _asdu(TYPE["clock_sync"], COT["activation"], ca, 0, data)
@@ -260,5 +262,5 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
         data = b"\x01" + mb
         asdu = _asdu(TYPE["meas_sp"], COT["spontaneous"], ca, ioa, data)
 
-    seq  = rnd.randint(0, 0x7FFF)
+    seq  = _iec104_seq if _iec104_seq is not None else rnd.randint(0, 0x7FFF)
     return _apci_i(seq, 0, asdu)

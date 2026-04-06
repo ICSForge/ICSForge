@@ -83,7 +83,7 @@
       <div style="font-size:13px">Generating…</div>
     </div>
     <iframe id="report_frame" style="display:none;width:100%;height:calc(100vh - 130px);border:none"
-            sandbox="allow-same-origin"></iframe>
+            sandbox="allow-same-origin allow-scripts"></iframe>
   </div>
 
 </div>
@@ -236,16 +236,16 @@ function generateReport() {
 
   fetch('/api/report/generate',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','X-CSRF-Token':(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
     body:JSON.stringify(_buildPayload())
   })
   .then(r=>r.json())
   .then(d=>{
     ld.style.display='none';
     if(d.error){ ph.style.display=''; window.toast('Error',d.error,'error'); return; }
-    const blob=new Blob([d.html],{type:'text/html'});
-    frm.src=URL.createObjectURL(blob);
-    frm.style.display='';
+    frm.srcdoc = d.html;
+    frm.style.display = '';
+    frm.style.height = 'calc(100vh - 160px)';
     document.getElementById('dl_btn').style.display='';
     window.toast('Report ready',`${d.executed} executed · ${d.detected} detected · ${d.gaps} gaps found`);
   })
@@ -255,7 +255,7 @@ function generateReport() {
 function downloadReport() {
   fetch('/api/report/download',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','X-CSRF-Token':(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
     body:JSON.stringify(_buildPayload())
   })
   .then(r=>r.blob())

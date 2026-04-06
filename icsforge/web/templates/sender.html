@@ -3,33 +3,37 @@
 
 <!-- ─── Network Settings Bar ─────────────────────────────── -->
 <div class="card" style="margin-bottom:16px" id="network_bar">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <h2 style="margin:0;white-space:nowrap">⚙ Network Settings</h2>
-    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;flex:1;justify-content:flex-end">
-      <div class="field" style="min-width:140px;margin:0">
-        <label style="font-size:11px;margin-bottom:2px">Sender IP (src)</label>
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0 8px 0 0;white-space:nowrap;align-self:center">⚙ Network Settings</h2>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;flex:1">
+      <div class="field" style="min-width:120px;max-width:160px;margin:0">
+        <label style="font-size:11px;margin-bottom:3px">Sender IP (SRC)</label>
         <input id="cfg_sender_ip" placeholder="127.0.0.1" value="127.0.0.1" style="padding:6px 10px;font-size:13px">
       </div>
-      <div class="field" style="min-width:140px;margin:0">
-        <label style="font-size:11px;margin-bottom:2px">Receiver IP (dst)</label>
-        <input id="cfg_receiver_ip" placeholder="e.g. 192.168.1.50" style="padding:6px 10px;font-size:13px" oninput="const v=this.value.trim();if(v){const d=document.getElementById('dst_ip');if(d)d.value=v;}">
+      <div class="field" style="min-width:140px;max-width:190px;margin:0">
+        <label style="font-size:11px;margin-bottom:3px">Receiver IP (DST)</label>
+        <input id="cfg_receiver_ip" placeholder="e.g. 192.168.1.50"
+          style="padding:6px 10px;font-size:13px"
+          title="Auto-fills the Destination IP field below"
+          oninput="const v=this.value.trim();if(v){const d=document.getElementById('dst_ip');if(d)d.value=v;}">
+        <span style="font-size:10px;color:var(--muted)">→ auto-fills Destination IP below</span>
       </div>
-      <div class="field" style="min-width:80px;margin:0">
-        <label style="font-size:11px;margin-bottom:2px">Receiver Port</label>
-        <input id="cfg_receiver_port" value="9090" style="padding:6px 10px;font-size:13px;max-width:80px">
+      <div class="field" style="min-width:70px;max-width:90px;margin:0">
+        <label style="font-size:11px;margin-bottom:3px">Receiver Port</label>
+        <input id="cfg_receiver_port" value="9090" style="padding:6px 10px;font-size:13px">
       </div>
-      <div class="field" style="min-width:260px;margin:0;flex:1 1 260px">
-        <label style="font-size:11px;margin-bottom:2px">Sender Callback URL (optional override)</label>
+      <div class="field" style="min-width:240px;flex:1;margin:0">
+        <label style="font-size:11px;margin-bottom:3px">Sender Callback URL (optional override)</label>
         <input id="cfg_sender_callback_url" placeholder="http://sender-ip:8080/api/receiver/callback" style="padding:6px 10px;font-size:13px">
       </div>
-      <div class="field" style="min-width:160px;margin:0;max-width:220px">
-        <label style="font-size:11px;margin-bottom:2px">Callback Token (optional)</label>
+      <div class="field" style="min-width:140px;max-width:200px;margin:0">
+        <label style="font-size:11px;margin-bottom:3px">Callback Token (optional)</label>
         <input id="cfg_callback_token" placeholder="shared-secret" style="padding:6px 10px;font-size:13px">
       </div>
-      <div style="display:flex;align-items:center;gap:6px;white-space:nowrap">
+      <div style="display:flex;align-items:center;gap:8px;padding-bottom:2px">
         <input id="cfg_pull_mode" type="checkbox" style="display:none">
         <button id="btn_pull_mode" type="button" onclick="togglePullMode()"
-          title="Sender polls the receiver for receipts instead of waiting for callbacks. Use when the sender has no reachable callback address (e.g. running behind NAT, no public IP, or receiver cannot initiate outbound connections)."
+          title="Sender polls the receiver for receipts instead of waiting for callbacks."
           style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.05em;
             text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
             background:var(--panel2);color:var(--muted);white-space:nowrap;
@@ -38,9 +42,9 @@
           <span>Pull Mode</span>
           <span class="small" style="font-weight:400;opacity:.7">sender-initiates</span>
         </button>
+        <button class="btn primary" id="btn_save_net" style="padding:6px 16px;font-size:12px;white-space:nowrap" onclick="saveNetworkConfig()">Save &amp; Connect</button>
+        <span id="net_status" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
       </div>
-      <button class="btn primary" id="btn_save_net" style="padding:6px 16px;font-size:12px;white-space:nowrap" onclick="saveNetworkConfig()">Save &amp; Connect</button>
-      <span id="net_status" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
     </div>
   </div>
 </div>
@@ -56,7 +60,7 @@
 <!-- ─── Main grid ──────────────────────────────────────────── -->
 <div class="sender-grid">
 
-  <!-- LEFT: Scenario picker + config + step plan + run log -->
+  <!-- LEFT: Scenario picker + config + run controls + secondary cards -->
   <div style="display:flex;flex-direction:column;gap:14px">
 
     <div class="card">
@@ -82,7 +86,7 @@
       <div class="row" style="gap:10px">
         <div class="field">
           <label>Destination IP</label>
-          <input id="dst_ip" placeholder="Set via Network Settings above" value="">
+          <input id="dst_ip" placeholder="Set via Network Settings above" value="" title="Target IP for live packet send — set automatically from Receiver IP in Network Settings">
         </div>
         <div class="field" style="max-width:100px">
           <label>Timeout (s)</label>
@@ -99,7 +103,6 @@
           <input id="iface" placeholder="eth0">
         </div>
       </div>
-      <!-- Protocol-specific parameters (loaded dynamically) -->
       <div id="proto_params" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px;gap:10px">
         <input id="pcap" type="checkbox" style="display:none">
@@ -112,7 +115,6 @@
           <span>Build PCAP</span>
         </button>
       </div>
-      <!-- Safety confirmation toggle -->
       <div style="margin-top:12px">
         <button id="confirm_btn" type="button" onclick="toggleConfirm()"
           style="width:100%;padding:11px 16px;border-radius:10px;font-size:12px;font-weight:700;
@@ -124,11 +126,10 @@
         </button>
         <input id="confirm" type="checkbox" style="display:none">
       </div>
-      <!-- Stealth mode toggle -->
       <div style="margin-top:10px">
         <input id="stealth_mode" type="checkbox" style="display:none">
         <button id="btn_stealth" type="button" onclick="toggleStealth()"
-          title="Omit ICSForge correlation tags from payloads. Traffic is bit-for-bit identical to real device traffic. Confirmation is via TCP ACK (network-layer delivery) instead of receiver marker detection. Useful for IDS/NGFW validation and red team exercises."
+          title="Omit ICSForge correlation tags from payloads. Traffic is bit-for-bit identical to real device traffic."
           style="width:100%;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:700;
             letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
             background:var(--panel2);color:var(--muted);text-align:left;display:flex;align-items:center;
@@ -138,9 +139,17 @@
         </button>
       </div>
       <div class="row" style="margin-top:12px">
-        <button id="btn_send" class="btn primary">▶ Run Live</button>
+        <button id="btn_send" class="btn primary" style="font-size:15px;padding:10px 28px;min-width:148px">▶ Run Live</button>
         <button id="btn_offline" class="btn">⬇ PCAP Only</button>
         <button id="btn_clear" class="btn">✕ Clear</button>
+      </div>
+      <!-- Last-run status bar -->
+      <div id="last_run_bar" style="display:none;margin-top:10px;padding:8px 12px;
+           background:#f8faff;border:1px solid #e5e7eb;border-radius:10px;
+           font-size:12px;align-items:center;gap:8px">
+        <span id="last_run_icon" style="font-size:16px">⏳</span>
+        <span id="last_run_text" class="muted" style="flex:1">—</span>
+        <span id="last_run_ts" class="muted" style="font-size:11px"></span>
       </div>
     </div>
 
@@ -159,7 +168,7 @@
       <div id="feed_techs" class="pillrow" style="margin-top:6px"></div>
     </div>
 
-    <!-- ─── EVE Tap (v0.49) ───────────────────────────────── -->
+    <!-- ─── Suricata EVE Tap ──────────────────────────────────── -->
     <div class="card">
       <h2>Suricata EVE Tap</h2>
       <div class="small muted" style="margin-bottom:10px">Tail EVE JSON live — confirmed detections update the timeline automatically.</div>
@@ -173,7 +182,7 @@
       </div>
     </div>
 
-    <!-- ─── Webhook (v0.49) ───────────────────────────────── -->
+    <!-- ─── Webhook Notifications ─────────────────────────────── -->
     <div class="card">
       <h2>Webhook Notifications</h2>
       <div class="small muted" style="margin-bottom:10px">POST run/campaign results to Slack, Teams, or any HTTP endpoint.</div>
@@ -187,7 +196,7 @@
       </div>
     </div>
 
-    <!-- ─── Run History ──────────────────────────────────────── -->
+    <!-- ─── Recent Runs ───────────────────────────────────────── -->
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <h2 style="margin-bottom:0">Recent Runs</h2>
@@ -198,7 +207,7 @@
       </div>
     </div>
 
-    <!-- ─── Run Management Panel (v0.49.3) ───────────────────── -->
+    <!-- ─── Run Management Panel ──────────────────────────────── -->
     <div class="card" id="run_mgmt_panel" style="display:none">
       <h2 style="margin-bottom:6px">Run Management</h2>
       <div class="mono" id="rmp_run_id" style="font-size:10px;color:var(--muted);margin-bottom:10px"></div>
@@ -222,19 +231,17 @@
 
   </div><!-- end LEFT -->
 
-  <!-- RIGHT: Hex dump + step summary -->
+  <!-- RIGHT: Live payload preview + scenario summary + step plan + timeline -->
   <div style="display:flex;flex-direction:column;gap:14px">
 
     <div class="card">
       <h2>Live Payload Preview</h2>
       <p class="muted" style="margin-bottom:10px;font-size:12px">Actual PDU bytes from the real protocol builder — what hits the wire.</p>
-
       <div class="hexdump-nav" id="hex_nav" style="display:none">
         <button class="btn" style="padding:4px 10px;font-size:11px" onclick="hexStep(-1)">← Prev</button>
         <span id="hex_step_label" class="small mono"></span>
         <button class="btn" style="padding:4px 10px;font-size:11px" onclick="hexStep(+1)">Next →</button>
       </div>
-
       <div class="hexdump-meta" id="hex_meta">
         <span class="small">Select a scenario to see its wire bytes.</span>
       </div>
@@ -282,73 +289,35 @@ function togglePullMode(){
   const btn=document.getElementById("btn_pull_mode");
   const ico=document.getElementById("pull_mode_icon");
   cb.checked=!cb.checked;
-  if(cb.checked){
-    btn.style.borderColor="var(--brand2,#00d4ff)";
-    btn.style.background="rgba(0,212,255,.1)";
-    btn.style.color="var(--brand2,#00d4ff)";
-    ico.textContent="●";
-  } else {
-    btn.style.borderColor="var(--border)";
-    btn.style.background="var(--panel2)";
-    btn.style.color="var(--muted)";
-    ico.textContent="○";
-  }
+  if(cb.checked){btn.style.borderColor="var(--brand2,#00d4ff)";btn.style.background="rgba(0,212,255,.1)";btn.style.color="var(--brand2,#00d4ff)";ico.textContent="●";}
+  else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
 }
 function togglePcapBtn(){
   const cb=document.getElementById("pcap");
   const btn=document.getElementById("btn_pcap");
   const ico=document.getElementById("pcap_icon");
   cb.checked=!cb.checked;
-  if(cb.checked){
-    btn.style.borderColor="var(--brand)";
-    btn.style.background="rgba(245,158,11,.1)";
-    btn.style.color="var(--brand)";
-    ico.textContent="✓";
-  } else {
-    btn.style.borderColor="var(--border)";
-    btn.style.background="var(--panel2)";
-    btn.style.color="var(--muted)";
-    ico.textContent="○";
-  }
+  if(cb.checked){btn.style.borderColor="var(--brand)";btn.style.background="rgba(245,158,11,.1)";btn.style.color="var(--brand)";ico.textContent="✓";}
+  else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
 }
 function toggleConfirm(){
-  const cb  = document.getElementById("confirm");
-  const btn = document.getElementById("confirm_btn");
-  const ico = document.getElementById("confirm_icon");
-  cb.checked = !cb.checked;
-  if(cb.checked){
-    btn.style.borderColor = "var(--good)";
-    btn.style.background  = "rgba(0,230,138,.08)";
-    btn.style.color       = "var(--good)";
-    ico.textContent = "✓";
-  } else {
-    btn.style.borderColor = "var(--border)";
-    btn.style.background  = "var(--panel2)";
-    btn.style.color       = "var(--muted)";
-    ico.textContent = "○";
-  }
+  const cb=document.getElementById("confirm");
+  const btn=document.getElementById("confirm_btn");
+  const ico=document.getElementById("confirm_icon");
+  cb.checked=!cb.checked;
+  if(cb.checked){btn.style.borderColor="var(--good)";btn.style.background="rgba(0,230,138,.08)";btn.style.color="var(--good)";ico.textContent="✓";}
+  else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
 }
 function toggleStealth(){
-  const cb  = document.getElementById("stealth_mode");
-  const btn = document.getElementById("btn_stealth");
-  const ico = document.getElementById("stealth_icon");
-  cb.checked = !cb.checked;
-  if(cb.checked){
-    btn.style.borderColor = "var(--bad)";
-    btn.style.background  = "rgba(255,59,92,.08)";
-    btn.style.color       = "var(--bad)";
-    ico.textContent = "●";
-  } else {
-    btn.style.borderColor = "var(--border)";
-    btn.style.background  = "var(--panel2)";
-    btn.style.color       = "var(--muted)";
-    ico.textContent = "○";
-  }
+  const cb=document.getElementById("stealth_mode");
+  const btn=document.getElementById("btn_stealth");
+  const ico=document.getElementById("stealth_icon");
+  cb.checked=!cb.checked;
+  if(cb.checked){btn.style.borderColor="var(--bad)";btn.style.background="rgba(255,59,92,.08)";btn.style.color="var(--bad)";ico.textContent="●";}
+  else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
+  // Reload hex dump to reflect stealth mode (markers hidden/shown)
+  if(window.selectedName) loadHexDump(window.selectedName, window.hexStepIdx||0);
 }
-// Sync toggle button state when loadNetworkConfig restores pull_enabled
-document.addEventListener("DOMContentLoaded", ()=>{
-  const orig = window.saveNetworkConfig;
-});
 </script>
 <script src="/static/js/sender.js"></script>
 {% endblock %}

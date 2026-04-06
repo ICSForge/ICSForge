@@ -169,7 +169,8 @@ def build_payload(marker: str, style: str = "who_is", **kwargs) -> bytes:
     """
     rnd = random.Random(kwargs.get("seed"))
     mb = marker_bytes(marker)
-    invoke_id = rnd.randint(0, 255)
+    # Monotonic invoke_id from engine; None → random per packet
+    invoke_id = (int(kwargs.get("bacnet_invoke_id")) & 0xFF) if kwargs.get("bacnet_invoke_id") is not None else rnd.randint(0, 255)
     device_instance = int(kwargs.get("device_instance", rnd.randint(1, 4194303)))
 
     if style == "who_is":

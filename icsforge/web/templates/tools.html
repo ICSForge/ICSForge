@@ -131,7 +131,7 @@
     <div class="card">
       <h2>Alerts Ingest</h2>
       <p class="small muted" style="margin-bottom:10px">Import Suricata EVE JSON or normalized alert files for run correlation. Normalised output is saved to <code>out/alerts/</code>.</p>
-      <div class="small" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:7px 10px;margin-bottom:12px;color:var(--muted)">⚠ Path must be inside the repo directory or <code>/var/log/suricata</code>.<br>Example: <code>out/alerts/suricata_eve.json</code></div>
+      <div class="small" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:7px 10px;margin-bottom:12px;color:var(--muted)">⚠ Path must be relative to the ICSForge project root — absolute paths are rejected.<br>Example: <code>out/alerts/suricata_eve.json</code> (not <code>/var/log/suricata/eve.json</code>)</div>
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label>Alert file path (server-side)</label>
@@ -238,7 +238,7 @@
       document.getElementById("g_log").value = "Working...";
       document.getElementById("g_pcap_download").style.display="none";
       const res = await fetch("/api/generate_offline",{
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers:{"Content-Type":"application/json","X-CSRF-Token":(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
         body: JSON.stringify({name, outdir, dst_ip, src_ip, build_pcap})
       });
       const data = await res.json();
@@ -263,7 +263,7 @@
       status.textContent='Uploading…';
       const fd = new FormData();
       fd.append('file', f);
-      const res = await fetch('/api/pcap/upload', {method:'POST', body:fd});
+      const res = await fetch('/api/pcap/upload', {method:'POST', headers:{'X-CSRF-Token':(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''}, body:fd});
       const d = await res.json();
       if(d.ok){
         document.getElementById('r_pcap').value = d.path;
@@ -280,7 +280,7 @@
       const interval = parseFloat(document.getElementById("r_interval").value.trim() || "0.05");
       document.getElementById("r_log").value = "Working...";
       const res = await fetch("/api/pcap/replay",{
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers:{"Content-Type":"application/json","X-CSRF-Token":(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
         body: JSON.stringify({pcap_path, dst_ip, interval})
       });
       const data = await res.json();

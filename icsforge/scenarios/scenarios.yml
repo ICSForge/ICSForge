@@ -181,32 +181,6 @@ scenarios:
       style: exception_probe
       count: 6
       interval: 0.08s
-  T0842__network_sniffing__profinet_passive:
-    title: T0842 – PROFINET DCP Hello observation (Network Sniffing)
-    description: 'Attacker sends DCP Hello and DCP Get to passively harvest device names and IP assignments. In real attacks this is passive listening, but the DCP Get pattern proves the attacker is already on the segment observing traffic (T0842 network-observable precursor).
-
-      '
-    tactic: Discovery
-    technique: T0842
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0842
-      style: hello
-      count: 10
-      interval: 0.1s
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0842
-      style: get_name
-      count: 8
-      interval: 0.12s
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0842
-      style: get_ip
-      count: 8
-      interval: 0.12s
   T0846__remote_sys_discovery__dnp3_probe:
     title: T0846 – DNP3 device probing (Remote System Discovery)
     description: 'Attacker sends DNP3 DelayMeasure and AssignClass requests to identify which outstation addresses respond. Timing data reveals network topology. AssignClass sweeps help discover all device IDs.
@@ -1484,10 +1458,8 @@ scenarios:
       count: 4
       interval: 0.2s
   CHAIN__triton__safety_system:
-    title: CHAIN – Triton/TRISIS safety system attack (SIS targeting)
-    description: 'Models the Triton attack against a Schneider Triconex Safety Controller: ENIP/CIP device discovery → S7comm SZL recon → Modbus safety register read → safety write to disable trips → OPC UA alarm suppression to hide changes. Covers T0888 + T0882 + T0829 + T0878 + T0832.
-
-      '
+    title: CHAIN – SIS Targeting (TRITON/TRISIS-inspired) — Modbus + S7comm surrogate
+    description: Models the attack pattern of TRITON/TRISIS (2017 Saudi petrochemical incident), which targeted Schneider Electric Triconex Safety Instrumented Systems (SIS) using the proprietary TriStation protocol. Because TriStation is not publicly documented and ICSForge does not include proprietary protocol implementations, this chain uses Modbus and S7comm as network-observable surrogates that exercise the same ATT&CK techniques against safety-range registers. The attacker behaviour modelled — reconnaissance, lateral movement to SIS-adjacent systems, and safety function disable — is accurate; the specific wire protocol differs from the real incident.
     tactic: Multi-Stage
     technique: T0829
     steps:
@@ -1789,27 +1761,43 @@ scenarios:
     tactic: Inhibit Response Function
   T0803__block_command__modbus_channel_flood:
     title: T0803 – Block Command Message — Modbus channel saturation
-    description: Saturates the Modbus/TCP channel with maximum-length FC03 reads, blocking command traffic from reaching the PLC and starving legitimate master access.
+    description: Combines Modbus FC08 Restart Communications with a high-rate read flood to block the SCADA master's command messages from reaching the slave. The restart disrupts the existing TCP session; the subsequent flood prevents the master from reestablishing a clean command channel, effectively blocking all command messages.
     technique: T0803
     steps:
     - type: pcap
       proto: modbus
       technique: T0803
+      style: diagnostic
+      count: 1
+      interval: 0s
+      note: 'FC08/SF01: Restart Communications — disrupt master command channel'
+    - type: pcap
+      proto: modbus
+      technique: T0803
       style: channel_flood
-      count: 60
-      interval: 0.03s
+      count: 20
+      interval: 0.02s
+      note: Flood FC03 requests to saturate slave command processing
     tactic: Inhibit Response Function
   T0804__block_reporting__modbus_listen_only:
     title: T0804 – Block Reporting Message — Modbus Force Listen-Only Mode
-    description: Sends Modbus FC08 subfunction 04 (Force Listen Only Mode) to put the PLC in a mode where it stops responding to SCADA polling, effectively silencing all outbound telemetry.
+    description: Sends Modbus FC08 Diagnostic Sub-Function 04 (Force Listen Only Mode) to silence the slave device. In Listen Only mode the slave accepts frames but sends no responses — all reporting to the SCADA master stops. The SCADA system receives no data and the operator's view goes stale, which is exactly Block Reporting Message (T0804).
     technique: T0804
     steps:
     - type: pcap
       proto: modbus
       technique: T0804
-      style: report_block
-      count: 8
-      interval: 0.3s
+      style: diagnostic
+      count: 1
+      interval: 0s
+      note: 'FC08/SF04: Force Listen Only Mode — slave stops sending responses'
+    - type: pcap
+      proto: modbus
+      technique: T0804
+      style: read_holding
+      count: 5
+      interval: 2s
+      note: Confirm slave not responding to polls (reporting blocked)
     tactic: Inhibit Response Function
   T0804__block_reporting__dnp3_disable_unsolicited:
     title: T0804 – Block Reporting Message — DNP3 Disable Unsolicited + clear events
@@ -1853,24 +1841,6 @@ scenarios:
       count: 5
       interval: 0.5s
     tactic: Execution
-  T0809__data_destruction__modbus_zero_regs:
-    title: T0809 – Data Destruction — Modbus zero-fill holding registers
-    description: Reads the current register map then overwrites the full holding register space with zeros via FC16 Write Multiple Registers. Destroys configuration, setpoints, and process data in PLC memory.
-    technique: T0809
-    steps:
-    - type: pcap
-      proto: modbus
-      technique: T0809
-      style: read_holding
-      count: 3
-      interval: 0.3s
-    - type: pcap
-      proto: modbus
-      technique: T0809
-      style: zero_all
-      count: 15
-      interval: 0.08s
-    tactic: Inhibit Response Function
   T0809__data_destruction__s7comm_zero_db:
     title: T0809 – Data Destruction — S7comm zero-fill all data blocks
     description: Enumerates data blocks via SZL read then zeros all DBs in the PLC, destroying process state, recipes, and configuration. Followed by SZL clear to erase system data.
@@ -3738,18 +3708,6 @@ scenarios:
       style: subscribe_commands
       count: 5
       interval: 0.15s
-  T0836__modify_parameter__mqtt_setpoint:
-    title: T0836 – MQTT setpoint modification via PUBLISH
-    description: PUBLISH setpoint change to HVAC/process control topic. Modifies operational parameters through the IIoT messaging layer.
-    tactic: Impair Process Control
-    technique: T0836
-    steps:
-    - type: pcap
-      proto: mqtt
-      technique: T0836
-      style: publish_setpoint
-      count: 8
-      interval: 0.15s
   T0838__modify_alarm__mqtt_suppress:
     title: T0838 – MQTT alarm suppression via PUBLISH
     description: PUBLISH false alarm state to suppress critical safety alerts. Masks physical process anomalies from operators.
@@ -4011,40 +3969,6 @@ scenarios:
       count: 3
       interval: 2s
       note: GOOSE false measurement keep-alive
-  T0849__masquerading__iec61850_goose_ied:
-    title: T0849 – Masquerading — IEC 61850 GOOSE IED identity spoofing
-    description: Injects GOOSE frames using the gocbRef of a legitimate protection IED, masquerading as that device. Subscribers accept the attacker's frames as originating from the trusted IED, enabling stealthy manipulation.
-    tactic: Evasion
-    technique: T0849
-    steps:
-    - type: pcap
-      proto: iec61850
-      technique: T0849
-      style: relay_inject
-      count: 1
-      interval: 0s
-      note: Initial masqueraded GOOSE frame
-    - type: pcap
-      proto: iec61850
-      technique: T0849
-      style: relay_inject
-      count: 1
-      interval: 0.004s
-      note: Masquerade retransmit 1
-    - type: pcap
-      proto: iec61850
-      technique: T0849
-      style: relay_inject
-      count: 1
-      interval: 0.016s
-      note: Masquerade retransmit 2
-    - type: pcap
-      proto: iec61850
-      technique: T0849
-      style: relay_inject
-      count: 1
-      interval: 2s
-      note: Masquerade keep-alive
   T0878__alarm_suppress__iec61850_goose:
     title: T0878 – Alarm Suppression — IEC 61850 GOOSE protection stall
     description: Floods the bus with GOOSE frames at a fixed low stNum, keeping all subscribers locked on a 'no alarm' state. When real faults generate alarm events, the legitimate publisher's GOOSE cannot break through the stalled state, effectively suppressing alarms.
@@ -4065,26 +3989,6 @@ scenarios:
       count: 20
       interval: 0.02s
       note: Alarm suppression GOOSE flood burst 2
-  T0888__remote_sys_info__iec61850_goose_probe:
-    title: T0888 – Remote System Information Discovery — IEC 61850 GOOSE IED probing
-    description: Sends crafted GOOSE frames targeting specific APPID ranges and gocbRef patterns to enumerate IEDs and their configured GOOSE control blocks. Observable as GOOSE traffic from an unexpected source with non-standard stNum values.
-    tactic: Discovery
-    technique: T0888
-    steps:
-    - type: pcap
-      proto: iec61850
-      technique: T0888
-      style: trip_inject
-      count: 1
-      interval: 0.5s
-      note: GOOSE probe with APPID 0x0001
-    - type: pcap
-      proto: iec61850
-      technique: T0888
-      style: relay_inject
-      count: 1
-      interval: 0.5s
-      note: GOOSE probe with APPID 0x0002
   T0816__device_restart__profinet_dcp_reset:
     title: T0816 – Device Restart — PROFINET DCP factory reset
     description: Sends a PROFINET DCP FactoryReset request to force a PLC or I/O device back to factory defaults, disrupting its configuration. The device restarts with default IP/subnet, losing all programmed parameters.
@@ -4125,33 +4029,6 @@ scenarios:
       count: 1
       interval: 1s
       note: DCP Identify to confirm new IP applied
-  T0888__remote_sys_info__profinet_identify:
-    title: T0888 – Remote System Information Discovery — PROFINET DCP device enumeration
-    description: 'Uses PROFINET DCP Get requests to extract detailed device information: station name, IP, subnet, MAC, vendor ID, device type, and software version. Provides complete inventory for targeting specific devices in follow-on attacks.'
-    tactic: Discovery
-    technique: T0888
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0888
-      style: identify
-      count: 1
-      interval: 0.5s
-      note: DCP IdentifyAll for device discovery
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0888
-      style: get_name
-      count: 1
-      interval: 0.5s
-      note: DCP GetName for station names
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0888
-      style: get_ip
-      count: 1
-      interval: 0.5s
-      note: DCP GetIP for network configuration
   T0832__manip_view__dnp3_spoof_response:
     title: T0832 – Manipulation of View — DNP3 spoofed analog response injection
     description: Injects DNP3 unsolicited response frames with falsified analog input values. Control room operators see incorrect sensor readings, masking real process deviations or creating false alarms.
@@ -4192,26 +4069,6 @@ scenarios:
       count: 4
       interval: 2s
       note: IEC-104 false measurement sustained
-  T0832__manip_view__s7comm_db_write:
-    title: T0832 – Manipulation of View — S7comm HMI display data manipulation
-    description: Overwrites S7 data blocks used by HMI/SCADA visualization with falsified process values. Operators see fabricated equipment states while the actual process runs unmonitored.
-    tactic: Impact
-    technique: T0832
-    steps:
-    - type: pcap
-      proto: s7comm
-      technique: T0832
-      style: write_db
-      count: 4
-      interval: 0.5s
-      note: S7comm HMI data block overwrite
-    - type: pcap
-      proto: s7comm
-      technique: T0832
-      style: read_db
-      count: 2
-      interval: 0.3s
-      note: S7comm verify falsified values read back
   T0832__manip_view__mqtt_false_telemetry:
     title: T0832 – Manipulation of View — MQTT false telemetry injection
     description: Publishes fabricated sensor readings on MQTT topics used by dashboards and alerting systems. Cloud SCADA platforms and historian databases receive and store false data, corrupting operational records.
@@ -4769,26 +4626,6 @@ scenarios:
       count: 2
       interval: 1s
       note: OPC UA parameter persistent write
-  T0836__modify_param__profinet_set_ip:
-    title: T0836 – Modify Parameter — PROFINET DCP parameter modification
-    description: 'Uses PROFINET DCP Set requests to modify device configuration parameters: IP address, subnet mask, gateway, station name. These changes alter network routing and device identity, disrupting automation cell communication.'
-    tactic: Impair Process Control
-    technique: T0836
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0836
-      style: set_ip
-      count: 1
-      interval: 0.5s
-      note: PROFINET DCP SetIP parameter write
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0836
-      style: set_name
-      count: 1
-      interval: 0.5s
-      note: PROFINET DCP SetName parameter write
   T0855__unauth_command__opcua_write:
     title: T0855 – Unauthorized Command Message — OPC UA unauthorized write
     description: 'Issues OPC UA WriteRequest to writable actuator nodes without engineering authorization: valve open/close nodes, motor start/stop, or breaker control. The OPC UA server executes the write if access control is misconfigured.'
@@ -4936,26 +4773,6 @@ scenarios:
       count: 2
       interval: 1s
       note: IEC-104 GI for data object enumeration
-  T0888__remote_sys_info__mqtt_topic_discovery:
-    title: T0888 – Remote System Information Discovery — MQTT topic enumeration
-    description: Subscribes to MQTT wildcard topics (# and +/+/+) to passively enumerate all topics published in an IIoT environment. Harvests device names, measurement paths, configuration topics, and OTA update endpoints.
-    tactic: Discovery
-    technique: T0888
-    steps:
-    - type: pcap
-      proto: mqtt
-      technique: T0888
-      style: subscribe_all
-      count: 3
-      interval: 0.5s
-      note: MQTT wildcard subscribe (#) for topic harvest
-    - type: pcap
-      proto: mqtt
-      technique: T0888
-      style: auto
-      count: 1
-      interval: 0.3s
-      note: MQTT connection with client ID enumeration
   T0826__loss_of_availability__opcua_session_flood:
     title: T0826 – Loss of Availability — OPC UA session flooding
     description: Opens maximum OPC UA sessions in rapid succession to exhaust the server session table. Once the limit is reached, legitimate engineering workstations and SCADA clients cannot connect, causing loss of monitoring and control.
@@ -5077,26 +4894,6 @@ scenarios:
       count: 2
       interval: 0.5s
       note: OPC UA namespace for I/O mapping
-  T0832__manipulation_of_view__dnp3_analog:
-    title: T0832 – Manipulation of View — DNP3 analog output write
-    description: Writes a false value to a DNP3 analog output point (Direct Operate, FC3). The target RTU stores the spoofed value; when the SCADA master next polls for status, it reads the attacker's value instead of the real process value. Operator HMI displays incorrect process state while the physical process continues operating at its true value.
-    tactic: Impact
-    technique: T0832
-    steps:
-    - type: pcap
-      proto: dnp3
-      technique: T0832
-      style: direct_operate
-      count: 1
-      interval: 0s
-      note: Write false analog output value to RTU
-    - type: pcap
-      proto: dnp3
-      technique: T0832
-      style: direct_operate
-      count: 1
-      interval: 2s
-      note: Confirm spoofed value persists
   T0832__manipulation_of_view__iec104:
     title: T0832 – Manipulation of View — IEC-104 measurement inject
     description: Injects a forged IEC-104 measurement (M_ME_NC_1 short float) into the station bus. Receiving SCADA systems accept the spoofed analog value as a legitimate spontaneous transmission and update the operator display. The real field value is masked for the duration of the attack.
@@ -5682,60 +5479,6 @@ scenarios:
       count: 1
       interval: 1s
       note: 'DCP Factory Reset: erase device identity'
-  T0812__default_creds__iec104_auth:
-    title: T0812 – Default Credentials — IEC-104 authentication bypass
-    description: IEC-104 optionally supports IEC 62351-5 authentication, but many deployments use it in unauthenticated mode (the default). This scenario sends IEC-104 control commands directly without any credentials, exploiting the default unauthenticated configuration to issue setpoints and commands as if a legitimate master station.
-    tactic: Lateral Movement
-    technique: T0812
-    steps:
-    - type: pcap
-      proto: iec104
-      technique: T0812
-      style: available
-      count: 1
-      interval: 0s
-      note: Connect without authentication (no IEC 62351-5)
-    - type: pcap
-      proto: iec104
-      technique: T0812
-      style: single_command
-      count: 3
-      interval: 1s
-      note: Issue control commands without credentials
-    - type: pcap
-      proto: iec104
-      technique: T0812
-      style: setpoint_float
-      count: 3
-      interval: 1s
-      note: Write setpoints without authentication
-  T0812__default_creds__profinet_dcp:
-    title: T0812 – Default Credentials — PROFINET DCP unauthenticated configuration
-    description: 'PROFINET DCP has no authentication layer by design. Any device on the network can issue Set-Name and Set-IP commands to any PROFINET device using only the device''s MAC address. This scenario demonstrates the default credential vulnerability: attacker changes device configuration without any password, certificate, or challenge-response.'
-    tactic: Lateral Movement
-    technique: T0812
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0812
-      style: identify
-      count: 1
-      interval: 0s
-      note: Identify target device (no auth needed)
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0812
-      style: set_name
-      count: 1
-      interval: 2s
-      note: Set station name without credentials
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0812
-      style: set_ip
-      count: 1
-      interval: 2s
-      note: Change IP configuration without authentication
   T0849__masquerading__iec61850_goose:
     title: T0849 – Masquerading — IEC 61850 GOOSE fake IED identity
     description: Sends GOOSE frames using the gocbRef and datSet reference of a known legitimate protection IED. Subscribing IEDs and the SCADA system cannot distinguish the attacker's GOOSE from the real IED because GOOSE has no message authentication. The attacker's device masquerades as a trusted protection relay, allowing injection of false trip commands or measurements under the trusted IED's identity.
@@ -5889,26 +5632,6 @@ scenarios:
       count: 5
       interval: 1s
       note: Write false Present-Value to BACnet sensor object
-  T0832__manipulation_of_view__profinet_dcp:
-    title: T0832 – Manipulation of View — PROFINET DCP name/IP spoof
-    description: Changes a PROFINET device's station name to one that matches a trusted reference device, then sets its IP to match. IO controllers and engineering tools that identify devices by name will now associate the attacker's device (or the real device with a wrong identity) with the spoofed values, producing a false view of the network topology.
-    tactic: Impact
-    technique: T0832
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0832
-      style: set_name
-      count: 1
-      interval: 0s
-      note: Set station name to mimic trusted device
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0832
-      style: set_ip
-      count: 1
-      interval: 1s
-      note: Set IP to match spoofed identity
   T0882__theft_op_info__iec61850_goose:
     title: T0882 – Theft of Operational Information — IEC 61850 GOOSE eavesdrop
     description: Subscribes passively to the IEC 61850 GOOSE multicast stream. GOOSE carries real-time protection events, circuit breaker states, and measurement data in plaintext with no encryption. An attacker on the process bus VLAN can silently capture complete substation operational state including protection trip events, measurement values, and IED configuration references — all without generating any traffic.
@@ -6088,26 +5811,6 @@ scenarios:
       count: 5
       interval: 1s
       note: Publish retained 'OK' to alarm topic to suppress alerts
-  T0878__alarm_suppression__profinet_dcp:
-    title: T0878 – Alarm Suppression — PROFINET DCP device reset to disable alarms
-    description: Sends a PROFINET DCP Factory Reset to an alarm-generating IO device. After the reset, the device loses its PROFINET identity and drops off the IO controller cycle. The IO controller raises a 'device unreachable' error rather than the specific process alarm, masking the root cause while the device is being reconfigured.
-    tactic: Inhibit Response Function
-    technique: T0878
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0878
-      style: factory_reset
-      count: 1
-      interval: 0s
-      note: Factory reset alarm device to suppress process alarms
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0878
-      style: identify
-      count: 3
-      interval: 2s
-      note: Verify device is offline (no response expected)
   T0831__manip_control__bacnet_write:
     title: T0831 – Manipulation of Control — BACnet Binary Output command
     description: Writes a command to a BACnet Binary Output object's Present-Value with priority 8 (Manual-Operator). This overrides the normal application priority and directly controls the physical output (e.g., relay, valve, damper). BACnet priority arrays allow any network client to issue commands without authentication, making this the canonical BACnet manipulation of control attack.
@@ -6383,26 +6086,6 @@ scenarios:
       count: 3
       interval: 5s
       note: Verify device no longer responds to normal traffic
-  T0803__block_command__enip:
-    title: T0803 – Block Command Message — EtherNet/IP CIP connection flood
-    description: Opens the maximum number of CIP Forward-Open connections to the target PLC without sending any data. PLCs have a fixed number of available CIP connections (typically 32–256). Once exhausted, the SCADA master's Forward-Open requests are rejected, preventing it from establishing I/O connections and effectively blocking all control commands.
-    tactic: Inhibit Response Function
-    technique: T0803
-    steps:
-    - type: pcap
-      proto: enip
-      technique: T0803
-      style: register_session
-      count: 30
-      interval: 0.05s
-      note: Flood Register Session to consume connection pool
-    - type: pcap
-      proto: enip
-      technique: T0803
-      style: register_session
-      count: 30
-      interval: 0.05s
-      note: Sustain to keep SCADA master locked out
   T0803__block_command__iec104:
     title: T0803 – Block Command Message — IEC-104 command block
     description: Exploits the IEC-104 unauthenticated mode to send a block command (C_SC_NA_1 with qualifier QU=22, block) to the RTU before the legitimate master can issue a real command. The block qualifier prevents command execution, and the RTU holds the blocked state until released. This prevents legitimate SCADA from actuating the targeted output point.
@@ -6463,19 +6146,6 @@ scenarios:
       count: 3
       interval: 2s
       note: Read SZL to confirm CPU in STOP state
-  T0804__block_reporting__bacnet:
-    title: T0804 – Block Reporting Message — BACnet COV subscription cancel
-    description: Cancels the BACnet Change-Of-Value subscriptions that the SCADA/BMS uses to receive real-time process data. By sending SubscribeCOV with Lifetime=0 (unsubscribe) for each monitored object, the attacker stops all event-driven reporting. The SCADA display freezes on the last received values while the physical process continues to change.
-    tactic: Inhibit Response Function
-    technique: T0804
-    steps:
-    - type: pcap
-      proto: bacnet
-      technique: T0804
-      style: subscribe_cov
-      count: 10
-      interval: 0.5s
-      note: Cancel COV subscriptions to block SCADA reporting
   T0804__block_reporting__enip:
     title: T0804 – Block Reporting Message — EtherNet/IP I/O connection teardown
     description: Sends CIP Forward-Close to terminate the I/O connections between the ControlLogix PLC and SCADA system. I/O connections carry implicit messaging (produced/consumed tags) that feeds the real-time SCADA display. Closing these connections stops the cyclic data transfer, leaving the SCADA with no updates until the connection is re-established.
@@ -6496,26 +6166,6 @@ scenarios:
       count: 3
       interval: 2s
       note: Verify SCADA sessions are terminated
-  T0804__block_reporting__iec104:
-    title: T0804 – Block Reporting Message — IEC-104 spontaneous transmission disable
-    description: Sends IEC-104 General Interrogation without STARTDT activation, or sends invalid control sequences that cause the RTU to enter a faulted communication state. RTUs that detect invalid sequences may disable spontaneous transmissions as a protective measure, stopping all unsolicited data reporting to the SCADA master.
-    tactic: Inhibit Response Function
-    technique: T0804
-    steps:
-    - type: pcap
-      proto: iec104
-      technique: T0804
-      style: interrogation
-      count: 10
-      interval: 0.1s
-      note: Rapid interrogation flood to overwhelm RTU reporting
-    - type: pcap
-      proto: iec104
-      technique: T0804
-      style: available
-      count: 5
-      interval: 0.5s
-      note: Re-open connections to prevent RTU reset
   T0804__block_reporting__iec61850:
     title: T0804 – Block Reporting Message — IEC 61850 GOOSE multicast flood
     description: Saturates the IEC 61850 process bus with forged GOOSE frames, overwhelming IED receive buffers. When IED buffers fill, incoming frames are dropped including legitimate GOOSE report messages. SCADA and protection systems stop receiving spontaneous state change notifications, effectively blocking all GOOSE-based reporting for the duration of the flood.
@@ -6536,26 +6186,6 @@ scenarios:
       count: 50
       interval: 0.005s
       note: Sustain flood through reporting window
-  T0804__block_reporting__s7comm:
-    title: T0804 – Block Reporting Message — S7comm diagnostic data flood
-    description: Floods the Siemens PLC with rapid SZL-Read requests for large SZL ID blocks. The S7 communication processor serialises all requests; when saturated with diagnostic reads, the WinCC client's data read cycles are delayed indefinitely. The SCADA display shows stale data while the attacker's diagnostic flood occupies all available CPU bandwidth.
-    tactic: Inhibit Response Function
-    technique: T0804
-    steps:
-    - type: pcap
-      proto: s7comm
-      technique: T0804
-      style: szl_read
-      count: 30
-      interval: 0.02s
-      note: SZL flood to block WinCC reporting cycles
-    - type: pcap
-      proto: s7comm
-      technique: T0804
-      style: read_all_dbs
-      count: 10
-      interval: 0.1s
-      note: DB read flood to saturate communication CPU
   T0869__std_app_protocol__dnp3:
     title: T0869 – Standard Application Layer Protocol — DNP3 C2 channel
     description: Uses DNP3 application layer fragmentation and file transfer (FC 25/28) to embed C2 communications within legitimate-looking DNP3 traffic. DNP3 file operations are used in legitimate firmware updates and event log retrieval, making this channel hard to distinguish from normal operational traffic in environments with DNP3 firewalls.
@@ -6598,7 +6228,7 @@ scenarios:
       note: Use clock sync for C2 timing signals
   T0869__std_app_protocol__iec61850:
     title: T0869 – Standard Application Layer Protocol — IEC 61850 GOOSE C2 beacon
-    description: Uses the reserved fields (Reserved1/Reserved2) and custom APPID values in GOOSE frames to encode C2 beacons. GOOSE reserved fields (4 bytes total) are ignored by legitimate IEDs but can carry 32 bits of C2 data per frame. At normal GOOSE keep-alive rates (1 frame/s), this provides a 32 bps covert channel invisible to most IEC 61850 inspection tools.
+    description: Uses IEC 61850 GOOSE frames (EtherType 0x88B8) as a C2 channel on the process bus. GOOSE multicast is forwarded by all process bus switches as a standard allowed protocol. An attacker encodes commands and exfiltrates data via the allData BER-encoded payload fields, appearing as legitimate protection relay traffic to network monitoring tools.
     tactic: Command and Control
     technique: T0869
     steps:
@@ -6606,9 +6236,16 @@ scenarios:
       proto: iec61850
       technique: T0869
       style: enumerate_ied
-      count: 10
+      count: 5
       interval: 1s
-      note: GOOSE C2 beacon via reserved fields
+      note: GOOSE on 0x88B8 EtherType blending with protection traffic
+    - type: pcap
+      proto: iec61850
+      technique: T0869
+      style: relay_inject
+      count: 3
+      interval: 2s
+      note: Encode C2 data in GOOSE allData fields using allowed EtherType
   T0869__std_app_protocol__s7comm:
     title: T0869 – Standard Application Layer Protocol — S7comm DB covert channel
     description: Uses S7comm data block read/write cycles as a covert C2 channel. The attacker writes C2 commands to a designated 'dead-drop' DB that the implanted malware polls at regular intervals. The malware writes C2 responses to a different DB offset. Traffic is indistinguishable from normal SCADA-PLC communication cycles.
@@ -6629,53 +6266,6 @@ scenarios:
       count: 3
       interval: 2s
       note: Write C2 response to exfil DB
-  T0812__default_creds__bacnet:
-    title: T0812 – Default Credentials — BACnet unauthenticated access
-    description: 'BACnet/IP has no authentication mechanism in the base standard (BACnet Security is rarely deployed). Any device on the network can read and write any object property. This scenario demonstrates the default credential vulnerability: attacker issues WriteProperty commands without any password, certificate, or challenge-response, gaining full control of the BAS.'
-    tactic: Lateral Movement
-    technique: T0812
-    steps:
-    - type: pcap
-      proto: bacnet
-      technique: T0812
-      style: who_is
-      count: 1
-      interval: 0s
-      note: Discover devices (no auth needed)
-    - type: pcap
-      proto: bacnet
-      technique: T0812
-      style: read_property
-      count: 3
-      interval: 0.5s
-      note: Read properties without credentials
-    - type: pcap
-      proto: bacnet
-      technique: T0812
-      style: write_property
-      count: 3
-      interval: 1s
-      note: Write control values without credentials
-  T0812__default_creds__dnp3:
-    title: T0812 – Default Credentials — DNP3 unauthenticated command
-    description: DNP3 Secure Authentication (SA) is optional and rarely enabled. Without SA, any device on the DNP3 network segment can issue commands as a master. This scenario sends Direct Operate commands without DNP3 SA challenge tokens, exploiting the default unauthenticated configuration to control RTU output points without any credentials.
-    tactic: Lateral Movement
-    technique: T0812
-    steps:
-    - type: pcap
-      proto: dnp3
-      technique: T0812
-      style: direct_operate
-      count: 3
-      interval: 1s
-      note: Direct Operate without SA challenge (default config)
-    - type: pcap
-      proto: dnp3
-      technique: T0812
-      style: write
-      count: 3
-      interval: 1s
-      note: Write output values without authentication
   T0814__denial_of_view__bacnet:
     title: T0814 – Denial of View — BACnet COV notification flood
     description: Floods the SCADA with forged BACnet Confirmed COV Notifications for multiple objects. The SCADA's BACnet client must process and acknowledge each notification; at high rate, the client cannot keep up and its receive queue fills. Legitimate COV notifications from real field devices are then dropped, producing a frozen operator display.
@@ -6749,26 +6339,6 @@ scenarios:
       count: 1
       interval: 2s
       note: General interrogation on exposed RTU
-  T0883__internet_accessible__iec61850:
-    title: T0883 – Internet Accessible Device — IEC 61850 GOOSE L2 exposure
-    description: IEC 61850 GOOSE is a Layer-2 protocol that should never cross routed boundaries. When GOOSE traffic is incorrectly bridged or tunnelled to Internet-facing interfaces, an attacker can inject GOOSE frames targeting substation IEDs from the Internet. This scenario probes for misrouted GOOSE and demonstrates the catastrophic impact if the VLAN boundary fails.
-    tactic: Initial Access
-    technique: T0883
-    steps:
-    - type: pcap
-      proto: iec61850
-      technique: T0883
-      style: enumerate_ied
-      count: 5
-      interval: 0.5s
-      note: Probe for Internet-exposed GOOSE traffic
-    - type: pcap
-      proto: iec61850
-      technique: T0883
-      style: trip_inject
-      count: 1
-      interval: 2s
-      note: Inject trip command if GOOSE boundary is missing
   T0883__internet_accessible__s7comm:
     title: T0883 – Internet Accessible Device — S7comm TCP 102 internet probe
     description: Connects to TCP port 102 (S7/TPKT) on Internet-facing addresses. Siemens S7 PLCs that accept S7comm connections from the Internet without firewall protection can be fully controlled by any attacker. Shodan indexes thousands of exposed S7 devices. This scenario demonstrates the initial connection and SZL read an attacker performs on a discovered exposed PLC.
@@ -7482,46 +7052,6 @@ scenarios:
       count: 50
       interval: 0.005s
       note: Sustain to maintain denial of view
-  T0815__denial_of_view__modbus:
-    title: T0815 – Denial of View — Modbus slave saturation
-    description: Floods the Modbus slave with read requests at a rate exceeding the device's processing capacity. SCADA master read cycles are queued behind the attacker's flood and time out. The operator HMI receives no fresh data — displays show stale values or communication-fault indicators for the targeted device.
-    tactic: Impact
-    technique: T0815
-    steps:
-    - type: pcap
-      proto: modbus
-      technique: T0815
-      style: read_holding
-      count: 50
-      interval: 0.01s
-      note: Saturate Modbus slave with read requests
-    - type: pcap
-      proto: modbus
-      technique: T0815
-      style: read_input
-      count: 50
-      interval: 0.01s
-      note: Flood all register types to maximise blockage
-  T0815__denial_of_view__s7comm:
-    title: T0815 – Denial of View — S7comm communication CPU saturation
-    description: Floods the Siemens PLC with rapid Read DB and SZL-Read requests, saturating the communication processor (CP) that handles all S7comm traffic. WinCC SCADA read cycles are serialised behind the flood and miss their poll intervals. The operator display goes stale while the PLC continues executing its control programme normally.
-    tactic: Impact
-    technique: T0815
-    steps:
-    - type: pcap
-      proto: s7comm
-      technique: T0815
-      style: read_db
-      count: 30
-      interval: 0.02s
-      note: Saturate S7 CP with read requests blocking WinCC
-    - type: pcap
-      proto: s7comm
-      technique: T0815
-      style: szl_read
-      count: 10
-      interval: 0.05s
-      note: Add SZL reads to compound the saturation
   T0815__denial_of_view__profinet_dcp:
     title: T0815 – Denial of View — PROFINET DCP multicast flood
     description: Floods the PROFINET segment with DCP Identify-All multicast frames. All IO devices must process each multicast; at high rate, their CPU cycles are consumed processing identify requests rather than updating cyclic I/O data. The IO controller's cyclic read of process images is delayed, producing stale data on the operator HMI.
@@ -7815,46 +7345,6 @@ scenarios:
       count: 5
       interval: 0.5s
       note: Overwrite alarm limit tags to disable threshold alarms
-  T0838__alarm_settings__iec61850:
-    title: T0838 – Modify Alarm Settings — IEC 61850 GOOSE relay threshold spoof
-    description: Injects GOOSE frames with modified FLOAT32 values representing protection relay pickup thresholds (overcurrent, undervoltage, overfrequency). Protection IEDs that accept GOOSE-sourced setpoints update their operating thresholds without operator awareness. The relay continues operating but now requires a more extreme fault condition to trip, effectively raising the alarm/protection threshold.
-    tactic: Inhibit Response Function
-    technique: T0838
-    steps:
-    - type: pcap
-      proto: iec61850
-      technique: T0838
-      style: spoof_measurement
-      count: 3
-      interval: 0.5s
-      note: GOOSE with extreme threshold value (disable protection trip)
-    - type: pcap
-      proto: iec61850
-      technique: T0838
-      style: spoof_measurement
-      count: 5
-      interval: 2s
-      note: Sustain modified threshold at keep-alive rate
-  T0838__alarm_settings__profinet_dcp:
-    title: T0838 – Modify Alarm Settings — PROFINET DCP device reset clears alarms
-    description: Sends PROFINET DCP Factory Reset to an alarm-generating IO device, resetting all configured alarm thresholds to factory defaults. Factory default thresholds are typically set to full-range values that never trigger during normal operation, effectively disabling all alarm reporting from the device until it is manually reconfigured.
-    tactic: Inhibit Response Function
-    technique: T0838
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0838
-      style: factory_reset
-      count: 1
-      interval: 0s
-      note: Factory reset device (clears all alarm thresholds)
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0838
-      style: identify
-      count: 3
-      interval: 5s
-      note: Confirm device returns with default (disabled) thresholds
   T0849__masquerading__dnp3:
     title: T0849 – Masquerading — DNP3 source address spoofing
     description: Sends DNP3 frames with a spoofed source address matching the legitimate SCADA master's DNP3 address. Outstations that do not validate source address against a whitelist will accept commands from the spoofed address as legitimate master commands. The attacker's requests are indistinguishable from the real SCADA master at the DNP3 application layer.
@@ -8267,66 +7757,6 @@ scenarios:
       style: pingreq
       count: 30
       interval: 0.05s
-  T0846__net_scan__profinet_dcp:
-    title: T0841 – Network Service Scanning — PROFINET DCP multicast identify
-    description: Sends PROFINET DCP IdentifyAll multicast to enumerate all PROFINET devices on the segment. Every PROFINET device responds with its station name, IP, vendor, and device type. Identical to initial reconnaissance in Siemens-environment attacks.
-    tactic: Discovery
-    technique: T0846
-    steps:
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0846
-      style: identify
-      count: 3
-      interval: 0.5s
-      note: DCP IdentifyAll enumeration sweep
-  T0846__net_scan__iec61850_goose_probe:
-    title: T0841 – Network Service Scanning — IEC 61850 GOOSE multicast probe
-    description: Sends GOOSE frames across all APPID ranges (0x0000-0x3FFF) to identify IEDs and their control block configurations. Observes GOOSE traffic patterns to map the substation topology and identify protection relay associations.
-    tactic: Discovery
-    technique: T0846
-    steps:
-    - type: pcap
-      proto: iec61850
-      technique: T0846
-      style: trip_inject
-      count: 2
-      interval: 0.5s
-      note: GOOSE probe APPID range 1
-    - type: pcap
-      proto: iec61850
-      technique: T0846
-      style: relay_inject
-      count: 2
-      interval: 0.5s
-      note: GOOSE probe APPID range 2
-    - type: pcap
-      proto: iec61850
-      technique: T0846
-      style: spoof_measurement
-      count: 2
-      interval: 0.5s
-      note: GOOSE probe APPID range 3
-  T0846__net_scan__bacnet_who_is:
-    title: T0841 – Network Service Scanning — BACnet/IP Who-Is network scan
-    description: Sends BACnet Who-Is broadcast to enumerate all BACnet devices (controllers, VAV boxes, meters, sensors). Each device responds with its object instance range, enabling a complete BACnet network map.
-    tactic: Discovery
-    technique: T0846
-    steps:
-    - type: pcap
-      proto: bacnet
-      technique: T0846
-      style: who_is
-      count: 4
-      interval: 0.5s
-      note: BACnet Who-Is broadcast sweep
-    - type: pcap
-      proto: bacnet
-      technique: T0846
-      style: read_property
-      count: 3
-      interval: 0.3s
-      note: BACnet device properties read
   T0846__network_scan__bacnet_sweep:
     title: T0841 – Network Scanning — BACnet Who-Is device ID sweep
     description: Sends BACnet Who-Is requests with low-limit/high-limit ranges to sweep the entire device ID space (0–4194303). Every BACnet device with a matching instance ID responds with an IAm, revealing device type, vendor, and object count. This is the canonical BACnet network discovery sweep used in building automation and industrial facilities.
@@ -8787,31 +8217,31 @@ scenarios:
       note: Disable safety controller communications
   T0880__loss_of_safety__profinet_dcp:
     title: T0880 – Loss of Safety — PROFINET safety IO device takeover
-    description: Changes the station name and IP of a PROFINET Fail-Safe (PROFIsafe) IO device to redirect its cyclic safety I/O connection. The F-CPU (failsafe controller) establishing a PROFIsafe connection to the attacker's device receives arbitrary safety data responses, effectively bypassing the physical safety I/O and producing a loss of safety function.
+    description: Targets PROFINET-connected safety I/O modules (e.g. Siemens ET 200SP F-modules, Pilz PSSuniversal) with DCP Factory Reset. Safety-rated IO modules in the unconfigured state disable all F-I/O channels and force safe state. The safety PLC loses its safety-rated I/O and cannot execute protective shutdown functions, causing loss of the process safety instrumented function.
     tactic: Impact
     technique: T0880
     steps:
     - type: pcap
       proto: profinet_dcp
       technique: T0880
-      style: set_name
-      count: 1
-      interval: 0s
-      note: Hijack PROFIsafe IO device station name
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0880
-      style: set_ip
-      count: 1
-      interval: 1s
-      note: Redirect safety IO device IP to attacker
-    - type: pcap
-      proto: profinet_dcp
-      technique: T0880
       style: factory_reset
       count: 1
+      interval: 0s
+      note: Factory reset safety I/O modules to disable protective functions
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0880
+      style: set_name
+      count: 1
+      interval: 2s
+      note: Redirect safety controller naming to prevent reconfiguration
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0880
+      style: identify
+      count: 3
       interval: 5s
-      note: Reset real safety device to remove from F-CPU cycle
+      note: Confirm safety I/O modules in unconfigured/unsafe state
   T0889__modify_program__dnp3:
     title: T0889 – Modify Program — DNP3 configuration file write
     description: Uses DNP3 file transfer services to upload a modified configuration file to an RTU that supports file-based programming. Modified configuration can change point class assignments, setpoint limits, control output mappings, and communication parameters — persisting attacker-defined behaviour across power cycles.
@@ -8948,7 +8378,7 @@ scenarios:
       note: Open file transfer during restart window
   T0800__fw_update_mode__iec104:
     title: T0800 – Activate Firmware Update Mode — IEC-104 reset process for update mode
-    description: Sends IEC-104 Reset Process (C_RP_NA_1) to transition an RTU through its restart sequence. During the initialisation phase, some RTUs accept firmware update commands via vendor-specific private type IDs before returning to normal operation. The attacker exploits this window to activate firmware update mode.
+    description: Sends IEC-104 Reset Process (C_RP_NA_1) to force an RTU into restart, creating the firmware update window used by ABB and Siemens RTUs. During restart the device enters an unconfigured state that accepts firmware images via the engineering tool channel. STOPDT halts data transfer to prevent interference during the update window.
     tactic: Inhibit Response Function
     technique: T0800
     steps:
@@ -8958,17 +8388,24 @@ scenarios:
       style: reset_process
       count: 1
       interval: 0s
-      note: 'C_RP_NA_1: reset to trigger firmware mode window'
+      note: 'C_RP_NA_1: reset RTU to open firmware update window'
     - type: pcap
       proto: iec104
       technique: T0800
-      style: meas_inject
-      count: 5
-      interval: 0.5s
-      note: Private type firmware update command during restart
+      style: stopdt
+      count: 1
+      interval: 2s
+      note: 'STOPDT: halt data transfer during firmware window'
+    - type: pcap
+      proto: iec104
+      technique: T0800
+      style: available
+      count: 3
+      interval: 5s
+      note: Monitor STARTDT to detect device re-initialization
   T0800__fw_update_mode__modbus:
     title: T0800 – Activate Firmware Update Mode — Modbus diagnostic restart
-    description: Uses Modbus FC08 sub-function 1 (Restart Communications Option) followed by rapid FC08 sub-function 4 (Force Listen Only Mode) to transition the device into a non-responsive state. Some devices interpret this sequence as a trigger for entering firmware update mode, halting normal operation and waiting for a firmware image.
+    description: Sends Modbus FC08 Diagnostic with Sub-Function 04 (Force Listen Only Mode) to halt the slave's ability to process any commands. This is the Modbus equivalent of firmware update mode — the slave stops all application processing and waits for a restart. Used in conjunction with vendor-specific firmware delivery tools that target the device during this halt state.
     tactic: Inhibit Response Function
     technique: T0800
     steps:
@@ -8978,14 +8415,14 @@ scenarios:
       style: diagnostic
       count: 1
       interval: 0s
-      note: 'FC08/SF01: Restart Communications to trigger mode change'
+      note: 'FC08/SF04: Force Listen Only Mode — halts all slave responses'
     - type: pcap
       proto: modbus
       technique: T0800
       style: diagnostic
       count: 3
-      interval: 0.5s
-      note: 'FC08/SF04: Force Listen Only during mode transition'
+      interval: 5s
+      note: 'FC08/SF00: Restart comms — confirm slave accepts firmware update reset'
   T0800__fw_update_mode__mqtt:
     title: T0800 – Activate Firmware Update Mode — MQTT OTA firmware update trigger
     description: Publishes a firmware update initiation command to the OTA (Over-The-Air) update topic of an MQTT-connected field device or gateway. IoT/ICS devices commonly subscribe to an OTA command topic for remote firmware updates. An attacker can trigger update mode by publishing a crafted OTA command, causing the device to halt normal operation and wait for a firmware image from an attacker-controlled server.
@@ -9046,46 +8483,6 @@ scenarios:
       count: 3
       interval: 1s
       note: Write new password via CIP Set_Attribute
-  T0892__change_credential__iec104:
-    title: T0892 – Change Credential — IEC-104 authentication token manipulation
-    description: Sends malformed or replayed IEC 62351-5 authentication challenge responses to confuse an RTU's authentication state machine, potentially causing it to accept a new challenge token. Once accepted, the legitimate SCADA master cannot authenticate and is locked out of the protected IEC-104 session.
-    tactic: Inhibit Response Function
-    technique: T0892
-    steps:
-    - type: pcap
-      proto: iec104
-      technique: T0892
-      style: available
-      count: 1
-      interval: 0s
-      note: Establish IEC-104 session
-    - type: pcap
-      proto: iec104
-      technique: T0892
-      style: meas_inject
-      count: 5
-      interval: 0.5s
-      note: Inject malformed auth sequences to manipulate state
-  T0892__change_credential__s7comm:
-    title: T0892 – Change Credential — S7comm password write
-    description: Uses S7comm Write Variable to overwrite the access level password registers in a Siemens S7 PLC. The S7 CPU access levels (1–4) are protected by passwords stored in a designated DB. Overwriting these registers blocks engineering workstations from accessing the PLC at protection levels 2–4, preventing programme downloads or modifications.
-    tactic: Inhibit Response Function
-    technique: T0892
-    steps:
-    - type: pcap
-      proto: s7comm
-      technique: T0892
-      style: write_failsafe
-      count: 3
-      interval: 0.5s
-      note: Write new password to S7 access level registers
-    - type: pcap
-      proto: s7comm
-      technique: T0892
-      style: szl_read
-      count: 3
-      interval: 1s
-      note: Verify access level change via SZL
   T0891__hardcoded_creds__bacnet:
     title: T0891 – Hardcoded Credentials — BACnet unauthenticated access (no auth)
     description: BACnet/IP has no authentication in its base specification. The 'hardcoded credential' in BACnet is the complete absence of any credential requirement — this is a design-time hardcoded decision by the standard. Any device on the network can issue WriteProperty commands with no password, certificate, or challenge-response required.
@@ -9388,6 +8785,3160 @@ scenarios:
       count: 5
       interval: 0.5s
       note: Read all data blocks as remote engineer
+  T0861__point_tag_id__iec61850:
+    title: T0861 – Point & Tag Identification — IEC 61850 GOOSE dataset enumeration
+    description: Sends test-mode GOOSE frames with enumerate_ied style to map all IED publishers and their dataset references on the process bus. Each IED's GOOSE subscription configuration reveals its dataset structure — the complete list of data attributes it monitors. This exposes every protection and measurement point in the substation without any MMS session.
+    tactic: Collection
+    technique: T0861
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0861
+      style: enumerate_ied
+      count: 10
+      interval: 0.2s
+      note: Probe all IEDs to map dataset structure
+    - type: pcap
+      proto: iec61850
+      technique: T0861
+      style: spoof_measurement
+      count: 5
+      interval: 1s
+      note: Read measurement datasets to enumerate analog points
+  T0861__point_tag_id__mqtt:
+    title: T0861 – Point & Tag Identification — MQTT topic wildcard subscription
+    description: Subscribes to the MQTT wildcard topic '#' to receive all messages published to the broker. Every published message reveals a tag name (topic path), its current value, and update frequency. This completely enumerates all process variables exposed via MQTT without any schema or engineering file.
+    tactic: Collection
+    technique: T0861
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0861
+      style: subscribe_all
+      count: 1
+      interval: 0s
+      note: Subscribe '#' to enumerate all published topics
+    - type: pcap
+      proto: mqtt
+      technique: T0861
+      style: subscribe_telemetry
+      count: 3
+      interval: 5s
+      note: Sustained subscription to collect all tag updates
+  T0861__point_tag_id__profinet:
+    title: T0861 – Point & Tag Identification — PROFINET DCP device and I/O enumeration
+    description: Uses PROFINET DCP Identify-All to enumerate all IO devices and their station names. Combined with Get Name and Get IP requests to each device, this maps the complete PROFINET I/O topology — every IO module, slot, and sub-slot — which corresponds directly to the physical I/O tag list.
+    tactic: Collection
+    technique: T0861
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0861
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: 'DCP Identify-All: enumerate all IO devices'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0861
+      style: get_name
+      count: 5
+      interval: 0.3s
+      note: Get station names for each discovered device
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0861
+      style: get_ip
+      count: 5
+      interval: 0.3s
+      note: Get IP addresses to map full topology
+  T0861__point_tag_id__s7comm:
+    title: T0861 – Point & Tag Identification — S7comm symbol table and DB enumeration
+    description: Reads all Data Blocks from a Siemens S7 PLC using Read All DBs. The DB structure mirrors the programme's symbol table — every variable name, type, and address offset is encoded in the DB layout. This reverse-engineers the complete I/O and process variable map without access to the Step7/TIA Portal project file.
+    tactic: Collection
+    technique: T0861
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0861
+      style: szl_read
+      count: 3
+      interval: 0.5s
+      note: SZL read to map block structure and count
+    - type: pcap
+      proto: s7comm
+      technique: T0861
+      style: read_all_dbs
+      count: 5
+      interval: 0.5s
+      note: Read all DBs to enumerate process variable layout
+  T0802__automated_collection__iec61850:
+    title: T0802 – Automated Collection — IEC 61850 GOOSE continuous monitoring
+    description: Passively receives all GOOSE multicast frames on the process bus VLAN, building a continuously updated picture of every protection relay status, measurement value, and breaker position. By monitoring all multicast groups, the attacker automatically collects process state without generating any query traffic.
+    tactic: Collection
+    technique: T0802
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0802
+      style: enumerate_ied
+      count: 10
+      interval: 0.1s
+      note: Enumerate IEDs to identify all GOOSE publishers
+    - type: pcap
+      proto: iec61850
+      technique: T0802
+      style: spoof_measurement
+      count: 10
+      interval: 0.5s
+      note: Capture measurement datasets for process state
+  T0802__automated_collection__opcua:
+    title: T0802 – Automated Collection — OPC UA subscription-based data harvest
+    description: Creates OPC UA subscriptions covering all MonitoredItems across the server's address space. Subscription-based collection is event-driven — the server pushes changes automatically. With subscriptions on all process variables, the attacker receives a complete real-time data feed that resembles legitimate SCADA historian behaviour.
+    tactic: Collection
+    technique: T0802
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0802
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse full address space to identify all nodes
+    - type: pcap
+      proto: opcua
+      technique: T0802
+      style: create_sub
+      count: 10
+      interval: 1s
+      note: Create OPC UA subscriptions covering all process variable nodes
+  T0802__automated_collection__profinet:
+    title: T0802 – Automated Collection — PROFINET cyclic I/O image capture
+    description: Captures PROFINET cyclic I/O frames from the process bus at the IO controller polling rate. Each cycle delivers the complete output and input process image of all IO devices. Automated collection at the cyclic rate (typically 1–16ms) provides a high-resolution time series of the entire plant's physical I/O state.
+    tactic: Collection
+    technique: T0802
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0802
+      style: identify
+      count: 5
+      interval: 0.5s
+      note: Identify all IO devices for collection targeting
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0802
+      style: get_ip
+      count: 5
+      interval: 0.5s
+      note: Map IP addresses for cyclic I/O stream capture
+  T0802__automated_collection__s7comm:
+    title: T0802 – Automated Collection — S7comm cyclic DB read
+    description: Reads all S7 data blocks at the PLC scan rate (typically 10–100ms) using rapid successive Read Variable requests. Automated at the scan rate, this captures every change to process variables — setpoints, counters, timers, PID states — building a time series equivalent to what the WinCC historian records, without any historian access.
+    tactic: Collection
+    technique: T0802
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0802
+      style: read_all_dbs
+      count: 10
+      interval: 0.1s
+      note: Cyclic DB read at scan rate for process telemetry
+    - type: pcap
+      proto: s7comm
+      technique: T0802
+      style: read_inputs
+      count: 10
+      interval: 0.1s
+      note: Read input process image for physical I/O state
+  T0881__service_stop__iec61850:
+    title: T0881 – Service Stop — IEC 61850 GOOSE bus saturation stops IED services
+    description: Floods the IEC 61850 process bus with protection_block GOOSE frames at a rate that overwhelms IED message queues. The IEDs' GOOSE receive service halts under load — they stop processing incoming frames and cannot publish their own GOOSE. This effectively stops the protection and measurement services of all IEDs on the bus.
+    tactic: Inhibit Response Function
+    technique: T0881
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0881
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: GOOSE flood overloading IED receive queues
+    - type: pcap
+      proto: iec61850
+      technique: T0881
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: Sustain flood to maintain service stop
+  T0881__service_stop__modbus:
+    title: T0881 – Service Stop — Modbus slave service saturation
+    description: Sends FC08 Restart Communications Option (sub-function 1) followed by sustained high-rate read requests. The restart option disrupts the Modbus application service, and the subsequent flood prevents recovery. The slave's communication service stops responding to the legitimate SCADA master while remaining physically powered.
+    tactic: Inhibit Response Function
+    technique: T0881
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0881
+      style: diagnostic
+      count: 1
+      interval: 0s
+      note: 'FC08/SF01: Restart Communication Option'
+    - type: pcap
+      proto: modbus
+      technique: T0881
+      style: read_holding
+      count: 30
+      interval: 0.02s
+      note: Flood to prevent service recovery
+  T0881__service_stop__mqtt:
+    title: T0881 – Service Stop — MQTT broker service exhaustion
+    description: Floods the MQTT broker with high-rate publish messages across many topics, exhausting its message queue and connection handling capacity. When the broker's service threads are saturated, legitimate clients cannot publish or receive — all MQTT-connected field device telemetry and command paths stop functioning.
+    tactic: Inhibit Response Function
+    technique: T0881
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0881
+      style: publish_dos
+      count: 50
+      interval: 0.005s
+      note: Flood broker to exhaust service capacity
+    - type: pcap
+      proto: mqtt
+      technique: T0881
+      style: publish_dos
+      count: 50
+      interval: 0.005s
+      note: Sustain to keep broker service stopped
+  T0881__service_stop__profinet:
+    title: T0881 – Service Stop — PROFINET IO device service stop via factory reset
+    description: Sends PROFINET DCP Factory Reset to IO devices to force them into unconfigured state, stopping their cyclic I/O service. The IO controller detects the IO device as missing and raises a diagnostic alarm. The physical outputs go to failsafe state. The PROFINET application service on the device is fully stopped pending reconfiguration.
+    tactic: Inhibit Response Function
+    technique: T0881
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0881
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: 'Factory reset: stop IO device cyclic service'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0881
+      style: identify
+      count: 3
+      interval: 10s
+      note: Confirm device in unconfigured (stopped) state
+  T0827__loss_of_control__iec61850:
+    title: T0827 – Loss of Control — IEC 61850 trip injection blocks operator commands
+    description: Injects GOOSE trip frames at high stNum to IEDs configured for direct GOOSE-based interlocking. IEDs that receive a higher-stNum trip cannot be overridden by the SCADA control system until the stNum wraps. During this window the operator cannot issue control commands to the affected switchgear — a complete loss of control of the substation bay.
+    tactic: Impact
+    technique: T0827
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0827
+      style: trip_inject
+      count: 5
+      interval: 0.2s
+      note: Inject high-stNum trip to block SCADA control
+    - type: pcap
+      proto: iec61850
+      technique: T0827
+      style: trip_inject
+      count: 10
+      interval: 0.5s
+      note: Sustain trip injection to maintain control denial
+  T0827__loss_of_control__mqtt:
+    title: T0827 – Loss of Control — MQTT command topic flooding
+    description: Publishes malformed or conflicting commands to field device command topics at high rate. Devices that process commands serially are unable to clear their command queues — legitimate SCADA commands are delayed indefinitely or rejected as the queue overflows. The SCADA operator loses the ability to issue effective control commands.
+    tactic: Impact
+    technique: T0827
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0827
+      style: publish_command
+      count: 30
+      interval: 0.02s
+      note: Flood command topics to starve SCADA commands
+    - type: pcap
+      proto: mqtt
+      technique: T0827
+      style: publish_dos
+      count: 30
+      interval: 0.02s
+      note: Sustain flood to maintain loss of control
+  T0827__loss_of_control__opcua:
+    title: T0827 – Loss of Control — OPC UA write flooding blocks SCADA writes
+    description: Floods an OPC UA server with write requests to process variable nodes, saturating the server's write queue. The OPC UA server serialises write operations — when overwhelmed, legitimate SCADA write requests from the operator workstation are queued indefinitely. The operator cannot adjust setpoints or issue commands through the OPC UA interface.
+    tactic: Impact
+    technique: T0827
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0827
+      style: write_value
+      count: 30
+      interval: 0.02s
+      note: Flood write queue to block SCADA setpoint writes
+    - type: pcap
+      proto: opcua
+      technique: T0827
+      style: write_value
+      count: 30
+      interval: 0.02s
+      note: Sustain flood to maintain control denial
+  T0827__loss_of_control__profinet:
+    title: T0827 – Loss of Control — PROFINET IO device name hijack
+    description: Changes a PROFINET IO device's station name to a non-matching value via DCP Set Name. The IO controller expects a device with the original name — when the name changes, the controller cannot establish a cyclic connection and raises an IO fault. Outputs go to failsafe state and the operator loses control of the associated field equipment.
+    tactic: Impact
+    technique: T0827
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0827
+      style: set_name
+      count: 1
+      interval: 0s
+      note: Change station name to break IO controller connection
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0827
+      style: identify
+      count: 3
+      interval: 5s
+      note: Confirm IO controller lost connection to device
+  T0843__program_download__iec104:
+    title: T0843 – Program Download — IEC-104 private type firmware command
+    description: Uses IEC-104 C_RP_NA_1 reset combined with vendor-specific private information object types (200+) to deliver a modified configuration to an RTU during its restart window. Several RTU vendors accept configuration downloads via private IEC-104 type IDs, effectively allowing programme modification over the standard control protocol.
+    tactic: Lateral Movement
+    technique: T0843
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0843
+      style: reset_process
+      count: 1
+      interval: 0s
+      note: Reset RTU to open configuration window
+    - type: pcap
+      proto: iec104
+      technique: T0843
+      style: meas_inject
+      count: 8
+      interval: 0.5s
+      note: Deliver modified config via private type IDs
+    - type: pcap
+      proto: iec104
+      technique: T0843
+      style: available
+      count: 3
+      interval: 5s
+      note: Verify RTU returns with modified configuration
+  T0843__program_download__modbus:
+    title: T0843 – Program Download — Modbus NVRAM write for persistent config
+    description: Writes modified configuration values to Modbus holding registers that map to NVRAM-backed storage. On PLCs that use dedicated holding register ranges for programme parameters, this constitutes a programme download — the modified configuration is loaded on every power cycle, providing persistent programme modification.
+    tactic: Lateral Movement
+    technique: T0843
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0843
+      style: write_multiple_registers
+      count: 10
+      interval: 0.2s
+      note: Write modified programme config to NVRAM registers
+    - type: pcap
+      proto: modbus
+      technique: T0843
+      style: diagnostic
+      count: 1
+      interval: 2s
+      note: Restart to activate downloaded configuration
+  T0843__program_download__profinet:
+    title: T0843 – Program Download — PROFINET DCP name/IP change for device takeover
+    description: Sets a PROFINET IO device's station name and IP address to match an attacker-controlled device. On next IO controller connection attempt, the controller connects to the attacker's device instead of the real one. The attacker's device can respond with arbitrary I/O data, effectively replacing the legitimate programme with attacker-controlled logic.
+    tactic: Lateral Movement
+    technique: T0843
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0843
+      style: set_name
+      count: 1
+      interval: 0s
+      note: Set station name for device substitution
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0843
+      style: set_ip
+      count: 1
+      interval: 1s
+      note: Set IP to redirect IO controller to attacker device
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0843
+      style: factory_reset
+      count: 1
+      interval: 3s
+      note: Reset real device to remove from controller cycle
+  T0800__fw_update_mode__bacnet:
+    title: T0800 – Activate Firmware Update Mode — BACnet ReinitializeDevice update mode
+    description: Sends a BACnet ReinitializeDevice request with the reinitializedStateOfDevice set to 'startbackup'. Some BACnet devices interpret this as the beginning of a firmware update sequence and halt normal operation to await a backup or firmware image. The device stops all BACnet services and monitoring functions while waiting.
+    tactic: Inhibit Response Function
+    technique: T0800
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0800
+      style: reinitialize_device
+      count: 1
+      interval: 0s
+      note: ReinitializeDevice startbackup to trigger update mode
+    - type: pcap
+      proto: bacnet
+      technique: T0800
+      style: who_is
+      count: 3
+      interval: 10s
+      note: Confirm device halted normal operation
+  T0800__fw_update_mode__profinet:
+    title: T0800 – Activate Firmware Update Mode — PROFINET DCP factory reset update mode
+    description: Sends DCP Factory Reset to a PROFINET IO device, placing it in its factory-default unconfigured state. This is functionally equivalent to firmware update mode — the device suspends normal cyclic operation, disables all outputs, and awaits new configuration from the IO controller or an engineering tool.
+    tactic: Inhibit Response Function
+    technique: T0800
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0800
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: 'Factory reset: activate unconfigured update mode'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0800
+      style: identify
+      count: 3
+      interval: 5s
+      note: Probe to confirm device halted normal operation
+  T0811__data_repos__dnp3:
+    title: T0811 – Data from Information Repositories — DNP3 file transfer data exfil
+    description: Uses DNP3 file transfer services to retrieve configuration and log files stored on an RTU. RTU configuration files contain point lists, setpoint tables, control logic, and communication parameters. Log files contain historical event records. Both represent information repositories that reveal plant operational data not visible in real-time polling.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0811
+      style: file_open
+      count: 1
+      interval: 0s
+      note: Open file session to access RTU config repository
+    - type: pcap
+      proto: dnp3
+      technique: T0811
+      style: read_class1
+      count: 5
+      interval: 0.5s
+      note: Read class data for historical event repository
+  T0811__data_repos__enip:
+    title: T0811 – Data from Information Repositories — EtherNet/IP programme and config read
+    description: Reads all ControlLogix Data Blocks including configuration databases, recipe tables, and historical setpoint archives. PLCs often store production recipes, calibration constants, and accumulated counters in DBs that constitute an information repository of operational data not available through standard process variable polling.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0811
+      style: read_tag
+      count: 10
+      interval: 0.3s
+      note: Bulk read all DBs as configuration repository
+    - type: pcap
+      proto: enip
+      technique: T0811
+      style: list_identity
+      count: 1
+      interval: 1s
+      note: Enumerate device identity for firmware version data
+  T0811__data_repos__iec104:
+    title: T0811 – Data from Information Repositories — IEC-104 integrated totals harvest
+    description: Reads IEC-104 integrated totals (counter interrogation C_CI_NA_1) which RTUs accumulate over time. These counters represent energy consumption, fault counts, and operational metrics — an information repository that reveals production volumes, operational patterns, and equipment health history not visible in instantaneous measurements.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0811
+      style: counter_interr
+      count: 1
+      interval: 0s
+      note: 'C_CI_NA_1: read accumulated counter repository'
+    - type: pcap
+      proto: iec104
+      technique: T0811
+      style: interrogation
+      count: 1
+      interval: 2s
+      note: General interrogation to cross-reference all data
+  T0811__data_repos__modbus:
+    title: T0811 – Data from Information Repositories — Modbus register bulk harvest
+    description: Reads all holding and input registers across the full Modbus address space using systematic FC03/FC04 sweeps. Holding registers on many PLCs store production totals, alarm histories, calibration offsets, and recipe parameters — an embedded information repository that reveals operational history and configuration without requiring separate historian access.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0811
+      style: read_holding
+      count: 10
+      interval: 0.1s
+      note: Systematic holding register sweep for config data
+    - type: pcap
+      proto: modbus
+      technique: T0811
+      style: read_input
+      count: 10
+      interval: 0.1s
+      note: Input register sweep for historical process data
+    - type: pcap
+      proto: modbus
+      technique: T0811
+      style: report_block
+      count: 3
+      interval: 0.5s
+      note: FC43 Device ID for identity repository
+  T0819__exploit_public__bacnet:
+    title: T0819 – Exploit Public-Facing Application — BACnet stack malformed request
+    description: Sends malformed BACnet confirmed service requests with invalid property identifiers and out-of-range values to probe for stack vulnerabilities. BACnet devices exposed to building networks or internet often run unpatched firmware. Abnormal service codes and oversized APDU payloads can trigger buffer overflows or service crashes.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0819
+      style: private_transfer
+      count: 3
+      interval: 0.5s
+      note: Private Transfer with malformed vendor data
+    - type: pcap
+      proto: bacnet
+      technique: T0819
+      style: read_property
+      count: 5
+      interval: 0.3s
+      note: Read invalid properties to trigger error handling
+  T0819__exploit_public__dnp3:
+    title: T0819 – Exploit Public-Facing Application — DNP3 malformed application layer
+    description: Sends DNP3 frames with malformed application layer headers targeting known vulnerability classes in RTU firmware. Oversized object headers, invalid function codes, and malformed multi-fragment requests trigger error handling paths in the DNP3 stack. Internet-exposed RTUs running old firmware are susceptible to these CVE-class vulnerabilities.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0819
+      style: write
+      count: 3
+      interval: 0.5s
+      note: DNP3 write with out-of-range values probing application validation
+    - type: pcap
+      proto: dnp3
+      technique: T0819
+      style: authenticate_req
+      count: 5
+      interval: 0.5s
+      note: Invalid auth frames to trigger SA error handling
+  T0819__exploit_public__iec104:
+    title: T0819 – Exploit Public-Facing Application — IEC-104 APDU overflow probe
+    description: Sends IEC-104 APDUs with oversized or invalid information object addresses and malformed COT (Cause of Transmission) fields. RTU implementations exposed on TCP port 2404 often have insufficient input validation. Malformed APDUs trigger error handling that can expose memory corruption vulnerabilities in production RTU firmware.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0819
+      style: meas_inject
+      count: 5
+      interval: 0.5s
+      note: Malformed measurement APDU to probe validation
+    - type: pcap
+      proto: iec104
+      technique: T0819
+      style: testfr
+      count: 3
+      interval: 1s
+      note: TESTFR with invalid sequences to probe error handling
+  T0885__common_port__dnp3:
+    title: T0885 – Commonly Used Port — DNP3 on TCP/20000 for traffic blending
+    description: Uses DNP3 over TCP port 20000 (the standard DNP3 port) to blend attack traffic with legitimate SCADA polling. Firewalls and IDS systems that allow TCP/20000 for DNP3 SCADA traffic will not block these frames. The attacker's commands are indistinguishable from legitimate master station queries at the port/protocol level.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0885
+      style: read_class1
+      count: 5
+      interval: 1s
+      note: DNP3 on standard port 20000 blending with SCADA
+    - type: pcap
+      proto: dnp3
+      technique: T0885
+      style: direct_operate
+      count: 3
+      interval: 2s
+      note: Control commands using allowed DNP3 port
+  T0885__common_port__iec104:
+    title: T0885 – Commonly Used Port — IEC-104 on TCP/2404 for traffic blending
+    description: Establishes IEC-104 sessions on TCP port 2404 (the standard IEC-104 port) to blend with legitimate RTU communication. Substation firewalls typically allow TCP/2404 for SCADA polling. An attacker pivoted into the substation network can use this allowed port to maintain C2 while appearing as normal RTU traffic.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0885
+      style: interrogation
+      count: 3
+      interval: 10s
+      note: IEC-104 on standard port 2404 blending with RTU traffic
+    - type: pcap
+      proto: iec104
+      technique: T0885
+      style: single_command
+      count: 3
+      interval: 5s
+      note: Control commands using allowed IEC-104 port
+  T0885__common_port__iec61850:
+    title: T0885 – Commonly Used Port — IEC 61850 GOOSE on standard multicast
+    description: Uses IEC 61850 GOOSE multicast addresses and EtherType 0x88B8 (the standard IEC 61850 EtherType) to blend attack frames with legitimate protection relay traffic. Process bus switches configured to pass GOOSE multicast to all ports will forward these frames without inspection — the attacker's frames travel on the allowed protocol.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0885
+      style: enumerate_ied
+      count: 5
+      interval: 1s
+      note: GOOSE on standard 0x88B8 EtherType and multicast
+    - type: pcap
+      proto: iec61850
+      technique: T0885
+      style: relay_inject
+      count: 3
+      interval: 2s
+      note: Control frames using allowed IEC 61850 addressing
+  T0885__common_port__s7comm:
+    title: T0885 – Commonly Used Port — S7comm on TCP/102 for traffic blending
+    description: Uses S7comm on TCP port 102 (the standard S7/COTP port) to blend attack traffic with legitimate Step7/TIA Portal and WinCC communication. OT firewalls that allow TCP/102 for engineering access will pass these frames. The attacker uses the allowed engineering port to maintain access to S7 PLCs without triggering firewall alarms.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0885
+      style: szl_read
+      count: 5
+      interval: 1s
+      note: S7comm on TCP/102 blending with WinCC traffic
+    - type: pcap
+      proto: s7comm
+      technique: T0885
+      style: read_db
+      count: 5
+      interval: 1s
+      note: DB reads using allowed engineering port
+  T0859__valid_accounts__bacnet:
+    title: T0859 – Valid Accounts — BACnet unauthenticated master access
+    description: BACnet has no native authentication — the 'credential' is simply being on the network. An attacker who has gained access to a BACnet segment via valid IT-layer credentials (VPN, jump host) inherits full BACnet master rights. This scenario demonstrates the resulting unrestricted read/write access to all BACnet devices as a legitimate-looking network participant.
+    tactic: Lateral Movement
+    technique: T0859
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0859
+      style: who_is
+      count: 1
+      interval: 0s
+      note: Discover all BACnet devices as valid master
+    - type: pcap
+      proto: bacnet
+      technique: T0859
+      style: read_property
+      count: 10
+      interval: 0.5s
+      note: Read all device properties with valid access
+    - type: pcap
+      proto: bacnet
+      technique: T0859
+      style: write_property
+      count: 5
+      interval: 1s
+      note: Write control values as valid BACnet master
+  T0859__valid_accounts__dnp3:
+    title: T0859 – Valid Accounts — DNP3 valid master station credentials
+    description: Uses valid master station credentials (IP address on the allowlist plus optional SA key) to establish a DNP3 session indistinguishable from the legitimate SCADA master. With valid credentials the attacker issues read and control commands that pass all DNP3 authentication checks, logging as the legitimate master station in any DNP3 audit trail.
+    tactic: Lateral Movement
+    technique: T0859
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0859
+      style: read_class1
+      count: 5
+      interval: 0.5s
+      note: Read all event classes as valid master station
+    - type: pcap
+      proto: dnp3
+      technique: T0859
+      style: authenticate_req
+      count: 3
+      interval: 1s
+      note: Authenticate with valid SA credentials
+    - type: pcap
+      proto: dnp3
+      technique: T0859
+      style: direct_operate
+      count: 5
+      interval: 1s
+      note: Control commands using valid master identity
+  T0859__valid_accounts__iec61850:
+    title: T0859 – Valid Accounts — IEC 61850 valid GOOSE publisher identity
+    description: Uses a legitimate IED identity (GOOSE app ID, GoCB reference, MAC address) obtained from engineering documentation or prior reconnaissance to publish GOOSE frames as a trusted IED. Subscriber IEDs accept the frames because the publisher identity matches their configured subscription — the attacker has effectively taken over a valid IED's GOOSE identity.
+    tactic: Lateral Movement
+    technique: T0859
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0859
+      style: enumerate_ied
+      count: 5
+      interval: 0.2s
+      note: Map IED identities for valid credential selection
+    - type: pcap
+      proto: iec61850
+      technique: T0859
+      style: relay_inject
+      count: 5
+      interval: 1s
+      note: Publish GOOSE using valid IED identity
+  T0809__data_destruction__iec104:
+    title: T0809 – Data Destruction — IEC-104 counter reset and event buffer clear
+    description: Sends IEC-104 Counter Interrogation (C_CI_NA_1) with FREEZE-AND-RESET qualifier to clear all accumulated totals, followed by a Reset Process command. This destroys the historical counter data (energy totals, fault counts, operational hours) accumulated in the RTU — critical data for billing, maintenance planning, and post-incident forensic analysis.
+    tactic: Inhibit Response Function
+    technique: T0809
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0809
+      style: counter_reset
+      count: 3
+      interval: 1s
+      note: 'C_CI_NA_1 FREEZE+RESET: destroy accumulated counters'
+    - type: pcap
+      proto: iec104
+      technique: T0809
+      style: reset_process
+      count: 1
+      interval: 3s
+      note: Reset process to clear volatile event buffer
+  T0809__data_destruction__opcua:
+    title: T0809 – Data Destruction — OPC UA historian node delete
+    description: Uses OPC UA DeleteNodes service to remove historical data nodes from the OPC UA server address space. On servers that store historian data as Variable nodes, deleting the nodes also destroys the time-series data they hold. This irreversibly removes operational history from the SCADA historian without leaving filesystem-level forensic evidence.
+    tactic: Inhibit Response Function
+    technique: T0809
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0809
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse historian nodes for targeted deletion
+    - type: pcap
+      proto: opcua
+      technique: T0809
+      style: write_large_blob
+      count: 5
+      interval: 0.5s
+      note: Overwrite historian data to corrupt records
+    - type: pcap
+      proto: opcua
+      technique: T0809
+      style: call_method
+      count: 3
+      interval: 1s
+      note: Call delete method on historian data nodes
+  T0809__data_destruction__profinet:
+    title: T0809 – Data Destruction — PROFINET DCP factory reset erases device config
+    description: Sends DCP Factory Reset to PROFINET IO devices, erasing all stored configuration including station name, IP address, I/O module parameters, and application data. Factory reset destroys the device's engineering configuration — requiring complete re-engineering from backup before the device can return to service.
+    tactic: Inhibit Response Function
+    technique: T0809
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0809
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: 'Factory reset: erase all device configuration data'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0809
+      style: identify
+      count: 3
+      interval: 10s
+      note: Confirm device in factory default (configuration destroyed)
+  T0835__manipulate_io__bacnet:
+    title: T0835 – Manipulate I/O Image — BACnet commandable object override
+    description: Writes to BACnet commandable Binary Output and Analog Output objects with high priority (1-3) to override the application's computed output value. BACnet's priority array means a write at priority 3 (Life Safety) overrides the application at priority 8 — physical outputs (relays, dampers, valve actuators) are directly commanded to attacker-controlled states.
+    tactic: Inhibit Response Function
+    technique: T0835
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0835
+      style: write_property
+      count: 5
+      interval: 1s
+      note: Write BO/AO objects at high priority to override outputs
+    - type: pcap
+      proto: bacnet
+      technique: T0835
+      style: write_property_multi
+      count: 3
+      interval: 2s
+      note: Multi-write to sustain overridden I/O state
+  T0835__manipulate_io__iec61850:
+    title: T0835 – Manipulate I/O Image — IEC 61850 GOOSE output state override
+    description: Injects GOOSE trip frames targeting the output process image of subscribed IEDs. IEDs configured to act on GOOSE-sourced data update their output registers immediately — circuit breaker trip coils, protection inhibit relays, and analogue setpoints are overwritten with attacker-controlled values, directly manipulating the substation's I/O image.
+    tactic: Inhibit Response Function
+    technique: T0835
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0835
+      style: trip_inject
+      count: 5
+      interval: 0.5s
+      note: GOOSE trip injection to override IED output registers
+    - type: pcap
+      proto: iec61850
+      technique: T0835
+      style: spoof_measurement
+      count: 5
+      interval: 1s
+      note: Spoof measurement data to corrupt analog output image
+  T0835__manipulate_io__mqtt:
+    title: T0835 – Manipulate I/O Image — MQTT setpoint injection to override process image
+    description: Publishes forged setpoint values to MQTT topics subscribed to by field controllers. Controllers that write MQTT-received setpoints directly into their output process image apply the attacker's values to physical outputs on the next control cycle, overriding what the application logic computed.
+    tactic: Inhibit Response Function
+    technique: T0835
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0835
+      style: publish_setpoint
+      count: 5
+      interval: 0.5s
+      note: Publish forged setpoints to override output process image
+    - type: pcap
+      proto: mqtt
+      technique: T0835
+      style: publish_command
+      count: 5
+      interval: 1s
+      note: Publish direct output commands to manipulate I/O
+  T0828__loss_productivity__dnp3:
+    title: T0828 – Loss of Productivity and Revenue — DNP3 outstation restart loop
+    description: Sends repeated DNP3 Warm Restart commands to an outstation at intervals shorter than its restart time. The outstation never fully restarts — it cycles continuously through reset, halting all process control functions. The associated field equipment defaults to safe state for the duration, causing production downtime and lost output.
+    tactic: Impact
+    technique: T0828
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0828
+      style: warm_restart
+      count: 1
+      interval: 0s
+      note: Warm Restart to halt outstation
+    - type: pcap
+      proto: dnp3
+      technique: T0828
+      style: warm_restart
+      count: 10
+      interval: 5s
+      note: Re-restart every 5s to prevent recovery
+  T0828__loss_productivity__iec61850:
+    title: T0828 – Loss of Productivity and Revenue — IEC 61850 protection bus flood halts production
+    description: Floods the IEC 61850 process bus with GOOSE frames at a rate that prevents IEDs from processing legitimate protection signals. With protection relays unable to function, the safety system demands a process shutdown to maintain safe operation. Production halts until the bus can be cleared and protection functions verified — causing direct productivity and revenue loss.
+    tactic: Impact
+    technique: T0828
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0828
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: GOOSE flood disabling protection, forcing shutdown
+    - type: pcap
+      proto: iec61850
+      technique: T0828
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: Sustain flood to extend production halt
+  T0828__loss_productivity__opcua:
+    title: T0828 – Loss of Productivity and Revenue — OPC UA historian flood halts reporting
+    description: Floods an OPC UA server with rapid write requests and subscription creates to exhaust its processing capacity. With the OPC UA service unavailable, the SCADA historian cannot record production data and quality systems cannot read process variables. Production may halt automatically if quality control thresholds cannot be verified, causing direct productivity and revenue impact.
+    tactic: Impact
+    technique: T0828
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0828
+      style: create_sub
+      count: 20
+      interval: 0.05s
+      note: Flood subscription creation to exhaust OPC UA service
+    - type: pcap
+      proto: opcua
+      technique: T0828
+      style: write_value
+      count: 20
+      interval: 0.05s
+      note: Write flood to prevent historian operation
+  T0828__loss_productivity__profinet:
+    title: T0828 – Loss of Productivity and Revenue — PROFINET I/O loss causes production halt
+    description: Targets PROFINET IO devices with repeated factory resets, causing the IO controller to declare IO faults. PLCs with IO fault handling typically transition to safe state and halt production until I/O communication is restored. Each factory reset requires engineering intervention to reconfigure the device, extending the production halt.
+    tactic: Impact
+    technique: T0828
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0828
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: Factory reset to trigger IO fault and production halt
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0828
+      style: identify
+      count: 3
+      interval: 30s
+      note: Probe to confirm PLC in IO fault state
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0828
+      style: factory_reset
+      count: 1
+      interval: 60s
+      note: Re-reset if device recovers to extend downtime
+  T0891__hardcoded_creds__iec61850:
+    title: T0891 – Hardcoded Credentials — IEC 61850 GOOSE no authentication
+    description: IEC 61850 GOOSE has no authentication in the base standard. Any device on the process bus VLAN can publish GOOSE as any IED with any app ID and GOOSE ID — the 'credential' is physical/VLAN access. This hardcoded design decision means the attacker's GOOSE frames are indistinguishable from legitimate IED traffic at the application layer without additional authentication overlays.
+    tactic: Lateral Movement
+    technique: T0891
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0891
+      style: enumerate_ied
+      count: 5
+      interval: 0.2s
+      note: Map IED app IDs using no-auth GOOSE access
+    - type: pcap
+      proto: iec61850
+      technique: T0891
+      style: relay_inject
+      count: 5
+      interval: 1s
+      note: Publish as legitimate IED using hardcoded no-auth design
+  T0891__hardcoded_creds__modbus:
+    title: T0891 – Hardcoded Credentials — Modbus hardcoded null credential
+    description: Modbus/TCP has no authentication — any TCP connection to port 502 is accepted as a valid master. The 'hardcoded credential' is the deliberate design choice to require no credential. This scenario exercises that design constraint by reading and writing process data without any authentication material, identical to what the legitimate SCADA master does.
+    tactic: Lateral Movement
+    technique: T0891
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0891
+      style: read_holding
+      count: 10
+      interval: 0.5s
+      note: Read all process data with null auth (by design)
+    - type: pcap
+      proto: modbus
+      technique: T0891
+      style: write_multiple_registers
+      count: 5
+      interval: 1s
+      note: Write process values with hardcoded null credential
+  T0891__hardcoded_creds__mqtt:
+    title: T0891 – Hardcoded Credentials — MQTT default anonymous access
+    description: Many MQTT brokers ship with anonymous access enabled by default or with well-known default credentials (guest/guest, admin/admin). This scenario connects using the default-anonymous or default-credential access that represents a hardcoded design choice in the broker configuration, then subscribes to and publishes on all available topics.
+    tactic: Lateral Movement
+    technique: T0891
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0891
+      style: connect_anonymous
+      count: 1
+      interval: 0s
+      note: Connect with hardcoded anonymous access
+    - type: pcap
+      proto: mqtt
+      technique: T0891
+      style: subscribe_all
+      count: 1
+      interval: 1s
+      note: Subscribe to all topics using default access
+    - type: pcap
+      proto: mqtt
+      technique: T0891
+      style: publish_telemetry
+      count: 5
+      interval: 1s
+      note: Publish on device topics with default credentials
+  T0891__hardcoded_creds__profinet:
+    title: T0891 – Hardcoded Credentials — PROFINET DCP no authentication
+    description: PROFINET DCP operates at Layer 2 with no authentication. Any device that can send Ethernet frames with EtherType 0x8892 can issue Set Name, Set IP, and Factory Reset commands to any IO device on the segment. The 'credential' is physical or VLAN access — a hardcoded design choice in the PROFINET standard that applies to all DCP implementations.
+    tactic: Lateral Movement
+    technique: T0891
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0891
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: Enumerate all devices with no-auth DCP access
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0891
+      style: set_name
+      count: 1
+      interval: 1s
+      note: Set device name using hardcoded no-auth DCP design
+  T0892__change_credential__bacnet:
+    title: T0892 – Change Credential — BACnet password change via private transfer
+    description: Uses BACnet Private Transfer (service 18) to send a vendor-specific password change command to a BACnet device. Some BACnet implementations expose password management via Private Transfer without requiring prior authentication. Changing the device password locks out legitimate operators from BACnet-level configuration access until the password is reset.
+    tactic: Inhibit Response Function
+    technique: T0892
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0892
+      style: private_transfer
+      count: 3
+      interval: 0.5s
+      note: 'Private Transfer: vendor-specific password change'
+    - type: pcap
+      proto: bacnet
+      technique: T0892
+      style: who_is
+      count: 3
+      interval: 5s
+      note: Confirm device still responds (credential changed)
+  T0892__change_credential__mqtt:
+    title: T0892 – Change Credential — MQTT credential change via config topic
+    description: Publishes a modified broker configuration to the MQTT broker's management topic (typically $SYS/broker/config or a vendor-specific config topic), changing the authentication credentials for a specific client. The legitimate client's next connection attempt fails with authentication error, locking it out of all MQTT-connected field device interactions.
+    tactic: Inhibit Response Function
+    technique: T0892
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0892
+      style: publish_config
+      count: 3
+      interval: 1s
+      note: Publish credential change to broker config topic
+    - type: pcap
+      proto: mqtt
+      technique: T0892
+      style: connect_creds
+      count: 3
+      interval: 2s
+      note: Verify credential change via authenticated connect
+  T0885__common_port__bacnet:
+    title: T0885 – Commonly Used Port — BACnet on UDP/47808 for traffic blending
+    description: Uses BACnet/IP on UDP port 47808 (the standard BACnet port) to blend attack traffic with legitimate building automation polling. Firewalls allowing UDP/47808 for BACnet/IP will pass these frames without inspection. The attacker uses the allowed BACnet port to maintain C2 access to building controllers while appearing as normal BAS polling traffic.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0885
+      style: who_is
+      count: 3
+      interval: 10s
+      note: BACnet on UDP/47808 blending with BAS polling
+    - type: pcap
+      proto: bacnet
+      technique: T0885
+      style: read_property
+      count: 5
+      interval: 2s
+      note: Read commands on allowed BACnet port
+  T0885__common_port__mqtt:
+    title: T0885 – Commonly Used Port — MQTT on TCP/1883 for traffic blending
+    description: Uses MQTT on TCP/1883 (the standard MQTT port) to blend C2 traffic with legitimate IoT/ICS telemetry. Networks allowing TCP/1883 for field device telemetry will pass these frames. The attacker uses the allowed MQTT port to push commands and receive status via publish/subscribe, appearing as a normal field device to network monitoring tools.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0885
+      style: publish_telemetry
+      count: 5
+      interval: 1s
+      note: MQTT on TCP/1883 blending with device telemetry
+    - type: pcap
+      proto: mqtt
+      technique: T0885
+      style: subscribe_commands
+      count: 3
+      interval: 5s
+      note: Subscribe to command topic using allowed MQTT port
+  T0885__common_port__opcua:
+    title: T0885 – Commonly Used Port — OPC UA on TCP/4840 for traffic blending
+    description: Uses OPC UA on TCP/4840 (the standard OPC UA port) to blend C2 traffic with legitimate SCADA historian and engineering workstation communication. OT firewalls allowing TCP/4840 for SCADA polling will pass these frames. OPC UA's binary protocol is complex enough that many NSM tools cannot deep-inspect it beyond port matching.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0885
+      style: browse
+      count: 5
+      interval: 1s
+      note: OPC UA on TCP/4840 blending with SCADA traffic
+    - type: pcap
+      proto: opcua
+      technique: T0885
+      style: read_value
+      count: 5
+      interval: 1s
+      note: Read process values using allowed OPC UA port
+  T0885__common_port__profinet:
+    title: T0885 – Commonly Used Port — PROFINET on EtherType 0x8892 for traffic blending
+    description: Uses PROFINET DCP frames with EtherType 0x8892 (the standard PROFINET EtherType) to blend attack traffic with legitimate IO controller communication. Process bus switches passing PROFINET multicast frames forward these transparently. The attacker uses the allowed PROFINET EtherType to issue management commands while appearing as normal IO controller traffic.
+    tactic: Command and Control
+    technique: T0885
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0885
+      style: identify
+      count: 5
+      interval: 1s
+      note: PROFINET on 0x8892 blending with IO controller traffic
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0885
+      style: get_name
+      count: 3
+      interval: 2s
+      note: Management queries using allowed PROFINET EtherType
+  T0819__exploit_public__iec61850:
+    title: T0819 – Exploit Public-Facing Application — IEC 61850 GOOSE malformed frames
+    description: Sends malformed GOOSE frames with invalid BER encoding, oversized allData fields, and invalid confRev values to probe IED firmware for parsing vulnerabilities. IEDs exposed on process bus segments reachable from corporate networks are susceptible. Malformed BER length fields can trigger buffer overflows in IED GOOSE parsing stacks.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0819
+      style: trip_inject
+      count: 3
+      interval: 0.5s
+      note: Malformed GOOSE with invalid confRev/allData
+    - type: pcap
+      proto: iec61850
+      technique: T0819
+      style: spoof_measurement
+      count: 3
+      interval: 0.5s
+      note: Oversized measurement GOOSE probing parser
+  T0819__exploit_public__modbus:
+    title: T0819 – Exploit Public-Facing Application — Modbus function code fuzzing
+    description: Sends Modbus requests with reserved or implementation-specific function codes (FC65-FC72, FC100-FC110) and oversized data payloads to probe for undocumented functionality or parsing vulnerabilities. Internet-exposed Modbus slaves running older firmware may have insufficient validation for out-of-spec function codes, exposing vendor-specific attack surfaces.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0819
+      style: exception_probe
+      count: 5
+      interval: 0.5s
+      note: Reserved FC probing for undocumented functionality
+    - type: pcap
+      proto: modbus
+      technique: T0819
+      style: diagnostic
+      count: 5
+      interval: 0.3s
+      note: FC08 subfunctions probing diagnostic path vulnerabilities
+  T0819__exploit_public__mqtt:
+    title: T0819 – Exploit Public-Facing Application — MQTT broker vulnerability probe
+    description: Probes an internet-accessible MQTT broker with malformed CONNECT packets, oversized client IDs, and malformed PUBLISH headers targeting known CVEs in MQTT broker implementations (Mosquitto, EMQX, HiveMQ). Many ICS MQTT deployments use unpatched broker versions. Malformed packets can trigger broker crashes or code execution vulnerabilities.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0819
+      style: connect_anonymous
+      count: 3
+      interval: 0.5s
+      note: CONNECT probe with malformed client ID
+    - type: pcap
+      proto: mqtt
+      technique: T0819
+      style: will_message
+      count: 3
+      interval: 0.5s
+      note: Malformed will message payload targeting parser
+    - type: pcap
+      proto: mqtt
+      technique: T0819
+      style: publish_dos
+      count: 5
+      interval: 0.2s
+      note: Oversized PUBLISH payloads probing broker limits
+  T0819__exploit_public__profinet:
+    title: T0819 – Exploit Public-Facing Application — PROFINET DCP malformed request
+    description: Sends malformed PROFINET DCP frames with invalid block types, oversized station names, and invalid IP address blocks to probe IO devices accessible from corporate network segments. Some IO devices have insufficient validation for malformed DCP frames, which can trigger device crashes or configuration corruption in response to unexpected block structures.
+    tactic: Initial Access
+    technique: T0819
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0819
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: Malformed DCP identify probing device validation
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0819
+      style: factory_reset
+      count: 1
+      interval: 2s
+      note: Unexpected factory reset to test access control
+  T0811__data_repos__bacnet:
+    title: T0811 – Data from Information Repositories — BACnet file object read
+    description: Uses BACnet ReadFile service to download files from BACnet File objects, which some controllers use to store trend logs, alarm histories, and configuration data. These File objects constitute an information repository of operational history that reveals production patterns, alarm frequency, and system configuration without requiring filesystem-level access.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0811
+      style: read_property
+      count: 5
+      interval: 0.5s
+      note: Read TrendLog and EventLog objects for history
+    - type: pcap
+      proto: bacnet
+      technique: T0811
+      style: read_file
+      count: 3
+      interval: 1s
+      note: 'ReadFile: download configuration and log files'
+  T0811__data_repos__iec61850:
+    title: T0811 – Data from Information Repositories — IEC 61850 GOOSE dataset harvest
+    description: Captures all GOOSE multicast traffic to reconstruct the complete IED dataset configuration and historical state changes. GOOSE frames include stNum (state change count) and sqNum (keep-alive sequence) which together form a historical record of all protection events since last IED restart — an implicit time-series information repository of the substation's protection history.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0811
+      style: enumerate_ied
+      count: 10
+      interval: 0.2s
+      note: Capture all IED GOOSE to reconstruct state history
+    - type: pcap
+      proto: iec61850
+      technique: T0811
+      style: spoof_measurement
+      count: 10
+      interval: 0.5s
+      note: Harvest measurement datasets for operational history
+  T0811__data_repos__mqtt:
+    title: T0811 – Data from Information Repositories — MQTT retained message harvest
+    description: Subscribes to all MQTT topics with the wildcard '#', which causes the broker to deliver all retained messages immediately. Retained messages are the last known good value for each topic — effectively a snapshot of the entire ICS/IoT system state. Harvesting all retained messages dumps the current state of every connected field device in one operation.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0811
+      style: subscribe_all
+      count: 1
+      interval: 0s
+      note: Subscribe '#' to receive all retained message repository
+    - type: pcap
+      proto: mqtt
+      technique: T0811
+      style: subscribe_telemetry
+      count: 5
+      interval: 5s
+      note: Subscribe telemetry topics for ongoing data harvest
+  T0811__data_repos__profinet:
+    title: T0811 – Data from Information Repositories — PROFINET DCP device database
+    description: Systematically queries all PROFINET IO devices using DCP Identify-All, Get Name, and Get IP to build a complete device database. Each device's station name, IP address, vendor, device type, and firmware version constitutes an information repository about the PROFINET topology — intelligence that maps the OT asset inventory without accessing any historian or CMDB system.
+    tactic: Collection
+    technique: T0811
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0811
+      style: identify
+      count: 10
+      interval: 0.3s
+      note: 'Identify-All: enumerate complete device database'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0811
+      style: get_name
+      count: 10
+      interval: 0.3s
+      note: Get all station names for device repository
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0811
+      style: get_ip
+      count: 10
+      interval: 0.3s
+      note: Get all IPs for complete topology repository
+  T0803__block_command__mqtt:
+    title: T0803 – Block Command Message — MQTT broker flood blocks SCADA commands
+    description: Floods the MQTT broker with high-rate publish messages, exhausting its message queue. SCADA command messages published to device command topics are queued behind the flood and either dropped or delivered with delays exceeding the controller's command timeout. The SCADA master's commands never reach the field devices — a network-visible block of command messages.
+    tactic: Inhibit Response Function
+    technique: T0803
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0803
+      style: publish_dos
+      count: 50
+      interval: 0.005s
+      note: Flood broker to block SCADA command delivery
+    - type: pcap
+      proto: mqtt
+      technique: T0803
+      style: publish_dos
+      count: 50
+      interval: 0.005s
+      note: Sustain to keep command channel blocked
+  T0804__block_reporting__mqtt:
+    title: T0804 – Block Reporting Message — MQTT telemetry flood prevents reporting
+    description: Subscribes to all topics then floods the broker with high-rate publishes to exhaust its routing capacity. Field devices continue publishing sensor data, but the broker's message routing is saturated — telemetry messages are dropped before reaching SCADA subscribers. The operator's view is frozen while the physical process continues changing.
+    tactic: Inhibit Response Function
+    technique: T0804
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0804
+      style: subscribe_all
+      count: 1
+      interval: 0s
+      note: Subscribe all topics to observe traffic flow
+    - type: pcap
+      proto: mqtt
+      technique: T0804
+      style: publish_dos
+      count: 50
+      interval: 0.005s
+      note: Flood broker to block telemetry delivery to SCADA
+    - type: pcap
+      proto: mqtt
+      technique: T0804
+      style: publish_dos
+      count: 50
+      interval: 0.005s
+      note: Sustain flood to maintain reporting block
+  T0806__brute_force_io__bacnet:
+    title: T0806 – Brute Force I/O — BACnet rapid commandable object cycling
+    description: Writes rapidly alternating values to BACnet commandable Binary Output and Analog Output objects at high priority, cycling them through all possible states. Physical equipment (HVAC dampers, fans, valves, lighting relays) responds to each intermediate state command — rapid cycling between 0 and full-scale causes actuator wear and process instability.
+    tactic: Impair Process Control
+    technique: T0806
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0806
+      style: write_property
+      count: 30
+      interval: 0.05s
+      note: Rapid BO/AO write cycling through all output states
+    - type: pcap
+      proto: bacnet
+      technique: T0806
+      style: write_property_multi
+      count: 10
+      interval: 0.1s
+      note: Multi-write to cycle multiple outputs simultaneously
+  T0806__brute_force_io__iec104:
+    title: T0806 – Brute Force I/O — IEC-104 rapid command cycling
+    description: Sends IEC-104 Single Command (C_SC_NA_1) and Double Command (C_DC_NA_1) in rapid succession, cycling connected actuators between ON and OFF. Each command is immediately applied by the RTU — circuit breaker contacts, valve actuators, and pump contactors cycle at the IEC-104 command rate, causing mechanical wear and process disruption.
+    tactic: Impair Process Control
+    technique: T0806
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0806
+      style: single_command
+      count: 20
+      interval: 0.05s
+      note: 'Rapid C_SC_NA_1 cycling: ON/OFF brute force'
+    - type: pcap
+      proto: iec104
+      technique: T0806
+      style: double_command
+      count: 20
+      interval: 0.05s
+      note: 'Rapid C_DC_NA_1 cycling: all states'
+    - type: pcap
+      proto: iec104
+      technique: T0806
+      style: setpoint_float
+      count: 10
+      interval: 0.05s
+      note: Rapid setpoint sweep through full engineering range
+  T0806__brute_force_io__iec61850:
+    title: T0806 – Brute Force I/O — IEC 61850 GOOSE rapid trip/close cycling
+    description: Sends alternating GOOSE trip (stNum++) and reset frames at high rate to IEDs configured to act on GOOSE-based interlocking. Circuit breakers and isolators receive alternating trip and close commands from the GOOSE source — each accepted as a genuine state change based on stNum ordering. Rapid mechanical cycling of high-voltage switchgear causes significant damage.
+    tactic: Impair Process Control
+    technique: T0806
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0806
+      style: trip_inject
+      count: 20
+      interval: 0.05s
+      note: Rapid GOOSE trip injection cycling breaker open
+    - type: pcap
+      proto: iec61850
+      technique: T0806
+      style: spoof_measurement
+      count: 20
+      interval: 0.05s
+      note: Alternating spoof to cycle all IED output states
+  T0806__brute_force_io__mqtt:
+    title: T0806 – Brute Force I/O — MQTT rapid setpoint sweep
+    description: Publishes rapidly alternating setpoint values to field controller command topics, sweeping the full engineering range. Controllers that apply MQTT-received setpoints to their output process image execute each value — physical actuators (VFDs, control valves, heaters) respond to every intermediate setpoint, causing process instability and equipment wear from continuous rapid cycling.
+    tactic: Impair Process Control
+    technique: T0806
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0806
+      style: publish_setpoint
+      count: 30
+      interval: 0.05s
+      note: Rapid setpoint sweep across full engineering range
+    - type: pcap
+      proto: mqtt
+      technique: T0806
+      style: publish_command
+      count: 20
+      interval: 0.05s
+      note: 'Rapid output command cycling: ON/OFF brute force'
+  T0806__brute_force_io__opcua:
+    title: T0806 – Brute Force I/O — OPC UA rapid write sweep
+    description: Writes rapidly cycling values to OPC UA process variable nodes that map to physical outputs — setpoints, command words, and analogue output nodes. The OPC UA server applies each write to the underlying process image on receipt. Rapid cycling drives connected actuators through the full output range continuously, causing process instability.
+    tactic: Impair Process Control
+    technique: T0806
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0806
+      style: write_value
+      count: 30
+      interval: 0.02s
+      note: Rapid write cycling all process output variables
+    - type: pcap
+      proto: opcua
+      technique: T0806
+      style: spoof_value
+      count: 20
+      interval: 0.02s
+      note: Spoof value injection sweeping full output range
+  T0821__modify_tasking__iec104:
+    title: T0821 – Modify Controller Tasking — IEC-104 process reset modifies tasking
+    description: Sends IEC-104 C_RP_NA_1 (Reset Process) which transitions the RTU through initialisation states, resetting its application task configuration. During and after the reset, the RTU's Class 1/2/3 event assignment, unsolicited reporting configuration, and process scan rates may differ from the pre-attack state — the controller's tasking is modified at the application layer.
+    tactic: Execution
+    technique: T0821
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0821
+      style: reset_process
+      count: 1
+      interval: 0s
+      note: 'C_RP_NA_1: reset RTU to modify application tasking'
+    - type: pcap
+      proto: iec104
+      technique: T0821
+      style: param_threshold
+      count: 5
+      interval: 2s
+      note: Change RTU parameter thresholds — alters reporting task configuration
+  T0821__modify_tasking__modbus:
+    title: T0821 – Modify Controller Tasking — Modbus force listen-only changes tasking
+    description: Writes modified control parameters to Modbus holding registers that control PLC scan cycle behaviour, output update rates, and control loop setpoints. On PLCs that use holding registers as controller tasking parameters (scan period, PID coefficients, output enable masks), these writes modify controller behaviour without uploading a new programme. An FC08 restart activates the changes.
+    tactic: Execution
+    technique: T0821
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0821
+      style: write_multiple_registers
+      count: 5
+      interval: 0.5s
+      note: Write modified control logic parameters to holding registers
+    - type: pcap
+      proto: modbus
+      technique: T0821
+      style: diagnostic
+      count: 1
+      interval: 2s
+      note: FC08 restart to activate modified controller behaviour
+  T0821__modify_tasking__mqtt:
+    title: T0821 – Modify Controller Tasking — MQTT maintenance mode command
+    description: Publishes a maintenance or manual override command to an MQTT-connected controller's command topic. Devices in maintenance mode change their task schedule — automatic control loops are suspended, alarm reporting may be suppressed, and the device executes a different programme branch. The modification persists until an operator manually restores auto mode.
+    tactic: Execution
+    technique: T0821
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0821
+      style: publish_command
+      count: 1
+      interval: 0s
+      note: 'Publish maintenance-mode command: change device tasking'
+    - type: pcap
+      proto: mqtt
+      technique: T0821
+      style: subscribe_telemetry
+      count: 3
+      interval: 5s
+      note: Monitor to confirm modified tasking in status messages
+  T0822__external_remote__bacnet:
+    title: T0822 – External Remote Services — Internet-exposed BACnet/IP access
+    description: Accesses a BACnet/IP controller exposed on UDP/47808 through an internet connection. Tens of thousands of BACnet devices are directly internet-reachable (documented in Shodan). Once connected, all BACnet services are available with no authentication — the attacker reads sensor data, writes to commandable objects, and enumerates the full device from the internet.
+    tactic: Initial Access
+    technique: T0822
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0822
+      style: who_is
+      count: 3
+      interval: 0.5s
+      note: 'Internet-exposed BACnet: discover devices via UDP/47808'
+    - type: pcap
+      proto: bacnet
+      technique: T0822
+      style: read_property
+      count: 5
+      interval: 0.5s
+      note: Read all device properties over internet connection
+    - type: pcap
+      proto: bacnet
+      technique: T0822
+      style: write_property
+      count: 3
+      interval: 1s
+      note: Write control values via internet BACnet access
+  T0822__external_remote__dnp3:
+    title: T0822 – External Remote Services — Internet-exposed DNP3 access
+    description: Accesses a DNP3 outstation or gateway exposed on TCP/20000 through an internet connection. ICS-CERT advisories document internet-exposed DNP3 RTUs in water, electric, and oil/gas utilities. Without Secure Authentication configured, the attacker connects as a master station from the internet and issues read and control commands to field devices.
+    tactic: Initial Access
+    technique: T0822
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0822
+      style: read_class1
+      count: 5
+      interval: 1s
+      note: 'Internet-exposed DNP3: read all process data as master'
+    - type: pcap
+      proto: dnp3
+      technique: T0822
+      style: direct_operate
+      count: 3
+      interval: 2s
+      note: Issue control commands via internet DNP3 connection
+  T0822__external_remote__iec104:
+    title: T0822 – External Remote Services — Internet-exposed IEC-104 access
+    description: Accesses an RTU or gateway exposed on TCP/2404 through an internet connection. Internet-exposed IEC-104 endpoints are common in electric utilities, particularly in Eastern Europe, Middle East, and Asia. IEC-104 has no authentication in its standard form — any internet-connected attacker can connect as a master station and issue commands.
+    tactic: Initial Access
+    technique: T0822
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0822
+      style: interrogation
+      count: 1
+      interval: 1s
+      note: 'Internet-exposed IEC-104: general interrogation as master'
+    - type: pcap
+      proto: iec104
+      technique: T0822
+      style: single_command
+      count: 3
+      interval: 2s
+      note: Issue control commands via internet IEC-104 access
+    - type: pcap
+      proto: iec104
+      technique: T0822
+      style: setpoint_float
+      count: 3
+      interval: 1s
+      note: Write setpoints via unauthenticated internet connection
+  T0822__external_remote__modbus:
+    title: T0822 – External Remote Services — Internet-exposed Modbus/TCP access
+    description: Accesses a PLC or gateway exposed on TCP/502 through an internet connection. Modbus is the most commonly internet-exposed OT protocol — Shodan finds hundreds of thousands of accessible endpoints. With no authentication, any internet client can read all registers and write to all coils and holding registers as if they were the local SCADA master.
+    tactic: Initial Access
+    technique: T0822
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0822
+      style: read_holding
+      count: 10
+      interval: 0.3s
+      note: 'Internet-exposed Modbus: read all holding registers'
+    - type: pcap
+      proto: modbus
+      technique: T0822
+      style: read_coils
+      count: 5
+      interval: 0.3s
+      note: Read all coil states via internet connection
+    - type: pcap
+      proto: modbus
+      technique: T0822
+      style: write_multiple_registers
+      count: 5
+      interval: 1s
+      note: Write setpoints via unauthenticated internet Modbus
+  T0839__module_firmware__mqtt:
+    title: T0839 – Module Firmware — MQTT OTA firmware update delivery
+    description: Publishes a malicious firmware image to the OTA update topic of an MQTT-connected field device. IoT/ICS devices with MQTT OTA capability download and apply firmware from the configured broker topic. An attacker with broker access can deliver a modified firmware that persists through power cycles, adds covert functionality, or alters I/O behaviour.
+    tactic: Impair Process Control
+    technique: T0839
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0839
+      style: publish_firmware
+      count: 3
+      interval: 2s
+      note: Publish malicious firmware to OTA update topic
+    - type: pcap
+      proto: mqtt
+      technique: T0839
+      style: subscribe_telemetry
+      count: 3
+      interval: 10s
+      note: Monitor device reboot and firmware activation
+  T0839__module_firmware__opcua:
+    title: T0839 – Module Firmware — OPC UA firmware file write
+    description: Uses OPC UA FileType write services to upload a modified firmware binary to a controller that exposes its firmware as an OPC UA file node. Some IEC 61131-3 runtimes and field device OPC UA servers expose firmware update as a file write followed by a method call to activate. The modified firmware is applied on next restart.
+    tactic: Impair Process Control
+    technique: T0839
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0839
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse for firmware file node
+    - type: pcap
+      proto: opcua
+      technique: T0839
+      style: write_large_blob
+      count: 5
+      interval: 2s
+      note: Write modified firmware via OPC UA FileType
+    - type: pcap
+      proto: opcua
+      technique: T0839
+      style: call_method
+      count: 1
+      interval: 3s
+      note: Call firmware activation method
+  T0839__module_firmware__bacnet:
+    title: T0839 – Module Firmware — BACnet ReinitializeDevice firmware window
+    description: Sends BACnet ReinitializeDevice with reinitializedStateOfDevice=startbackup to trigger a firmware update window. Some BACnet controllers interpret this service as the beginning of a firmware backup/restore sequence, entering a state that accepts a new firmware image. The device halts normal operation and waits for a firmware image from any BACnet client.
+    tactic: Impair Process Control
+    technique: T0839
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0839
+      style: reinitialize_device
+      count: 1
+      interval: 0s
+      note: 'ReinitializeDevice: trigger firmware update window'
+    - type: pcap
+      proto: bacnet
+      technique: T0839
+      style: write_file
+      count: 3
+      interval: 5s
+      note: Upload modified firmware via BACnet WriteFile
+  T0845__program_upload__bacnet:
+    title: T0845 – Program Upload — BACnet file and programme read
+    description: Uses BACnet ReadFile service to download programme files and configuration data from BACnet File objects. BACnet controllers that support file objects expose their application programme, setpoint tables, and schedule configurations as downloadable files. The attacker analyses these offline to find exploitable logic and parameter ranges.
+    tactic: Collection
+    technique: T0845
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0845
+      style: read_file
+      count: 5
+      interval: 1s
+      note: 'ReadFile: download programme and configuration files'
+    - type: pcap
+      proto: bacnet
+      technique: T0845
+      style: read_property_multi
+      count: 5
+      interval: 0.5s
+      note: Read all object properties to reconstruct programme
+  T0845__program_upload__modbus:
+    title: T0845 – Program Upload — Modbus complete register map read
+    description: 'Reads the complete Modbus register map: all holding registers (FC03), input registers (FC04), coil status (FC01), and discrete inputs (FC02). The register map is the programme — it contains all setpoints, calibration constants, alarm thresholds, PID parameters, and process values. A complete read is a full programme state upload.'
+    tactic: Collection
+    technique: T0845
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0845
+      style: io_image_read
+      count: 5
+      interval: 0.2s
+      note: Read complete I/O image for programme state upload
+    - type: pcap
+      proto: modbus
+      technique: T0845
+      style: read_holding
+      count: 10
+      interval: 0.1s
+      note: 'Full holding register dump: all programme parameters'
+    - type: pcap
+      proto: modbus
+      technique: T0845
+      style: report_block
+      count: 3
+      interval: 0.5s
+      note: FC43 Device ID for programme version identification
+  T0857__system_firmware__mqtt:
+    title: T0857 – System Firmware — MQTT OTA system firmware replacement
+    description: Delivers a complete system firmware replacement to a field device or gateway via its MQTT OTA update mechanism. Unlike module firmware (T0839), system firmware replaces the entire device operating environment — boot loader, RTOS, and application stack. The modified system firmware provides persistent covert access that survives configuration resets.
+    tactic: Inhibit Response Function
+    technique: T0857
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0857
+      style: publish_firmware
+      count: 1
+      interval: 0s
+      note: Publish complete system firmware replacement via OTA
+    - type: pcap
+      proto: mqtt
+      technique: T0857
+      style: subscribe_telemetry
+      count: 3
+      interval: 30s
+      note: Monitor for firmware reboot completion
+  T0857__system_firmware__opcua:
+    title: T0857 – System Firmware — OPC UA system firmware file replacement
+    description: Writes a complete system firmware binary to an OPC UA server's firmware file node, then calls the firmware activation method. System-level firmware delivered via OPC UA replaces the controller's complete operating environment. The OPC UA file write path bypasses engineering-tool-level access controls that protect traditional firmware update interfaces.
+    tactic: Inhibit Response Function
+    technique: T0857
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0857
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse for system firmware file nodes
+    - type: pcap
+      proto: opcua
+      technique: T0857
+      style: write_large_blob
+      count: 5
+      interval: 3s
+      note: Write complete system firmware binary via OPC UA FileType
+    - type: pcap
+      proto: opcua
+      technique: T0857
+      style: call_method
+      count: 1
+      interval: 5s
+      note: Activate system firmware replacement
+  T0857__system_firmware__bacnet:
+    title: T0857 – System Firmware — BACnet system firmware via file write
+    description: Uses BACnet WriteFile service to upload a modified system firmware image to a controller's file object after triggering firmware mode via ReinitializeDevice. Some BACnet implementations support full system firmware replacement via file services. The replacement survives power cycles and configuration resets.
+    tactic: Inhibit Response Function
+    technique: T0857
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0857
+      style: reinitialize_device
+      count: 1
+      interval: 0s
+      note: 'ReinitializeDevice: enter system firmware update mode'
+    - type: pcap
+      proto: bacnet
+      technique: T0857
+      style: write_file
+      count: 5
+      interval: 2s
+      note: Write system firmware image via BACnet WriteFile
+  T0857__system_firmware__dnp3:
+    title: T0857 – System Firmware — DNP3 system firmware via file transfer
+    description: Uses DNP3 file transfer (FC 25 Open, FC 29 Write) during the restart window to deliver a complete system firmware image to an RTU. Several RTU vendors (SEL, GE, Schweitzer) support full system firmware replacement via DNP3 file transfer as an alternative to serial firmware update tools. The uploaded image activates on next complete restart.
+    tactic: Inhibit Response Function
+    technique: T0857
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0857
+      style: warm_restart
+      count: 1
+      interval: 0s
+      note: Warm Restart to open system firmware update window
+    - type: pcap
+      proto: dnp3
+      technique: T0857
+      style: file_open
+      count: 3
+      interval: 1s
+      note: Open file session for system firmware delivery
+    - type: pcap
+      proto: dnp3
+      technique: T0857
+      style: cold_restart
+      count: 1
+      interval: 10s
+      note: Cold Restart to activate uploaded system firmware
+  T0866__exploit_remote__modbus:
+    title: T0866 – Exploitation of Remote Services — Modbus internal service exploit
+    description: From inside the OT network, sends malformed Modbus frames with out-of-range function codes and oversized data to Modbus slaves. Unlike T0819 (internet-facing), this exploits Modbus services reached by lateral movement within the OT network. Internal Modbus slaves often have even less validation than internet-exposed ones as they are assumed trusted.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0866
+      style: exception_probe
+      count: 5
+      interval: 0.5s
+      note: 'Internal Modbus: malformed FC probing for service bugs'
+    - type: pcap
+      proto: modbus
+      technique: T0866
+      style: diagnostic
+      count: 5
+      interval: 0.3s
+      note: FC08 sub-function probing internal service paths
+  T0866__exploit_remote__iec104:
+    title: T0866 – Exploitation of Remote Services — IEC-104 internal RTU exploit
+    description: From inside the control network, sends malformed IEC-104 APDUs with invalid TypeIDs, oversized information objects, and invalid COT values to internal RTUs. Internal RTUs behind substation firewalls receive no external input validation scrutiny and often run unpatched firmware — internal network access from a compromised SCADA workstation exposes these services.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0866
+      style: meas_inject
+      count: 5
+      interval: 0.5s
+      note: 'Internal IEC-104: malformed ASDU probing RTU firmware'
+    - type: pcap
+      proto: iec104
+      technique: T0866
+      style: testfr
+      count: 5
+      interval: 0.5s
+      note: Malformed TESTFR sequences probing session handling
+  T0866__exploit_remote__iec61850:
+    title: T0866 – Exploitation of Remote Services — IEC 61850 internal IED exploit
+    description: From inside the process bus segment (reached by lateral movement), sends malformed GOOSE frames with invalid BER encoding, inconsistent field lengths, and out-of-range confRev values. Internal IEDs on the process bus have no filtering — they must process every GOOSE frame matching their subscription, making them vulnerable to BER parsing bugs.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0866
+      style: trip_inject
+      count: 5
+      interval: 0.5s
+      note: Malformed GOOSE BER probing internal IED firmware
+    - type: pcap
+      proto: iec61850
+      technique: T0866
+      style: spoof_measurement
+      count: 5
+      interval: 0.5s
+      note: Malformed measurement data probing parser paths
+  T0866__exploit_remote__mqtt:
+    title: T0866 – Exploitation of Remote Services — MQTT broker internal exploit
+    description: From inside the OT network, sends malformed MQTT packets targeting known vulnerability classes in MQTT broker implementations — oversized client IDs, malformed topic filters, and invalid QoS values. Internal MQTT brokers reached by lateral movement from the corporate network are often less hardened than internet-facing services.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0866
+      style: will_message
+      count: 3
+      interval: 0.5s
+      note: 'Internal MQTT: malformed will message probing broker'
+    - type: pcap
+      proto: mqtt
+      technique: T0866
+      style: publish_dos
+      count: 5
+      interval: 0.2s
+      note: Oversized publish payloads probing broker validation
+  T0866__exploit_remote__opcua:
+    title: T0866 – Exploitation of Remote Services — OPC UA internal server exploit
+    description: From inside the OT network, sends malformed OPC UA browse requests with invalid node IDs, cyclical references, and oversized request bodies. Internal OPC UA servers serving engineering workstations and SCADA historians are reached by lateral movement and may run versions with known CVEs not patched due to OT change-control processes.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0866
+      style: malformed_browse
+      count: 5
+      interval: 0.5s
+      note: 'Internal OPC UA: malformed browse probing server'
+    - type: pcap
+      proto: opcua
+      technique: T0866
+      style: native_raw
+      count: 5
+      interval: 0.5s
+      note: Raw malformed OPC UA frames probing session handling
+  T0866__exploit_remote__bacnet:
+    title: T0866 – Exploitation of Remote Services — BACnet internal controller exploit
+    description: From inside the building or OT network, sends malformed BACnet confirmed service requests with invalid property identifiers and oversized APDU bodies to internal BACnet controllers. Internal BACnet devices are reached by lateral movement from the IT/corporate network through building integration gateways — they receive no external filtering.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0866
+      style: private_transfer
+      count: 5
+      interval: 0.5s
+      note: 'Internal BACnet: malformed Private Transfer probing'
+    - type: pcap
+      proto: bacnet
+      technique: T0866
+      style: read_property
+      count: 5
+      interval: 0.3s
+      note: Invalid property reads probing internal validation
+  T0866__exploit_remote__profinet:
+    title: T0866 – Exploitation of Remote Services — PROFINET internal DCP exploit
+    description: From inside the production network, sends malformed PROFINET DCP frames with invalid block types, oversized station names (>240 bytes), and malformed IP parameter blocks. PROFINET IO devices on the process bus lack external-network filtering and may have insufficient validation in their DCP stack — reachable after lateral movement from the office network.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0866
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: Malformed DCP identify probing internal device stack
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0866
+      style: factory_reset
+      count: 1
+      interval: 2s
+      note: Unexpected factory reset testing internal access control
+  T0867__lateral_tool__bacnet:
+    title: T0867 – Lateral Tool Transfer — BACnet file write for tool delivery
+    description: Uses BACnet WriteFile service to upload a tool or payload to a BACnet controller's file object. BACnet File objects on some controllers map to filesystem locations that are executed or loaded by the controller application. The attacker uses the legitimate BACnet file transfer mechanism to move a tool from a compromised engineering workstation to a field controller.
+    tactic: Lateral Movement
+    technique: T0867
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0867
+      style: read_file
+      count: 1
+      interval: 0s
+      note: 'ReadFile: identify existing files before upload'
+    - type: pcap
+      proto: bacnet
+      technique: T0867
+      style: write_file
+      count: 5
+      interval: 1s
+      note: 'WriteFile: upload attacker tool via BACnet file service'
+  T0867__lateral_tool__dnp3:
+    title: T0867 – Lateral Tool Transfer — DNP3 file transfer for tool delivery
+    description: Uses DNP3 file transfer services to upload a tool or payload to an RTU. The DNP3 file transfer mechanism (FC 25-29) provides authenticated or unauthenticated file upload to RTU storage. RTU-resident scripts or configuration files that reference uploaded content can execute attacker tools after the next device restart.
+    tactic: Lateral Movement
+    technique: T0867
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0867
+      style: file_open
+      count: 1
+      interval: 0s
+      note: Open DNP3 file transfer session for tool upload
+    - type: pcap
+      proto: dnp3
+      technique: T0867
+      style: write
+      count: 5
+      interval: 0.5s
+      note: Write tool payload blocks via DNP3 file transfer
+  T0867__lateral_tool__mqtt:
+    title: T0867 – Lateral Tool Transfer — MQTT firmware publish for tool delivery
+    description: Uses the MQTT OTA firmware channel to deliver an attacker tool disguised as a firmware update. The broker forwards the published firmware payload to all subscribed devices on the target topic. Devices that process the payload store it in their update buffer — effectively receiving the attacker's tool via the legitimate MQTT OTA path.
+    tactic: Lateral Movement
+    technique: T0867
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0867
+      style: publish_firmware
+      count: 3
+      interval: 2s
+      note: Publish attacker tool disguised as firmware update
+    - type: pcap
+      proto: mqtt
+      technique: T0867
+      style: subscribe_telemetry
+      count: 3
+      interval: 10s
+      note: Monitor delivery confirmation from target device
+  T0867__lateral_tool__opcua:
+    title: T0867 – Lateral Tool Transfer — OPC UA large blob write for tool delivery
+    description: Uses OPC UA write_large_blob to transfer an attacker tool or payload to an OPC UA server's file node. OPC UA FileType nodes on some servers map to filesystem locations accessible to the controller application. The attacker uses OPC UA's legitimate file write capability to move tools between OT network segments without using conventional file transfer protocols.
+    tactic: Lateral Movement
+    technique: T0867
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0867
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse for writable file nodes on target server
+    - type: pcap
+      proto: opcua
+      technique: T0867
+      style: write_large_blob
+      count: 5
+      interval: 2s
+      note: Write attacker tool via OPC UA file transfer
+  T0886__remote_services__bacnet:
+    title: T0886 – Remote Services — BACnet as lateral movement vector
+    description: Uses BACnet/IP as a lateral movement service — connects to BACnet controllers reachable from a compromised workstation and uses the legitimate BACnet master-slave protocol to pivot into the building or OT network. BACnet devices are often dual-homed between IT and OT segments, making them effective lateral movement targets.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0886
+      style: who_is
+      count: 3
+      interval: 0.5s
+      note: Discover BACnet devices as lateral movement targets
+    - type: pcap
+      proto: bacnet
+      technique: T0886
+      style: read_property
+      count: 10
+      interval: 0.3s
+      note: Access OT devices via BACnet remote service
+    - type: pcap
+      proto: bacnet
+      technique: T0886
+      style: write_property
+      count: 5
+      interval: 1s
+      note: Execute control actions via BACnet lateral pivot
+  T0886__remote_services__dnp3:
+    title: T0886 – Remote Services — DNP3 as lateral movement vector
+    description: Uses DNP3 master-outstation sessions to move laterally through the OT network. A compromised engineering workstation or data historian with legitimate DNP3 master credentials can reach all outstations in the DNP3 network. The attacker uses this legitimate service to enumerate and control all field devices reachable by the compromised master.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0886
+      style: read_class1
+      count: 5
+      interval: 0.5s
+      note: Use DNP3 master session for lateral OT network access
+    - type: pcap
+      proto: dnp3
+      technique: T0886
+      style: direct_operate
+      count: 5
+      interval: 1s
+      note: Execute control commands via lateral DNP3 pivot
+  T0886__remote_services__enip:
+    title: T0886 – Remote Services — EtherNet/IP as lateral movement vector
+    description: Uses EtherNet/IP CIP sessions to move laterally from a compromised device to PLCs and I/O modules on the EtherNet/IP network. Engineering workstations, HMIs, and data gateways with EtherNet/IP access can reach all PLCs in the subnet. The attacker uses the legitimate CIP session mechanism to pivot to additional controllers.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0886
+      style: list_identity
+      count: 5
+      interval: 0.3s
+      note: Enumerate EtherNet/IP devices for lateral pivot targets
+    - type: pcap
+      proto: enip
+      technique: T0886
+      style: read_tag
+      count: 10
+      interval: 0.3s
+      note: Access OT devices via lateral EtherNet/IP sessions
+    - type: pcap
+      proto: enip
+      technique: T0886
+      style: write_tag
+      count: 5
+      interval: 1s
+      note: Execute actions via legitimate EtherNet/IP service
+  T0886__remote_services__iec104:
+    title: T0886 – Remote Services — IEC-104 as lateral movement vector
+    description: Uses IEC-104 master-RTU sessions to move laterally through the substation communication network. SCADA workstations and control servers with IEC-104 master access reach all RTUs in the substation hierarchy. A compromised SCADA workstation uses its legitimate IEC-104 master credentials to reach all RTUs as a lateral movement path.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0886
+      style: interrogation
+      count: 1
+      interval: 1s
+      note: Use IEC-104 master session for lateral OT access
+    - type: pcap
+      proto: iec104
+      technique: T0886
+      style: single_command
+      count: 5
+      interval: 1s
+      note: Execute commands via lateral IEC-104 pivot
+  T0886__remote_services__iec61850:
+    title: T0886 – Remote Services — IEC 61850 GOOSE as lateral movement vector
+    description: From inside the process bus VLAN (reached by lateral movement through a compromised bay controller or engineering laptop), uses IEC 61850 GOOSE to interact with protection IEDs. GOOSE on the process bus VLAN is accessible to any device on that VLAN — a compromised device acts as a GOOSE publisher to control all subscribed IEDs.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0886
+      style: enumerate_ied
+      count: 5
+      interval: 0.2s
+      note: Map IEDs accessible via process bus lateral access
+    - type: pcap
+      proto: iec61850
+      technique: T0886
+      style: relay_inject
+      count: 5
+      interval: 1s
+      note: Control IEDs using lateral GOOSE publisher access
+  T0886__remote_services__modbus:
+    title: T0886 – Remote Services — Modbus as lateral movement vector
+    description: Uses Modbus/TCP sessions to move laterally from a compromised OT workstation to PLCs and field devices throughout the Modbus network. Any device with TCP/502 access reaches all Modbus slaves — a compromised historian or HMI uses this legitimate service to read configuration data and issue control commands across the OT network.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0886
+      style: read_holding
+      count: 10
+      interval: 0.3s
+      note: Use Modbus service for lateral OT network access
+    - type: pcap
+      proto: modbus
+      technique: T0886
+      style: write_multiple_registers
+      count: 5
+      interval: 1s
+      note: Execute actions via legitimate lateral Modbus sessions
+  T0886__remote_services__mqtt:
+    title: T0886 – Remote Services — MQTT as lateral movement vector
+    description: Uses the MQTT broker as a lateral movement hub — a compromised device connected to the MQTT broker can publish to any topic and subscribe to all telemetry. From one compromised subscriber, the attacker pivots to control all field devices connected to the same broker by publishing to their respective command topics.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0886
+      style: subscribe_all
+      count: 1
+      interval: 0s
+      note: Subscribe all topics to map broker-connected devices
+    - type: pcap
+      proto: mqtt
+      technique: T0886
+      style: publish_command
+      count: 5
+      interval: 1s
+      note: Issue commands via lateral MQTT broker access
+    - type: pcap
+      proto: mqtt
+      technique: T0886
+      style: publish_telemetry
+      count: 5
+      interval: 1s
+      note: Use MQTT service as lateral movement data exfil path
+  T0886__remote_services__profinet:
+    title: T0886 – Remote Services — PROFINET DCP as lateral movement vector
+    description: Uses PROFINET DCP from inside the production network to reach IO devices directly. A compromised device on the PROFINET VLAN can interact with all IO devices via DCP — enumerate station names and IPs, modify device configuration, and use Set Name/IP to redirect IO connections. PROFINET DCP provides a zero-authentication lateral movement surface.
+    tactic: Lateral Movement
+    technique: T0886
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0886
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: Enumerate all IO devices via lateral DCP access
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0886
+      style: set_name
+      count: 1
+      interval: 1s
+      note: Modify device config via lateral PROFINET access
+  T0857__system_firmware__iec104:
+    title: T0857 – System Firmware — IEC-104 private type system firmware delivery
+    description: Uses IEC-104 private information object types (TypeID ≥200) during an RTU initialisation window to deliver a complete system firmware image. Vendor-specific RTU implementations (ABB, Siemens, GE) use private TypeIDs for firmware and bootloader updates over the standard IEC-104 TCP session — distinct from configuration updates (T0843) as this replaces the complete RTU operating system.
+    tactic: Inhibit Response Function
+    technique: T0857
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0857
+      style: reset_process
+      count: 1
+      interval: 0s
+      note: 'C_RP_NA_1: reset RTU to open firmware update window'
+    - type: pcap
+      proto: iec104
+      technique: T0857
+      style: meas_inject
+      count: 10
+      interval: 0.2s
+      note: 'Private TypeID delivery: system firmware via IEC-104'
+    - type: pcap
+      proto: iec104
+      technique: T0857
+      style: available
+      count: 3
+      interval: 15s
+      note: Wait for RTU restart with new system firmware
+  T0857__system_firmware__profinet:
+    title: T0857 – System Firmware — PROFINET DCP factory reset initiates firmware mode
+    description: Sends PROFINET DCP Factory Reset to an IO device, placing it in its unconfigured boot state. Siemens and Phoenix Contact IO devices in this state accept firmware images from the Siemens Primary Setup Tool or equivalent DCP-based provisioning tools. The attacker uses this window to push a modified firmware image before the IO controller reconnects.
+    tactic: Inhibit Response Function
+    technique: T0857
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0857
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: 'Factory reset: place device in firmware update mode'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0857
+      style: identify
+      count: 3
+      interval: 5s
+      note: Probe to confirm device in update-ready state
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0857
+      style: set_ip
+      count: 1
+      interval: 10s
+      note: Set provisional IP for firmware delivery
+  T0839__module_firmware__profinet:
+    title: T0839 – Module Firmware — PROFINET DCP factory reset initiates I/O module update
+    description: Uses DCP Factory Reset on a PROFINET IO device (e.g. Siemens ET 200SP, Phoenix Contact Axioline) to force it into an unconfigured state. In this state, the device accepts a new firmware image from the engineering network. A modified firmware image pushed during this window can change I/O behaviour or install a persistent backdoor in the module.
+    tactic: Impair Process Control
+    technique: T0839
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0839
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: 'Factory reset: force IO module into update mode'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0839
+      style: identify
+      count: 3
+      interval: 5s
+      note: Confirm module in unconfigured/update state
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0839
+      style: set_ip
+      count: 1
+      interval: 8s
+      note: Set provisional IP for firmware delivery
+  T0866__exploit_remote__dnp3:
+    title: T0866 – Exploitation of Remote Services — DNP3 internal Secure Auth exploit
+    description: From inside the OT network, sends malformed DNP3 Secure Authentication frames — challenge responses with incorrect lengths, invalid HMAC fields, and unexpected authentication control bytes. Internal DNP3 outstations with SA enabled but running vulnerable firmware may crash or enter error states when their SA state machine receives unexpected message sequences.
+    tactic: Lateral Movement
+    technique: T0866
+    steps:
+    - type: pcap
+      proto: dnp3
+      technique: T0866
+      style: authenticate_req
+      count: 5
+      interval: 0.5s
+      note: Malformed SA challenge probing outstation state machine
+    - type: pcap
+      proto: dnp3
+      technique: T0866
+      style: default_auth_bypass
+      count: 3
+      interval: 1s
+      note: SA bypass attempt probing authentication weakness
+  T0801__monitor_process__iec61850:
+    title: T0801 – Monitor Process State — IEC 61850 GOOSE continuous state monitoring
+    description: 'Listens on the IEC 61850 process bus VLAN and captures all GOOSE multicast frames, building a continuously updated picture of every IED''s state. Each GOOSE frame carries the publishing IED''s complete dataset: protection status, breaker positions, measurement values, and quality flags. By monitoring all multicast groups, the attacker tracks real-time substation state with the same fidelity as the SCADA system — without generating any query traffic.'
+    tactic: Collection
+    technique: T0801
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0801
+      style: enumerate_ied
+      count: 10
+      interval: 0.2s
+      note: Enumerate all IED publishers for state monitoring
+    - type: pcap
+      proto: iec61850
+      technique: T0801
+      style: spoof_measurement
+      count: 10
+      interval: 0.5s
+      note: Capture measurement datasets continuously
+  T0814__denial_of_service__iec61850:
+    title: T0814 – Denial of Service — IEC 61850 process bus GOOSE flood
+    description: Floods the IEC 61850 process bus with GOOSE frames at a rate that saturates IED receive buffers and exhausts processing capacity. IEDs cannot process legitimate protection events while handling the flood — their GOOSE receive services effectively stop functioning. This is a network-layer DoS that targets the real-time guarantees of the IEC 61850 protection scheme.
+    tactic: Inhibit Response Function
+    technique: T0814
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0814
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: GOOSE flood exhausting IED receive buffers
+    - type: pcap
+      proto: iec61850
+      technique: T0814
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: Sustain to maintain IED service denial
+  T0814__denial_of_service__profinet:
+    title: T0814 – Denial of Service — PROFINET DCP multicast flood
+    description: Sends PROFINET DCP Identify-All frames at high rate to the PROFINET multicast address (01:0E:CF:00:00:00). All IO devices on the segment must process each frame. At sufficient rate, device CPUs are consumed processing DCP requests rather than updating cyclic I/O data — the IO controller receives stale or no process data, and may declare IO faults halting production.
+    tactic: Inhibit Response Function
+    technique: T0814
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0814
+      style: identify
+      count: 50
+      interval: 0.01s
+      note: DCP flood exhausting IO device CPU cycles
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0814
+      style: identify
+      count: 50
+      interval: 0.01s
+      note: Sustain flood to maintain IO service denial
+  T0815__denial_of_view__bacnet:
+    title: T0815 – Denial of View — BACnet Who-Is broadcast storm
+    description: Floods the BACnet/IP network with Who-Is broadcasts at high rate. All BACnet devices must process each broadcast and generate I-Am responses — consuming their UDP receive buffers and CPU cycles. The SCADA ReadProperty polling cycles are dropped behind the flood; the operator HMI displays stale or communication-fault indicators for all BACnet devices.
+    tactic: Impact
+    technique: T0815
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0815
+      style: who_is
+      count: 50
+      interval: 0.01s
+      note: Who-Is broadcast storm blocking SCADA read cycles
+    - type: pcap
+      proto: bacnet
+      technique: T0815
+      style: who_is
+      count: 50
+      interval: 0.01s
+      note: Sustain to maintain stale HMI data
+  T0815__denial_of_view__enip:
+    title: T0815 – Denial of View — EtherNet/IP session table exhaustion
+    description: Opens the maximum number of EtherNet/IP sessions without closing them, filling the PLC's session table. ControlLogix PLCs enforce a hard session limit (8–32 depending on model). With the table full, SCADA historians and HMI clients cannot establish new sessions — they receive no process data and the operator view freezes at last-known values.
+    tactic: Impact
+    technique: T0815
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0815
+      style: register_session
+      count: 30
+      interval: 0.05s
+      note: Exhaust EtherNet/IP session table
+    - type: pcap
+      proto: enip
+      technique: T0815
+      style: register_session
+      count: 30
+      interval: 0.05s
+      note: Maintain exhaustion to sustain loss of view
+  T0835__manipulate_io__opcua:
+    title: T0835 – Manipulate I/O Image — OPC UA direct process image write
+    description: Writes falsified values directly to OPC UA process variable nodes that map to physical output addresses in the controller's I/O image. On OPC UA servers that directly expose the output process image (common in soft PLCs and OPC UA-native controllers), a write to the output node is immediately reflected in the physical output without any programme logic.
+    tactic: Inhibit Response Function
+    technique: T0835
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0835
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse for output process image nodes
+    - type: pcap
+      proto: opcua
+      technique: T0835
+      style: write_value
+      count: 10
+      interval: 0.5s
+      note: Write falsified values to output process image nodes
+    - type: pcap
+      proto: opcua
+      technique: T0835
+      style: spoof_value
+      count: 10
+      interval: 1s
+      note: Sustain spoofed values to maintain manipulated I/O state
+  T0868__detect_op_mode__iec104:
+    title: T0868 – Detect Operating Mode — IEC-104 interrogation to reveal RTU mode
+    description: Sends IEC-104 General Interrogation (C_IC_NA_1) and reads the RTU's Cause of Transmission (COT) responses. COT values distinguish between spontaneous events, requested data, and initialisation — revealing whether the RTU is in normal operation, test mode, or initialising. The initialisation status bit in M_EI_NA_1 (End of Initialization) directly indicates mode changes.
+    tactic: Collection
+    technique: T0868
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0868
+      style: interrogation
+      count: 1
+      interval: 0s
+      note: 'C_IC_NA_1: force RTU to report all status including mode'
+    - type: pcap
+      proto: iec104
+      technique: T0868
+      style: counter_interr
+      count: 1
+      interval: 2s
+      note: Counter interrogation to detect operational accumulation
+    - type: pcap
+      proto: iec104
+      technique: T0868
+      style: testfr
+      count: 3
+      interval: 1s
+      note: TESTFR to probe RTU responsiveness and mode
+  T0868__detect_op_mode__profinet:
+    title: T0868 – Detect Operating Mode — PROFINET DCP device state enumeration
+    description: 'Uses PROFINET DCP Identify requests to read device status blocks that reveal the IO device''s current operating mode: configured/unconfigured, fault state, parameterisation state, or data exchange active. The DCP DeviceStatus block exposes the device''s station state, which directly indicates whether it is in normal operation, firmware update mode, or awaiting configuration from the IO controller.'
+    tactic: Collection
+    technique: T0868
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0868
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: 'DCP Identify: read device status and operating mode'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0868
+      style: identify_unicast
+      count: 5
+      interval: 0.3s
+      note: Unicast identify for targeted mode detection
+  T0830__aitm__profinet:
+    title: T0830 – Adversary-in-the-Middle — PROFINET DCP station name redirect
+    description: Changes a PROFINET IO device's station name and IP address to match the attacker's device, then resets the real IO device. The IO controller reconnects to the attacker's device using the correct station name. The attacker's device sits between the controller and the process, receiving controller commands and responding with arbitrary I/O data — a complete Adversary-in-the-Middle position on the PROFINET bus.
+    tactic: Collection
+    technique: T0830
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0830
+      style: identify
+      count: 3
+      interval: 0.3s
+      note: Identify legitimate IO device for AitM targeting
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0830
+      style: set_name
+      count: 1
+      interval: 1s
+      note: Claim victim station name on attacker device
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0830
+      style: set_ip
+      count: 1
+      interval: 1s
+      note: Set attacker device IP to redirect IO controller
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0830
+      style: factory_reset
+      count: 1
+      interval: 2s
+      note: Reset real device to remove it from controller cycle
+  T0869__std_app_protocol__profinet:
+    title: T0869 – Standard Application Layer Protocol — PROFINET as C2 channel
+    description: Uses PROFINET DCP frames as a covert command-and-control channel. DCP management traffic is expected and logged on industrial networks — Set Name and Set IP operations can carry attacker C2 instructions encoded in station name or IP parameters. Network monitoring tools that whitelist DCP traffic will not flag this C2 channel.
+    tactic: Command and Control
+    technique: T0869
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0869
+      style: identify
+      count: 3
+      interval: 5s
+      note: 'DCP identify: beacon using standard PROFINET protocol'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0869
+      style: set_name
+      count: 1
+      interval: 30s
+      note: Set Name with encoded C2 command in station name field
+  T0859__valid_accounts__modbus:
+    title: T0859 – Valid Accounts — Modbus null authentication as valid access
+    description: 'Connects to Modbus slaves using the legitimate protocol access model — which requires no credential. An attacker who has reached the Modbus network segment (via VPN, compromised jump host, or lateral movement) has a ''valid account'' by design: any TCP connection to port 502 is accepted as authorised. All reads and writes proceed identically to the legitimate SCADA master.'
+    tactic: Lateral Movement
+    technique: T0859
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0859
+      style: read_holding
+      count: 10
+      interval: 0.3s
+      note: Access all process data using valid (null) Modbus credential
+    - type: pcap
+      proto: modbus
+      technique: T0859
+      style: write_multiple_registers
+      count: 5
+      interval: 1s
+      note: Modify setpoints using valid Modbus access model
+  T0883__internet_accessible__mqtt:
+    title: T0883 – Internet Accessible Device — Internet-exposed MQTT broker
+    description: Accesses an MQTT broker exposed on TCP/1883 directly from the internet. Internet-exposed MQTT brokers are common in IIoT deployments — Shodan identifies thousands of unauthenticated brokers. With anonymous access enabled (the default), any internet client subscribes to all topics and publishes to any device command topic, giving full access to all connected field devices.
+    tactic: Initial Access
+    technique: T0883
+    steps:
+    - type: pcap
+      proto: mqtt
+      technique: T0883
+      style: connect_anonymous
+      count: 1
+      interval: 0s
+      note: Anonymous connect to internet-exposed MQTT broker
+    - type: pcap
+      proto: mqtt
+      technique: T0883
+      style: subscribe_all
+      count: 1
+      interval: 1s
+      note: 'Subscribe all topics: enumerate all connected devices'
+    - type: pcap
+      proto: mqtt
+      technique: T0883
+      style: publish_command
+      count: 5
+      interval: 2s
+      note: Send commands to field devices via internet MQTT access
+  T0800__fw_update_mode__opcua:
+    title: T0800 – Activate Firmware Update Mode — OPC UA method call triggers update mode
+    description: Calls a vendor-specific OPC UA Method node that activates the controller's firmware update mode. Some IEC 61131-3 runtimes and field device OPC UA servers expose firmware management as OPC UA Method calls — the node is discoverable via Browse. Activating update mode halts normal process execution and opens a firmware download window.
+    tactic: Inhibit Response Function
+    technique: T0800
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0800
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse for firmware management method nodes
+    - type: pcap
+      proto: opcua
+      technique: T0800
+      style: call_method
+      count: 1
+      interval: 2s
+      note: Call firmware update mode activation method
+    - type: pcap
+      proto: opcua
+      technique: T0800
+      style: read_value
+      count: 3
+      interval: 5s
+      note: Confirm controller in firmware update mode
+  T0814__dos__iec61850:
+    title: T0814 – Denial of Service — IEC 61850 GOOSE process bus flood
+    description: Floods the IEC 61850 process bus with protection GOOSE frames at a rate exceeding IED receive buffer capacity. IEDs starved of processing time cannot publish their own GOOSE — protection functions are denied their communication service. The entire substation protection scheme becomes unavailable while the flood is sustained.
+    tactic: Inhibit Response Function
+    technique: T0814
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0814
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: 'GOOSE flood: deny IED communication service'
+    - type: pcap
+      proto: iec61850
+      technique: T0814
+      style: protection_block
+      count: 50
+      interval: 0.005s
+      note: Sustain flood to maintain process bus DoS
+  T0814__dos__profinet:
+    title: T0814 – Denial of Service — PROFINET DCP flood denies IO service
+    description: Floods the PROFINET segment with DCP Identify-All multicast frames, consuming all available IO device CPU cycles. IO devices unable to process cyclic data within the watchdog interval trigger a PROFINET IO fault — the IO controller loses its I/O connection and all physical outputs go to failsafe. The process is denied its I/O service.
+    tactic: Inhibit Response Function
+    technique: T0814
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0814
+      style: identify
+      count: 50
+      interval: 0.005s
+      note: 'DCP flood: deny IO device service by CPU starvation'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0814
+      style: identify
+      count: 50
+      interval: 0.005s
+      note: Sustain flood to hold IO fault state
+  T0816__restart_shutdown__opcua:
+    title: T0816 – Device Restart/Shutdown — OPC UA method call for device restart
+    description: Calls an OPC UA Server Management Method node that triggers a device restart or controlled shutdown. Some OPC UA servers expose device lifecycle management (restart, shutdown, factory reset) as Method nodes accessible to any authenticated or unauthenticated client. The called method causes the physical controller to reboot, halting all process control.
+    tactic: Inhibit Response Function
+    technique: T0816
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0816
+      style: browse
+      count: 1
+      interval: 0s
+      note: Browse for device management and restart method nodes
+    - type: pcap
+      proto: opcua
+      technique: T0816
+      style: call_method
+      count: 1
+      interval: 2s
+      note: Call device restart method via OPC UA
+    - type: pcap
+      proto: opcua
+      technique: T0816
+      style: hello
+      count: 5
+      interval: 10s
+      note: Probe for reconnection after restart completes
+  T0849__masquerade__opcua:
+    title: T0849 – Masquerading — OPC UA session identity masquerade
+    description: Opens OPC UA sessions using a session name and application description that matches a legitimate engineering workstation or SCADA client. OPC UA server logs record the session name as the audit identifier — the attacker's traffic appears to originate from the masqueraded application. On servers without certificate authentication, this is trivially achieved.
+    tactic: Evasion
+    technique: T0849
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0849
+      style: open_session
+      count: 3
+      interval: 0.5s
+      note: Open session with legitimate workstation identity
+    - type: pcap
+      proto: opcua
+      technique: T0849
+      style: read_value
+      count: 10
+      interval: 0.3s
+      note: Read process data appearing as legitimate SCADA client
+    - type: pcap
+      proto: opcua
+      technique: T0849
+      style: write_value
+      count: 5
+      interval: 0.5s
+      note: Write values masquerading as authorised engineering session
+  T0859__valid_accounts__profinet:
+    title: T0859 – Valid Accounts — PROFINET DCP access with no authentication
+    description: Accesses PROFINET IO devices using the standard's access model — which has no credential requirement for DCP management commands. An attacker on the production VLAN is a valid PROFINET participant by protocol design. DCP commands (identify, set name, set IP, reset) are accepted from any sender — the 'valid account' is physical or VLAN-level network access.
+    tactic: Lateral Movement
+    technique: T0859
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0859
+      style: identify
+      count: 5
+      interval: 0.3s
+      note: Enumerate devices using valid (no-auth) DCP access
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0859
+      style: get_name
+      count: 5
+      interval: 0.3s
+      note: Read all device names using valid PROFINET access model
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0859
+      style: set_ip
+      count: 1
+      interval: 2s
+      note: Modify device config as valid PROFINET participant
+  T0868__detect_mode__iec104:
+    title: T0868 – Detect Operating Mode — IEC-104 initialisation state probing
+    description: Sends IEC-104 STARTDT activation and General Interrogation to probe RTU operating mode. The RTU's response pattern reveals its current state — initialisation (CsI/CsR), normal (available, confirming), or offline (no response). Counter interrogation responses reveal whether the RTU is accumulating data (operational) or cleared (post-reset).
+    tactic: Collection
+    technique: T0868
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0868
+      style: available
+      count: 3
+      interval: 1s
+      note: 'STARTDT probe: detect RTU operating mode'
+    - type: pcap
+      proto: iec104
+      technique: T0868
+      style: interrogation
+      count: 1
+      interval: 2s
+      note: 'General interrogation: confirm operational state'
+    - type: pcap
+      proto: iec104
+      technique: T0868
+      style: counter_interr
+      count: 1
+      interval: 2s
+      note: 'Counter read: confirm data accumulation mode'
+  T0868__detect_mode__profinet:
+    title: T0868 – Detect Operating Mode — PROFINET DCP device mode detection
+    description: Sends PROFINET DCP Identify-All and Identify-Unicast to probe IO device operating states. DCP responses include a DeviceProperties block that indicates whether the device is in factory-default (unconfigured), operational (running cyclic I/O), or error (IO fault) state. This provides a complete operating mode survey of all PROFINET devices.
+    tactic: Collection
+    technique: T0868
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0868
+      style: identify
+      count: 5
+      interval: 0.5s
+      note: 'DCP Identify-All: detect all IO device operating modes'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0868
+      style: identify_unicast
+      count: 5
+      interval: 0.5s
+      note: 'Targeted unicast: confirm individual device modes'
+  T0803__block_command__enip:
+    title: T0803 – Block Command Message — EtherNet/IP session table exhaustion
+    description: Fills the ControlLogix session table by opening the maximum number of EtherNet/IP sessions and keeping them open. ControlLogix PLCs enforce a hard session limit (typically 8–32 per controller). With the table full the SCADA master cannot register a new session and its command messages are rejected before reaching the application layer — the PLC stops receiving setpoint writes, mode changes, and control commands.
+    tactic: Inhibit Response Function
+    technique: T0803
+    steps:
+    - type: pcap
+      proto: enip
+      technique: T0803
+      style: register_session
+      count: 30
+      interval: 0.05s
+      note: Exhaust EtherNet/IP session table to block SCADA commands
+    - type: pcap
+      proto: enip
+      technique: T0803
+      style: register_session
+      count: 30
+      interval: 0.05s
+      note: Maintain exhaustion to sustain command block
+  T0803__block_command__opcua:
+    title: T0803 – Block Command Message — OPC UA subscription flood blocks write commands
+    description: Creates the maximum number of OPC UA subscriptions on the server, exhausting its subscription table. OPC UA servers enforce a subscription limit per session and globally. Once the table is full, the SCADA client's write requests (setpoints, mode changes, output commands) are queued behind the subscription processing load and time out — command messages to the controller are effectively blocked.
+    tactic: Inhibit Response Function
+    technique: T0803
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0803
+      style: create_sub
+      count: 20
+      interval: 0.05s
+      note: Exhaust OPC UA subscription table to block write commands
+    - type: pcap
+      proto: opcua
+      technique: T0803
+      style: create_sub
+      count: 20
+      interval: 0.05s
+      note: Sustain subscription flood to maintain command block
+  T0803__block_command__profinet:
+    title: T0803 – Block Command Message — PROFINET DCP flood blocks IO controller commands
+    description: Sends PROFINET DCP Identify-All frames at high rate to the PROFINET multicast address. IO devices must process each DCP frame in their management stack. When CPU cycles are consumed processing DCP floods, the cyclic I/O data exchange with the IO controller is delayed or dropped — the controller's output command data does not reach the physical I/O modules. DCP floods are documented in PROFINET security research as a viable command-blocking vector.
+    tactic: Inhibit Response Function
+    technique: T0803
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0803
+      style: identify
+      count: 50
+      interval: 0.01s
+      note: DCP flood consuming IO device CPU, blocking cyclic command data
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0803
+      style: identify
+      count: 50
+      interval: 0.01s
+      note: Sustain flood to maintain command block
+  T0804__block_reporting__bacnet:
+    title: T0804 – Block Reporting Message — BACnet Device Communication Control
+    description: Sends BACnet Device Communication Control (service 17) with a disable duration to put target devices into communication-disabled mode. Devices in this mode stop responding to all Who-Is broadcasts and ReadProperty requests — the SCADA system receives no BACnet data and the operator's view of all BACnet points goes stale. Device Communication Control requires no authentication in many BACnet implementations.
+    tactic: Inhibit Response Function
+    technique: T0804
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0804
+      style: device_comm_control
+      count: 1
+      interval: 0s
+      note: 'Device Communication Control: disable BACnet reporting'
+    - type: pcap
+      proto: bacnet
+      technique: T0804
+      style: who_is
+      count: 3
+      interval: 30s
+      note: Probe to confirm device not responding (reporting blocked)
+  T0804__block_reporting__iec104:
+    title: T0804 – Block Reporting Message — IEC-104 STOPDT halts spontaneous reporting
+    description: Sends IEC-104 STOPDT (Stop Data Transfer) to terminate the RTU's active data transfer state. In STOPDT state the RTU stops sending spontaneous messages (TypeID 3 M_DP_NA_1, TypeID 13 M_ME_NC_1 etc.) — all unsolicited event reports are blocked. The SCADA master sees no new data from the RTU until it sends STARTDT, which an attacker controlling the session can prevent.
+    tactic: Inhibit Response Function
+    technique: T0804
+    steps:
+    - type: pcap
+      proto: iec104
+      technique: T0804
+      style: stopdt
+      count: 1
+      interval: 0s
+      note: 'STOPDT: halt RTU spontaneous reporting'
+    - type: pcap
+      proto: iec104
+      technique: T0804
+      style: inhibit_alarm
+      count: 3
+      interval: 5s
+      note: Inhibit alarm reporting to prevent operator notification
+    - type: pcap
+      proto: iec104
+      technique: T0804
+      style: testfr
+      count: 3
+      interval: 10s
+      note: TESTFR keep-alive to hold session without restarting data
+  T0804__block_reporting__opcua:
+    title: T0804 – Block Reporting Message — OPC UA subscription deletion
+    description: Deletes all active OPC UA subscriptions on the server. SCADA historians and HMI clients receive process data via subscriptions — when these are deleted the server stops publishing data changes to all subscribers. The historian recording stops and the operator HMI displays the last-known values. An attacker with write access to the server can delete subscriptions belonging to other sessions, blocking all reporting without closing those sessions.
+    tactic: Inhibit Response Function
+    technique: T0804
+    steps:
+    - type: pcap
+      proto: opcua
+      technique: T0804
+      style: delete_sub
+      count: 5
+      interval: 0.5s
+      note: Delete all active subscriptions to stop data reporting
+    - type: pcap
+      proto: opcua
+      technique: T0804
+      style: close_session
+      count: 3
+      interval: 2s
+      note: Close historian sessions to prevent subscription recreation
+  T0804__block_reporting__profinet:
+    title: T0804 – Block Reporting Message — PROFINET DCP factory reset stops IO reporting
+    description: Sends DCP Factory Reset to PROFINET IO devices, forcing them into unconfigured state. In this state devices stop cyclic I/O data exchange with the IO controller — the controller receives no input data from physical sensors or actuator feedback. The PLC's input process image freezes at last-known values and the SCADA historian stops receiving updated process data, blocking all field reporting.
+    tactic: Inhibit Response Function
+    technique: T0804
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0804
+      style: factory_reset
+      count: 1
+      interval: 0s
+      note: 'Factory reset: stop all IO device cyclic reporting'
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0804
+      style: identify
+      count: 3
+      interval: 10s
+      note: Confirm device in unconfigured state (reporting stopped)
+  T0804__block_reporting__s7comm:
+    title: T0804 – Block Reporting Message — S7comm CPU stop halts all process reporting
+    description: Sends S7comm CPU Stop to the PLC, halting programme execution. A stopped PLC no longer updates its output process image or responds to data read requests from WinCC or other SCADA clients. The historian receives no new data, OPC DA/UA servers report stale values, and all SCADA reporting from the PLC stops. This is the most complete form of block reporting available on S7 networks.
+    tactic: Inhibit Response Function
+    technique: T0804
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0804
+      style: setup
+      count: 1
+      interval: 0s
+      note: Establish S7comm session with the PLC
+    - type: pcap
+      proto: s7comm
+      technique: T0804
+      style: cpu_stop
+      count: 1
+      interval: 1s
+      note: 'CPU Stop: halt programme execution and freeze process image'
+    - type: pcap
+      proto: s7comm
+      technique: T0804
+      style: szl_read
+      count: 3
+      interval: 5s
+      note: Read CPU state to confirm stopped (reporting blocked)
+  T0815__denial_of_view__modbus_flood:
+    title: T0815 – Denial of View — Modbus read flood saturates slave polling
+    description: Sends high-rate Modbus FC03 read requests to saturate the slave's TCP receive buffer and processing queue. The Modbus slave processes requests serially — when overwhelmed by the attacker's reads, legitimate SCADA polling requests are delayed or dropped. The SCADA master's data request timeouts cause the HMI to display stale or communication-fault indicators for all Modbus points, denying the operator an accurate view of process state.
+    tactic: Impact
+    technique: T0815
+    steps:
+    - type: pcap
+      proto: modbus
+      technique: T0815
+      style: dos_read
+      count: 50
+      interval: 0.01s
+      note: High-rate FC03 flood saturating slave polling queue
+    - type: pcap
+      proto: modbus
+      technique: T0815
+      style: dos_read
+      count: 50
+      interval: 0.01s
+      note: Sustain to maintain stale HMI data (denial of view)
+  T0815__denial_of_view__s7comm_flood:
+    title: T0815 – Denial of View — S7comm read flood prevents SCADA polling
+    description: Sends high-rate S7comm Read All DBs requests to the PLC, consuming its communication processor capacity. S7 PLCs have a fixed communication job queue — when saturated by attacker reads, legitimate WinCC and OPC DA server polling requests are queued indefinitely. WinCC displays stale values and eventually raises communication alarms, denying operators an accurate view of the process while the PLC continues running normally.
+    tactic: Impact
+    technique: T0815
+    steps:
+    - type: pcap
+      proto: s7comm
+      technique: T0815
+      style: read_all_dbs
+      count: 50
+      interval: 0.02s
+      note: Saturate S7comm communication processor with read requests
+    - type: pcap
+      proto: s7comm
+      technique: T0815
+      style: read_all_dbs
+      count: 50
+      interval: 0.02s
+      note: Sustain to hold SCADA polling in timeout state
+  T0821__modify_tasking__bacnet:
+    title: T0821 – Modify Controller Tasking — BACnet commandable object reprogramming
+    description: Writes to BACnet programmable objects — Schedule objects (TypeID 17), Calendar objects (TypeID 6), and Trend Log objects — to modify the controller's tasking schedule. Schedule objects control when outputs are enabled and at what values. Reprogramming a Schedule object changes what the controller does and when, without uploading a new programme — the schedule IS the tasking logic for building automation controllers.
+    tactic: Execution
+    technique: T0821
+    steps:
+    - type: pcap
+      proto: bacnet
+      technique: T0821
+      style: read_property_multi
+      count: 1
+      interval: 0s
+      note: Read Schedule and Calendar objects to understand current tasking
+    - type: pcap
+      proto: bacnet
+      technique: T0821
+      style: write_property
+      count: 5
+      interval: 0.5s
+      note: Write modified Schedule object entries to change controller tasking
+    - type: pcap
+      proto: bacnet
+      technique: T0821
+      style: write_property_multi
+      count: 3
+      interval: 1s
+      note: Update multiple output assignments to activate modified tasking
+  T0821__modify_tasking__iec61850:
+    title: T0821 – Modify Controller Tasking — IEC 61850 GOOSE confRev manipulation
+    description: Injects GOOSE frames with a modified confRev (configuration revision) field and altered dataset references. IEDs that accept a new confRev update their internal dataset binding — changing which data attributes trigger their protection and control functions. This modifies the IED's logical tasking (what it monitors and acts on) without uploading a new firmware or configuration file via MMS.
+    tactic: Execution
+    technique: T0821
+    steps:
+    - type: pcap
+      proto: iec61850
+      technique: T0821
+      style: enumerate_ied
+      count: 3
+      interval: 0.3s
+      note: Enumerate IED GOOSE configuration for targeting
+    - type: pcap
+      proto: iec61850
+      technique: T0821
+      style: relay_inject
+      count: 5
+      interval: 0.5s
+      note: Inject modified confRev to alter IED dataset binding
+    - type: pcap
+      proto: iec61850
+      technique: T0821
+      style: relay_inject
+      count: 5
+      interval: 1s
+      note: Sustain injection to confirm IED accepted new tasking
+  T0821__modify_tasking__profinet:
+    title: T0821 – Modify Controller Tasking — PROFINET DCP name redirect re-tasks IO controller
+    description: Changes a PROFINET IO device's station name via DCP Set Name. The IO controller identifies IO devices by station name and maps them to specific slots in its hardware configuration. By changing an IO device's name the attacker causes the controller to lose its association with that device and re-map its I/O assignment — effectively modifying which physical I/O the controller tasks to each programme address without changing the programme code.
+    tactic: Execution
+    technique: T0821
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0821
+      style: identify
+      count: 3
+      interval: 0.3s
+      note: Identify IO devices and their current station names
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0821
+      style: set_name
+      count: 1
+      interval: 1s
+      note: Set modified station name to re-task IO controller mapping
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0821
+      style: identify
+      count: 3
+      interval: 5s
+      note: Verify IO controller has remapped tasking to new device name
+  T0832__manipulation_of_view__profinet:
+    title: T0832 – Manipulation of View — PROFINET DCP station name spoof
+    description: Changes a PROFINET IO device's station name to that of a different device in the engineering project. The IO controller, which maps station names to hardware slots, connects to the wrong device and reads its I/O data as if it were the intended device. The SCADA operator sees measurements from a different physical location than the label on their HMI indicates — a manipulation of the operator's view of the process.
+    tactic: Impact
+    technique: T0832
+    steps:
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0832
+      style: identify
+      count: 3
+      interval: 0.3s
+      note: Identify IO devices to select target for name swap
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0832
+      style: set_name
+      count: 1
+      interval: 1s
+      note: Set target device name to a different device's station name
+    - type: pcap
+      proto: profinet_dcp
+      technique: T0832
+      style: get_name
+      count: 3
+      interval: 3s
+      note: Confirm operator will see misattributed device data
 aliases:
   enip_sweep: T0840__network_enum__enip_sweep
   profinet_discover: T0840__network_enum__profinet_identify
