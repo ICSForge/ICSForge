@@ -110,7 +110,7 @@
         </div>
         <div class="field">
           <label>Destination IP</label>
-          <input id="r_dst" value="198.51.100.42">
+          <input id="r_dst" placeholder="e.g. 127.0.0.1 (receiver IP)" value="">
         </div>
         <div class="field">
           <label>Interval (seconds)</label>
@@ -166,6 +166,31 @@
       <div class="row">
         <a href="/api/report/heatmap" class="btn primary" target="_blank">⬇ Download Coverage Heatmap</a>
         <a href="/report" class="btn">Custom Report Builder →</a>
+      </div>
+    </div>
+
+    <div class="card" {% if ui_mode != 'sender' %}style="display:none"{% endif %}>
+      <h2>⚙ Allowed Networks</h2>
+      <p class="small muted" style="margin-bottom:6px">
+        <b>Private IPs are already allowed</b> — 10.x, 172.16–31.x, 192.168.x, loopback, and link-local work out of the box. You do not need to add anything for those.
+      </p>
+      <p class="small muted" style="margin-bottom:14px">
+        Some OT networks assign IP addresses from publicly-routed ranges that are only reachable inside the organisation — for example 130.75.0.0/24 or 195.10.20.0/24.
+        Because these look like internet addresses, ICSForge blocks them by default. Add those ranges here so you can send scenarios to devices on that network.
+      </p>
+      <div class="field">
+        <label>Additional allowed CIDRs <span class="muted small">(one per line, e.g. 130.75.0.0/24)</span></label>
+        <textarea id="an_cidrs" rows="4" placeholder="130.75.0.0/24&#10;195.10.20.0/24"
+          style="font-family:var(--mono);font-size:12px;resize:vertical"></textarea>
+      </div>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <button class="btn primary" onclick="saveAllowedNets()">Save</button>
+        <button class="btn" onclick="loadAllowedNets()">Reload</button>
+        <span id="an_status" class="small muted"></span>
+      </div>
+      <div id="an_env_note" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--panel2);border:1px solid var(--border)">
+        <span class="small muted">Also active via <code>ICSFORGE_ALLOWED_NETS</code> env var: </span>
+        <span id="an_env_list" class="small" style="font-family:var(--mono)"></span>
       </div>
     </div>
 
@@ -278,13 +303,18 @@
       const pcap_path = document.getElementById("r_pcap").value.trim();
       const dst_ip = document.getElementById("r_dst").value.trim();
       const interval = parseFloat(document.getElementById("r_interval").value.trim() || "0.05");
+      if (!pcap_path) { document.getElementById("r_log").value = "Error: select or enter a PCAP path first."; return; }
+      if (!dst_ip) { document.getElementById("r_log").value = "Error: Destination IP is required.\nEnter the receiver IP address in the Destination IP field above."; return; }
       document.getElementById("r_log").value = "Working...";
       const res = await fetch("/api/pcap/replay",{
         method:"POST", headers:{"Content-Type":"application/json","X-CSRF-Token":(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
         body: JSON.stringify({pcap_path, dst_ip, interval})
       });
       const data = await res.json();
-      document.getElementById("r_log").value = JSON.stringify(data, null, 2);
+      const summary = data.error
+        ? `Error: ${data.error}`
+        : `Sent: ${data.sent} packets\nL2 frames (PROFINET/GOOSE) are skipped — require raw socket interface.`;
+      document.getElementById("r_log").value = summary + "\n\n" + JSON.stringify(data, null, 2);
     }
     async function alertsIngest(){
       const path    = document.getElementById("ai_path").value.trim();
@@ -301,9 +331,56 @@
     }
     {% endif %}
 
+
+    async function loadAllowedNets(){
+      const data = await fetchJSON("/api/config/allowed_nets");
+      if(data.error){ document.getElementById("an_status").textContent = "Error: "+data.error; return; }
+      document.getElementById("an_cidrs").value = (data.allowed_nets||[]).join("\n");
+      // Show env var note if set
+      const env = data.env_nets||[];
+      const note = document.getElementById("an_env_note");
+      if(env.length){
+        note.style.display = "";
+        document.getElementById("an_env_list").textContent = env.join(", ");
+      } else {
+        note.style.display = "none";
+      }
+      document.getElementById("an_status").textContent = "";
+    }
+    async function saveAllowedNets(){
+      const raw = document.getElementById("an_cidrs").value.trim();
+      const cidrs = raw ? raw.split("\n").map(s=>s.trim()).filter(Boolean) : [];
+      const st = document.getElementById("an_status");
+      st.textContent = "Saving…";
+      const res = await fetch("/api/config/allowed_nets",{
+        method:"POST",
+        headers:{"Content-Type":"application/json",
+          "X-CSRF-Token":(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>""}).getAttribute("content")||""},
+        body:JSON.stringify({cidrs})
+      });
+      const data = await res.json();
+      if(data.error){
+        st.style.color="var(--bad)"; st.textContent = "Error: "+data.error;
+      } else {
+        st.style.color="var(--good)"; st.textContent = "✓ Saved ("+data.allowed_nets.length+" range"+(data.allowed_nets.length===1?"":"s")+")";
+        setTimeout(()=>{ st.textContent=""; st.style.color=""; },3000);
+      }
+    }
     // Init
     loadIfaces();
+    // Auto-fill replay dst from saved network config
+    (async () => {
+      try {
+        const cfg = await (window.fetchJSON || fetch)('/api/config/network');
+        const ip = cfg && cfg.receiver_ip;
+        if (ip) {
+          const el = document.getElementById('r_dst');
+          if (el && !el.value) el.value = ip;
+        }
+      } catch(_) {}
+    })();
     {% if ui_mode == 'sender' %}
+    loadAllowedNets();
     loadGenerateScenarios();
     const f=document.getElementById("g_filter"); if(f){ f.addEventListener("input", filterGenerateScenarios); }
     {% endif %}

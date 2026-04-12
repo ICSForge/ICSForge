@@ -320,6 +320,7 @@ def api_send():
             run_id=res["run_id"],
             build_pcap=also_build_pcap,
             no_marker=no_marker,
+            resolve_mac=True,   # live send: try ARP cache for realistic dst MAC
         )
 
         # Index run for SOC Mode (legacy JSONL + enterprise DB)
@@ -475,6 +476,7 @@ def api_technique_send():
             run_id=res["run_id"],
             build_pcap=also_build_pcap,
             no_marker=no_marker,
+            resolve_mac=True,   # live send: try ARP cache for realistic dst MAC
         )
 
         entry = {
@@ -640,7 +642,7 @@ def api_scenario_params():
 @bp.route("/api/pcap/upload", methods=["POST"])
 def api_pcap_upload():
     """Accept a PCAP file upload and save it to out/pcaps/uploads/."""
-    rr = str(Path(__file__).resolve().parents[2])
+    rr = _repo_root()
     upload_dir = os.path.join(rr, "out", "pcaps", "uploads")
     os.makedirs(upload_dir, exist_ok=True)
     f = request.files.get("file")

@@ -410,3 +410,42 @@ def api_config_test_webhook():
         "note": "ICSForge webhook test event",
     })
     return jsonify({"ok": ok, "webhook_url": url})
+
+
+@bp.route("/api/config/allowed_nets", methods=["GET", "POST"])
+def api_config_allowed_nets():
+    """
+    GET  → return current allowed_nets list (from config + env var).
+    POST → {cidrs: ["130.75.0.0/24", ...]} — validate and save.
+    """
+    import ipaddress as _ip
+    if request.method == "GET":
+        env_nets = os.environ.get("ICSFORGE_ALLOWED_NETS", "").strip()
+        env_list = [c.strip() for c in env_nets.split(",") if c.strip()] if env_nets else []
+        return jsonify({
+            "allowed_nets": _h._allowed_nets,       # from web config (editable)
+            "env_nets":     env_list,                # from env var (read-only display)
+        })
+    # POST — validate and save
+    data = request.get_json(force=True) or {}
+    raw = data.get("cidrs") or []
+    if not isinstance(raw, list):
+        return jsonify({"error": "cidrs must be a list of CIDR strings"}), 400
+    validated = []
+    errors = []
+    for cidr in raw:
+        cidr = str(cidr).strip()
+        if not cidr:
+            continue
+        try:
+            net = _ip.ip_network(cidr, strict=False)
+            # Warn on RFC1918 — those are always allowed and don't need to be listed
+            validated.append(str(net))
+        except ValueError:
+            errors.append(f"Invalid CIDR: {cidr!r}")
+    if errors:
+        return jsonify({"error": "; ".join(errors)}), 400
+    _h._allowed_nets = validated
+    _h._save_persisted_config()
+    return jsonify({"ok": True, "allowed_nets": validated})
+

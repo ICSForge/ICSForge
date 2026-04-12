@@ -1,4 +1,4 @@
-# ICSForge v0.4 — Full-Stack Demo
+# ICSForge — Full-Stack Demo
 # Usage: docker compose up
 # Sender UI:   http://localhost:8080
 # Receiver UI: http://localhost:9090

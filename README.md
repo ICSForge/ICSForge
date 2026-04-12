@@ -3,26 +3,26 @@
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.59.4-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
+[![Version](https://img.shields.io/badge/version-0.60.0-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
-ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP)** which are aligned with **67 of 83 unique techniques in MITRE ATT&CK for ICS v18 (80.7% coverage)** — without exploiting real systems or causing unsafe process impact — to help asset owners and defenders assess the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identify hidden gaps.
+ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP)** which are aligned with **68 of 83 unique techniques in MITRE ATT&CK for ICS v18 (82% coverage)** — without exploiting real systems or causing unsafe process impact — to help asset owners and defenders assess the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identify hidden gaps.
 
 ICSForge is developed with a **safe-by-design** approach, operating within a **Sender-Receiver architecture** and interacting only with the designated sender and receiver, without touching other OT devices.
 
 > Most ICS security tools promise coverage - ICSForge lets you **prove it**.
 ---
 
-## Key Numbers (v0.59.4)
+## Key Numbers (v0.60)
 
 | Metric | Value |
 |---|---|
 | **Protocols** | 10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP) |
 | **Runnable Scenarios** | 536 standalone + 11 named attack chains = 547 total |
-| **ATT&CK for ICS Techniques Implemented** | 67 unique technique IDs in scenario steps |
+| **ATT&CK for ICS Techniques Implemented** | 68 unique technique IDs in scenario steps |
 | **ATT&CK for ICS Matrix** | 83 unique technique IDs (94 total entries — 11 appear under multiple tactics) |
-| **ATT&CK for ICS Matrix Coverage** | 80.7% (67 out of 83 technique) — 35 of 67 techniques at 10/10 protocols |
+| **ATT&CK for ICS Matrix Coverage** | 82% (68 out of 83 technique) — 35 of 68 techniques at 10/10 protocols |
 | **Detection Rules** | Auto-generated Suricata + Sigma rules per scenario |
 
 ---
@@ -144,24 +144,24 @@ icsforge send --name T0855__unauth_command__modbus \
 ---
 ## Protocol Coverage
 
-| Protocol | Port | Styles | Techniques (of 67) |
+| Protocol | Port | Styles | Techniques (of 68) |
 |---|---|---|---|
-| OPC UA | TCP/4840 | 30 | 58/67 |
-| DNP3 | TCP/20000 | 22 | 57/67 |
-| S7comm (Siemens) | TCP/102 | 36 | 56/67 |
-| EtherNet/IP (Allen-Bradley) | TCP/44818 | 23 | 55/67 |
-| Modbus/TCP | TCP/502 | 29 | 54/67 |
-| BACnet/IP | UDP/47808 | 16 | 54/67 |
-| MQTT | TCP/1883 | 16 | 52/67 |
-| IEC-104 | TCP/2404 | 24 | 51/67 |
-| PROFINET DCP | L2/EtherType 0x8892 | 8 | 44/67 |
-| IEC 61850 GOOSE | L2/EtherType 0x88B8 | 5 | 42/67 |
+| OPC UA | TCP/4840 | 30 | 59/68 |
+| DNP3 | TCP/20000 | 22 | 57/68 |
+| S7comm (Siemens) | TCP/102 | 36 | 56/68 |
+| EtherNet/IP (Allen-Bradley) | TCP/44818 | 24 | 55/68 |
+| Modbus/TCP | TCP/502 | 29 | 54/68 |
+| BACnet/IP | UDP/47808 | 16 | 54/68 |
+| MQTT | TCP/1883 | 17 | 52/68 |
+| IEC-104 | TCP/2404 | 20 | 51/68 |
+| PROFINET DCP | L2/EtherType 0x8892 | 8 | 44/68 |
+| IEC 61850 GOOSE | L2/EtherType 0x88B8 | 5 | 42/68 |
 
 **IEC 61850 GOOSE** and **PROFINET DCP** are Layer 2 protocols — they require a raw socket interface (`--l2-iface eth0`) for live sends. PCAP and offline generation work without a network interface.
 
 ### Techniques at Full Coverage (10/10 protocols)
 
-T0802, T0803, T0804, T0811, T0813, T0814, T0815, T0819, T0821, T0826, T0827, T0828, T0829, T0830, T0831, T0832, T0840, T0846, T0848, T0855, T0856, T0858, T0859, T0861, T0866, T0868, T0869, T0877, T0881, T0882, T0885, T0886, T0888, T0889, T0891 — **35 techniques** fully covered across all 10 protocols.
+T0800, T0801, T0802, T0803, T0804, T0806, T0811, T0813, T0814, T0815, T0819, T0821, T0822, T0826, T0827, T0828, T0829, T0830, T0831, T0832, T0835, T0836, T0840, T0843, T0846, T0848, T0855, T0856, T0858, T0859, T0861, T0866, T0868, T0869, T0877, T0881, T0882, T0885, T0886, T0888, T0889, T0891 — **35 techniques** fully covered across all 10 protocols.
 
 ---
 
@@ -195,7 +195,7 @@ Scenarios are defined in `icsforge/scenarios/scenarios.yml`.
 
 ## What Techniques Are Covered
 
-ICSForge implements 67 of 83 ATT&CK for ICS techniques at the network-observable level. The remaining 16 are correctly classified as host-only, require physical access, or generate no network-observable packets — they are documented in `icsforge/data/technique_support.json` with explicit rationale per technique, and also exposed via `/api/technique_support`.
+ICSForge implements 68 of 83 ATT&CK for ICS techniques at the network-observable level. The remaining 15 are correctly classified as host-only, require physical access, or generate no network-observable packets — they are documented in `icsforge/data/technique_support.json` with explicit rationale per technique, and also exposed via `/api/technique_support`.
 
 **ATT&CK matrix counts explained:**
 - 83 unique technique IDs in the matrix
@@ -366,6 +366,10 @@ Offline PCAP generation (`icsforge generate`) works without an interface.
 **MQTT** generates all packet types including CONNECT (with credentials and Will message), PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, and DISCONNECT. All 17 styles produce spec-valid frames with correct `remaining_length` encoding. Requires a broker at the destination IP (default port 1883).
 
 **DNP3** implements correct per-block CRC per IEEE 1815-2012 §8.2 — the transport layer payload is split into 16-byte blocks, each followed by its own 2-byte CRC, matching what real DNP3 outstations expect at the link layer.
+
+**Source MAC addresses** use registered OT vendor OUIs per protocol (Siemens for S7comm, Rockwell for EtherNet/IP, Schneider for Modbus, GE/SEL for DNP3, ABB for IEC-104, etc.) — no locally-administered bit, passes OT NSM vendor lookups cleanly.
+
+**TCP source port** is stable within a scenario run — derived deterministically from `md5(src_ip + dst_ip + run_id)` in the ephemeral range 49152–65534. All frames in a run share one source port, matching real ICS master-RTU persistent connections.
 
 **OPC UA** sessions are coherent within a scenario run — all MSG frames share the same `sc_id` and `security_token`, with monotonically incrementing `sequence_number` and `request_id` per packet.
 

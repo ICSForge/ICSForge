@@ -159,7 +159,7 @@ async function loadHexDump(name, stepIdx){
   $("hex_meta").innerHTML = "";
   $("hex_nav").style.display = "none";
   const stealth = !!(document.getElementById("stealth_mode") && document.getElementById("stealth_mode").checked);
-  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}${stealth?"&no_marker=1":""}`);
+  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}${stealth?"&no_marker=1":""}&_=${Date.now()}`);
   if(data.error){$("hex_dump").innerHTML=`<span style="color:var(--bad)">${escHtml(data.error)}</span>`;return;}
   const lines = (data.hexdump||"").split("\n").map(line=>{
     const m = line.match(/^([0-9a-f]{4})  ([ 0-9a-f]{47})  (.+)$/);
@@ -491,8 +491,8 @@ async function pollFeed(){
     const pkts = data.total ?? 0;
     $("fk_pkts").textContent  = pkts;
     $("fk_runs").textContent  = data.top_protocols ? data.top_protocols.length : "—";
-    $("fk_tech").textContent  = data.top_techniques ? data.top_techniques.length : "—";
-    $("fk_proto").textContent = data.top_protocols ? data.top_protocols.length : "—";
+    $("fk_tech").textContent  = data.unique_techniques ?? (data.top_techniques ? data.top_techniques.length : "—");
+    $("fk_proto").textContent = data.unique_protocols  ?? (data.top_protocols  ? data.top_protocols.length  : "—");
     // Techniques pill row
     const techs = (data.top_techniques||[]).slice(0,8);
     $("feed_techs").innerHTML = techs.map(([t,n])=>`<span class="badge brand">${t} <span style="color:var(--muted)">${n}</span></span>`).join("");
@@ -760,6 +760,36 @@ async function saveNetworkConfig(){
   }
 }
 window.saveNetworkConfig = saveNetworkConfig;
+
+// Export IIFE-private names needed by post-IIFE EVE tap and webhook code
+window._senderAPI = API;
+window._senderLog = logln;
+window._senderTlConfirm = tlConfirmStep;
+window._senderGetTlRunId = () => tlRunId;
+window._sender$ = $;
+
+// ── Stealth toggle — INSIDE IIFE so selectedName/loadHexDump are in scope ──
+window.toggleStealth = function() {
+  const cb  = document.getElementById("stealth_mode");
+  const btn = document.getElementById("btn_stealth");
+  const ico = document.getElementById("stealth_icon");
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  if (cb.checked) {
+    btn.style.borderColor = "var(--bad)";
+    btn.style.background  = "rgba(255,59,92,.08)";
+    btn.style.color       = "var(--bad)";
+    ico.textContent = "●";
+  } else {
+    btn.style.borderColor = "var(--border)";
+    btn.style.background  = "var(--panel2)";
+    btn.style.color       = "var(--muted)";
+    ico.textContent = "○";
+  }
+  // selectedName and loadHexDump are in scope because this is inside the IIFE
+  if (selectedName) loadHexDump(selectedName, hexStepIdx || 0);
+};
+
 })();
 
 /* ── EVE tap live poll (v0.49) ──────────────────────────────── */
@@ -772,14 +802,13 @@ function startEveTapPoll(run_id){
   if(_evePollTimer) clearInterval(_evePollTimer);
   _evePollTimer = setInterval(async ()=>{
     try {
-      const d = await API("/api/eve/matches");
+      const d = await window._senderAPI("/api/eve/matches");
       if(!d.active){ clearInterval(_evePollTimer); _evePollTimer = null; return; }
       for(const m of (d.matches||[])){
         if(m.technique && !_eveConfirmedTechs.has(m.technique)){
           _eveConfirmedTechs.add(m.technique);
-          // Confirm the timeline step
-          tlConfirmStep(m.technique, _eveRunId);
-          logln(`[EVE] ${m.technique} — ${(m.signature||"").slice(0,60)}`, "log-ok");
+          window._senderTlConfirm(m.technique, _eveRunId);
+          window._senderLog(`[EVE] ${m.technique} — ${(m.signature||"").slice(0,60)}`, "log-ok");
         }
       }
     } catch(e){}
@@ -789,22 +818,22 @@ function startEveTapPoll(run_id){
 /* ── Webhook config panel (v0.49) ───────────────────────────── */
 async function loadWebhookConfig(){
   try {
-    const d = await API("/api/config/webhook");
-    const el = $("cfg_webhook_url");
+    const d = await window._senderAPI("/api/config/webhook");
+    const el = window._sender$("cfg_webhook_url");
     if(el && d.webhook_url) el.value = d.webhook_url;
   } catch(e){}
 }
 
 window.saveWebhookConfig = async function(){
-  const url = ($("cfg_webhook_url")||{}).value?.trim()||"";
-  const r = await API("/api/config/webhook", {method:"POST",
+  const url = (window._sender$("cfg_webhook_url")||{}).value?.trim()||"";
+  const r = await window._senderAPI("/api/config/webhook", {method:"POST",
     headers:{"Content-Type":"application/json"}, body:JSON.stringify({webhook_url:url})});
   if(r.ok) window.toast("Webhook saved", url || "Webhook disabled", "ok");
   else window.toast("Error", r.error||"save failed", "err");
 };
 
 window.testWebhook = async function(){
-  const r = await API("/api/config/test_webhook", {method:"POST",
+  const r = await window._senderAPI("/api/config/test_webhook", {method:"POST",
     headers:{"Content-Type":"application/json"}, body:JSON.stringify({})});
   if(r.ok) window.toast("Webhook OK", "Test event delivered", "ok");
   else window.toast("Webhook failed", r.error||"unreachable", "err");
@@ -812,10 +841,10 @@ window.testWebhook = async function(){
 
 /* ── EVE tap arm/disarm (v0.49) ─────────────────────────────── */
 window.armEveTap = async function(){
-  const path = ($("cfg_eve_path")||{}).value?.trim()||"";
+  const path = (window._sender$("cfg_eve_path")||{}).value?.trim()||"";
   if(!path){ window.toast("EVE path required","Enter path to eve.json","err"); return; }
-  const run_id = tlRunId||null;
-  const r = await API("/api/eve/start", {method:"POST",
+  const run_id = (window._senderGetTlRunId && window._senderGetTlRunId())||null;
+  const r = await window._senderAPI("/api/eve/start", {method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({eve_path:path, run_id})});
   if(r.ok) window.toast("EVE tap armed", `Watching ${path}`, "ok");
@@ -823,7 +852,7 @@ window.armEveTap = async function(){
 };
 
 window.disarmEveTap = async function(){
-  const r = await API("/api/eve/stop", {method:"POST",
+  const r = await window._senderAPI("/api/eve/stop", {method:"POST",
     headers:{"Content-Type":"application/json"}, body:JSON.stringify({})});
   const count = r.matches?.length||0;
   window.toast("EVE tap stopped", `${count} detection${count===1?"":"s"} matched`, "ok");

@@ -229,7 +229,7 @@ PCAP: <span class='mono'>{next((a.get('path') for a in idx.get('artifacts',[]) i
 <div class='card'><h2>Validation</h2>
 <pre class='mono'>{json.dumps(validation, indent=2) if validation else 'Run validation from SOC Mode to populate this section.'}</pre>
 </div>
-<div class='muted' style='margin:20px 0'>ICSForge &bull; GPLv3 &bull; OT/ICS security coverage validation platform</div>
+<div class='muted' style='margin:20px 0'>ICSForge &bull; GPLv3 &bull; OT/ICS Cybersecurity Coverage Validation Platform</div>
 </div></body></html>"""
 
     out_path = _export_path(run_id)
@@ -251,13 +251,17 @@ def api_pcap_replay():
     if not dst_ip:
         return jsonify({"error": "dst_ip required"}), 400
     rr = _repo_root()
+    # Resolve relative paths against repo root, not CWD
+    if not os.path.isabs(pcap_path):
+        pcap_path = os.path.join(rr, pcap_path)
     real = os.path.realpath(pcap_path)
-    if not real.startswith(os.path.realpath(os.path.join(rr, "out"))):
+    allowed_out = os.path.realpath(os.path.join(rr, "out"))
+    if not real.startswith(allowed_out):
         return jsonify({"error": "pcap_path must be inside out/"}), 400
     if not os.path.exists(real):
         return jsonify({"error": "pcap not found"}), 404
-    if not _is_safe_private_ip(dst_ip):
-        return jsonify({"error": "dst_ip blocked: must be private/test/link-local/loopback"}), 400
+    # PCAP replay allows any dst_ip — the user explicitly controls where captured
+    # frames are replayed. This is intentional: replay may target real devices.
     if allowlist and dst_ip not in allowlist:
         return jsonify({"error": "dst_ip not in allowlist"}), 400
     try:

@@ -98,15 +98,34 @@ def _artifact_rel(repo_root: str, path: str) -> str:
 
 
 def _is_safe_private_ip(ip: str) -> bool:
-    """Allow RFC1918, loopback, link-local, and TEST-NET ranges. Block public/global."""
+    """
+    Allow RFC1918, loopback, link-local, RFC 5737 test nets, and any ranges
+    in ICSFORGE_ALLOWED_NETS (comma-separated CIDRs for non-standard internal ranges).
+    Block public/global IPs not in any of the above.
+    """
     try:
-        import ipaddress
+        import ipaddress, os
         a = ipaddress.ip_address(ip)
         if a.is_loopback or a.is_private or a.is_link_local:
             return True
-        return any(a in ipaddress.ip_network(net) for net in [
+        # RFC 5737 test nets
+        if any(a in ipaddress.ip_network(net) for net in [
             "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"
-        ])
+        ]):
+            return True
+        # User-defined additional networks: env var + persisted web config
+        extra_cidrs = []
+        env_nets = os.environ.get("ICSFORGE_ALLOWED_NETS", "").strip()
+        if env_nets:
+            extra_cidrs.extend(c.strip() for c in env_nets.split(",") if c.strip())
+        extra_cidrs.extend(_allowed_nets)  # from web UI / persisted config
+        for cidr in extra_cidrs:
+            try:
+                if a in ipaddress.ip_network(cidr, strict=False):
+                    return True
+            except ValueError:
+                pass
+        return False
     except ValueError:
         return False
 
@@ -196,12 +215,13 @@ _receiver_port: int = 9090
 _sender_callback_url: str | None = None
 _callback_token: str | None = None
 _pull_enabled: bool = False
+_allowed_nets: list[str] = []  # extra CIDRs for non-RFC1918 internal ranges
 
 _CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".icsforge", "web_config.json")
 
 
 def _load_persisted_config() -> None:
-    global _receiver_ip, _sender_ip, _receiver_port, _sender_callback_url, _callback_token, _pull_enabled
+    global _receiver_ip, _sender_ip, _receiver_port, _sender_callback_url, _callback_token, _pull_enabled, _allowed_nets
     if not os.path.exists(_CONFIG_PATH):
         return
     try:
@@ -213,6 +233,7 @@ def _load_persisted_config() -> None:
         _sender_callback_url = cfg.get("sender_callback_url") or None
         _callback_token = cfg.get("callback_token") or None
         _pull_enabled = bool(cfg.get("pull_enabled", False))
+        _allowed_nets = [c.strip() for c in cfg.get("allowed_nets", []) if isinstance(c, str) and c.strip()]
     except (OSError, json.JSONDecodeError, ValueError):
         pass
 
@@ -227,6 +248,7 @@ def _save_persisted_config() -> None:
             "sender_callback_url": _sender_callback_url or "",
             "callback_token": _callback_token or "",
             "pull_enabled": _pull_enabled,
+            "allowed_nets": _allowed_nets,
         }, f, indent=2)
 
 

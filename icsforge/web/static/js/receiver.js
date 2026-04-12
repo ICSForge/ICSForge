@@ -138,8 +138,7 @@ async function resetReceipts(){
   const btn = $("reset_btn");
   btn.disabled = true; btn.textContent = "Resetting…";
   try {
-    const res = await fetch("/api/receiver/reset", {method:"POST"});
-    const d   = await res.json();
+    const d = await window.fetchJSON("/api/receiver/reset", {method:"POST"});
     if(d.error){ alert("Reset failed: "+d.error); return; }
     const msg = d.archived
       ? `Archived ${d.lines} packets → ${d.archived}`
@@ -157,8 +156,8 @@ async function reloadOverview(){
   if(!data) return;
   $("k_total").textContent = data.total ?? 0;
   $("k_runs").textContent  = data.runs  ?? 0;
-  $("k_tech").textContent  = (data.top_techniques||[]).length;
-  $("k_proto").textContent = (data.top_protocols||[]).length;
+  $("k_tech").textContent  = data.unique_techniques ?? (data.top_techniques||[]).length;
+  $("k_proto").textContent = data.unique_protocols  ?? (data.top_protocols||[]).length;
   // L2 listener status banner
   const banner = $("l2_banner");
   if(banner){
@@ -167,7 +166,7 @@ async function reloadOverview(){
       banner.style.background = "rgba(16,185,129,.1)";
       banner.style.border = "1px solid rgba(16,185,129,.3)";
       banner.style.color = "#10b981";
-      banner.textContent = "⬡ PROFINET L2 listener active on interface: " + data.l2_iface;
+      banner.textContent = "⬡ L2 listeners active (PROFINET DCP + GOOSE) on interface: " + data.l2_iface;
     } else {
       banner.style.display = "";
       banner.style.background = "rgba(239,68,68,.08)";

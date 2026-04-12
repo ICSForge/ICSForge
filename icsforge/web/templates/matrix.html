@@ -32,6 +32,7 @@
     <span class="small">Overlay:</span>
     <select id="run_sel" style="font-size:11px;padding:5px 8px;min-width:240px;max-width:360px">
       <option value="">(no overlay — select a run)</option>
+      <option value="__all__">★ All runs (aggregate)</option>
     </select>
     <button class="btn" onclick="loadRuns()" style="font-size:10px;padding:5px 9px">Load Runs</button>
     <button class="btn primary" onclick="applyOverlay()" style="font-size:10px;padding:5px 9px">Apply</button>
@@ -370,7 +371,8 @@ async function sendTech(){
 async function loadRuns(){
   const data = await window.fetchJSON("/api/runs");
   const sel = document.getElementById("run_sel");
-  sel.innerHTML = '<option value="">(no overlay)</option>';
+  sel.innerHTML = '<option value="">(no overlay)</option>\n'
+                + '<option value="__all__">★ All runs (aggregate)</option>';
   for(const r of (data.runs||[])){
     const o = document.createElement("option");
     o.value = r.run_id;
@@ -394,7 +396,8 @@ async function applyOverlay(){
     if(s.detected) el.classList.add("detected");
     if(s.gap)      el.classList.add("gap");
   }
-  window.toast("Overlay applied", `run_id: ${run_id.slice(0,12)}`, "ok");
+  const label = run_id === "__all__" ? "all runs" : run_id.slice(0,12);
+  window.toast("Overlay applied", `${label}`, "ok");
 }
 
 function clearOverlay(){

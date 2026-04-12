@@ -10,7 +10,7 @@ from .common import ether_frame
 # DCP Service IDs
 # DCP Service IDs per PROFINET spec IEC 61158-6-10
 # Note: Hello and Set both use ServiceID=0x04 — they are distinguished
-# by FrameID (0xFEFD=Hello, 0xFEFE=Set/Get request) and ServiceType.
+# by FrameID (0xFEFC=Hello, 0xFEFD=Get/Set request, 0xFEFE=Identify-Req, 0xFEFF=Identify-Resp).
 SVC_ID_IDENTIFY = 0x05  # Identify: broadcast device discovery
 SVC_ID_GET      = 0x03  # Get: read a parameter block
 SVC_ID_SET      = 0x04  # Set: write a parameter block
@@ -44,9 +44,10 @@ OPTION = {
 
 # PROFINET frame IDs
 FRAME_ID = {
-    "dcp_identify_multicast": 0xFEFE,  # DCP identify request (multicast)
-    "dcp_identify_unicast":   0xFEFF,  # DCP identify response
-    "dcp_hello":              0xFEFD,  # DCP Hello
+    "dcp_identify_multicast": 0xFEFE,  # DCP Identify Request (multicast) — IEC 61158-6-10
+    "dcp_identify_unicast":   0xFEFF,  # DCP Identify Response (unicast)
+    "dcp_get_set":            0xFEFD,  # DCP Get/Set Request
+    "dcp_hello":              0xFEFC,  # DCP Hello Request (boot announcement)
     "ptcp_sync":              0xFF00,  # PTCP time sync (precision)
 }
 
@@ -71,7 +72,10 @@ def _dcp_block(option: int, suboption: int, data: bytes) -> bytes:
 
 def build(src_mac: str | None = None, dst_mac: str | None = None):
     """Legacy interface: build basic DCP identify request."""
-    src_mac = src_mac or f"02:00:00:{random.randint(0, 255):02x}:{random.randint(0, 255):02x}:{random.randint(0, 255):02x}"
+    # Use Siemens/Phoenix Contact OUI — no locally-administered bit
+    if src_mac is None:
+        _smac_bytes = _src_mac_from_ip("10.0.0.1", proto="profinet_dcp")
+        src_mac = ":".join(f"{b:02x}" for b in _smac_bytes)
     dst_mac = dst_mac or "01:0e:cf:00:00:00"
     xid     = random.randint(0, 0xFFFFFFFF)
     dcp     = _dcp_pdu(FRAME_ID["dcp_identify_multicast"], SVC_ID["identify"],
@@ -97,7 +101,7 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
     xid = random.randint(0, 0xFFFFFFFF)
     # Accept both bytes (from build_marker) and str (from marker_bytes/tests)
     if isinstance(run_marker, str):
-        from .common import marker_bytes
+        from .common import marker_bytes, _src_mac_from_ip
         mb = marker_bytes(run_marker)
     else:
         mb = run_marker
@@ -117,13 +121,13 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
     elif style == "get_name":
         # DCP Get NameOfStation — T0882 Theft of Operational Info
         block   = _dcp_block(OPTION["name"][0], OPTION["name"][1], b"")
-        payload = _dcp_pdu(FRAME_ID["dcp_identify_unicast"],
+        payload = _dcp_pdu(FRAME_ID["dcp_get_set"],
                            SVC_ID["get"], SVC_TYPE["request"], xid, block)
 
     elif style == "get_ip":
         # DCP Get IP address — T0882
         block   = _dcp_block(OPTION["ip"][0], OPTION["ip"][1], b"")
-        payload = _dcp_pdu(FRAME_ID["dcp_identify_unicast"],
+        payload = _dcp_pdu(FRAME_ID["dcp_get_set"],
                            SVC_ID["get"], SVC_TYPE["request"], xid, block)
 
     elif style == "set_name":
@@ -133,7 +137,7 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
             name = name.encode()
         block_data = bytes([0x00, 0x01]) + name  # BlockQualifier(2) + name
         block   = _dcp_block(OPTION["name"][0], OPTION["name"][1], block_data)
-        payload = _dcp_pdu(FRAME_ID["dcp_identify_unicast"],
+        payload = _dcp_pdu(FRAME_ID["dcp_get_set"],
                            SVC_ID["set"], SVC_TYPE["request"], xid, block)
 
     elif style == "set_ip":
@@ -143,7 +147,7 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
         gw      = kwargs.get("gw",   b"\x0a\x00\x00\x01")
         block_data = bytes([0x00, 0x01]) + ip + mask + gw  # qualifier + IP + Mask + GW
         block   = _dcp_block(OPTION["ip"][0], OPTION["ip"][1], block_data)
-        payload = _dcp_pdu(FRAME_ID["dcp_identify_unicast"],
+        payload = _dcp_pdu(FRAME_ID["dcp_get_set"],
                            SVC_ID["set"], SVC_TYPE["request"], xid, block)
 
     elif style == "hello":
@@ -153,14 +157,14 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
             name = name.encode()
         block_data = bytes([0x00, 0x01]) + name
         block   = _dcp_block(OPTION["name"][0], OPTION["name"][1], block_data)
-        payload = _dcp_pdu(FRAME_ID["dcp_hello"],
+        payload = _dcp_pdu(FRAME_ID["dcp_hello"],  # 0xFEFC boot announcement
                            SVC_ID["hello"], SVC_TYPE["request"], xid, block)
 
     elif style == "factory_reset":
         # DCP Set Control = Factory Reset — T0816 Device Restart
         block_data = bytes([0x00, 0x02, 0x00, 0x04])  # BlockQualifier: Remanent=Yes, Action=4 (FactoryReset)
         block   = _dcp_block(OPTION["ctrl"][0], OPTION["ctrl"][1], block_data)
-        payload = _dcp_pdu(FRAME_ID["dcp_identify_unicast"],
+        payload = _dcp_pdu(FRAME_ID["dcp_get_set"],
                            SVC_ID["set"], SVC_TYPE["request"], xid, block)
 
     else:

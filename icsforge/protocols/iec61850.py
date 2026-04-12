@@ -35,7 +35,7 @@ import random
 import struct
 import time
 
-from .common import marker_bytes
+from .common import marker_bytes, _src_mac_from_ip
 
 # ── GOOSE multicast MACs (IEC 61850-8-1 Annex C) ─────────────────────────────
 _GOOSE_DST_PROTECTION = bytes([0x01, 0x0C, 0xCD, 0x01, 0x00, 0x01])  # class 1/2
@@ -148,7 +148,8 @@ def _goose_frame(
     dst_mac: bytes = _GOOSE_DST_PROTECTION,
 ) -> bytes:
     """Wrap GOOSE PDU in a complete Ethernet II frame."""
-    src_mac = bytes([0x02] + [rnd.randint(0, 0xFF) for _ in range(5)])
+    # Use registered IEC 61850 vendor OUI (GE/ABB) — no locally-administered bit
+    src_mac = _src_mac_from_ip("10.0.0.1", proto="iec61850")  # relay-style MAC
     l2_hdr = struct.pack(">HH", appid, 8 + len(goose_pdu)) + b"\x00\x00\x00\x00"
     frame = dst_mac + src_mac + _GOOSE_ETHERTYPE + l2_hdr + goose_pdu
     if len(frame) < 60:

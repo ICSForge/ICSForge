@@ -200,8 +200,9 @@ def _udp_server(bind_ip, port, proto, receipts_path, max_payload):
 
 # ── L2 PROFINET DCP listener ──────────────────────────────────────────
 
-_ETH_P_PN_DCP = 0x8892
-_ETH_P_ALL = 0x0003
+_ETH_P_PN_DCP  = 0x8892
+_ETH_P_GOOSE   = 0x88B8
+_ETH_P_ALL     = 0x0003
 _SOL_PACKET = 263
 _PACKET_ADD_MEMBERSHIP = 1
 _PACKET_DROP_MEMBERSHIP = 2
@@ -292,6 +293,72 @@ def _l2_profinet_listener(iface, receipts_path, max_payload):
 # ── Entry point ───────────────────────────────────────────────────────
 
 
+def _parse_goose_frame(raw):
+    """Parse an IEC 61850 GOOSE frame and extract correlation metadata."""
+    if len(raw) < 14:
+        return None
+    ethertype = struct.unpack(">H", raw[12:14])[0]
+    if ethertype != _ETH_P_GOOSE:
+        return None
+    src_mac = ":".join(f"{b:02x}" for b in raw[6:12])
+    dst_mac = ":".join(f"{b:02x}" for b in raw[0:6])
+    payload = raw[14:]
+    meta = _parse_marker(payload)
+    return {
+        "@timestamp": _now(),
+        "receiver.proto": "iec61850",
+        "receiver.port": 0,
+        "receiver.l2": True,
+        "src_mac": src_mac,
+        "dst_mac": dst_mac,
+        "bytes": len(raw),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        **meta,
+    }
+
+
+def _l2_goose_listener(iface, receipts_path, max_payload):
+    """
+    Listen for IEC 61850 GOOSE frames (EtherType 0x88B8) via AF_PACKET raw socket.
+
+    GOOSE is a Layer-2 multicast protocol. The socket runs in promiscuous mode
+    to capture both unicast and multicast GOOSE frames regardless of destination MAC.
+    Requires Linux + root/CAP_NET_RAW.
+    """
+    if not hasattr(socket, "AF_PACKET"):
+        log.warning("GOOSE L2 skipped: AF_PACKET not available (Linux only)")
+        return
+    try:
+        sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(_ETH_P_ALL))
+    except PermissionError:
+        log.error("GOOSE L2 on '%s': permission denied — run as root or grant CAP_NET_RAW", iface)
+        return
+    except OSError as e:
+        log.error("GOOSE L2 on '%s': %s", iface, e)
+        return
+    try:
+        sock.bind((iface, socket.htons(_ETH_P_ALL)))
+    except OSError as e:
+        log.error("GOOSE L2 bind to '%s': %s", iface, e)
+        sock.close()
+        return
+
+    _set_promisc(sock, iface, enable=True)
+    log.info("iec61850 GOOSE L2 listening on '%s' (ethertype 0x%04x, promiscuous ON)", iface, _ETH_P_GOOSE)
+
+    while True:
+        try:
+            raw, _ = sock.recvfrom(max_payload)
+        except Exception:
+            continue
+        ev = _parse_goose_frame(raw)
+        if ev is not None:
+            try:
+                _write_receipt(receipts_path, ev)
+            except Exception as e:
+                log.error("Failed to write GOOSE receipt: %s", e)
+
+
 def main():
 
 
@@ -343,11 +410,16 @@ def main():
         threading.Thread(target=_udp_server, args=(args.bind, int(port), proto, receipts_path, max_payload), daemon=True).start()
 
     pn_iface = (args.l2_iface or "").strip() or (l2_listen.get("profinet_dcp") or "").strip()
+    goose_iface = (args.l2_iface or "").strip() or (l2_listen.get("iec61850") or "").strip()
     if pn_iface:
         os.environ["ICSFORGE_L2_IFACE"] = pn_iface
         threading.Thread(target=_l2_profinet_listener, args=(pn_iface, receipts_path, max(max_payload, 1518)), daemon=True).start()
+        threading.Thread(target=_l2_goose_listener,    args=(pn_iface, receipts_path, max(max_payload, 1518)), daemon=True).start()
+    elif goose_iface:
+        os.environ["ICSFORGE_L2_IFACE"] = goose_iface
+        threading.Thread(target=_l2_goose_listener, args=(goose_iface, receipts_path, max(max_payload, 1518)), daemon=True).start()
     else:
-        log.info("PROFINET L2 listener disabled (set l2_listen.profinet_dcp or --l2-iface)")
+        log.info("L2 listeners disabled (set l2_listen.profinet_dcp/iec61850 or --l2-iface)")
 
     log.info("Receipts: %s", receipts_path)
 

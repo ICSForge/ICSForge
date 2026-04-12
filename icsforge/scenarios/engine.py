@@ -11,7 +11,7 @@ from icsforge.log import get_logger
 from icsforge.protocols import TCP_PROTOS as PROTO_PAYLOADS
 from icsforge.protocols import UDP_PROTOS as UDP_PAYLOADS
 from icsforge.protocols import iec61850, profinet_dcp
-from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet, _src_mac_from_ip
+from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet, _src_mac_from_ip, _resolve_dst_mac
 
 
 def load_scenarios(scenario_path: str) -> dict[str, Any]:
@@ -31,6 +31,7 @@ def run_scenario(
     build_pcap: bool = True,
     skip_intervals: bool = False,
     no_marker: bool = False,
+    resolve_mac: bool = False,
 ) -> dict[str, Any]:
     """Offline scenario runner.
 
@@ -52,6 +53,19 @@ def run_scenario(
 
     os.makedirs(outdir, exist_ok=True)
     run_id = run_id or os.environ.get("ICSFORGE_RUN_ID")  # optional, can be None
+
+    # Resolve dst MAC once per scenario run.
+    # resolve_mac=True (live context): ARP cache lookup → deterministic unicast fallback.
+    # resolve_mac=False (offline PCAP builder): ff:ff:ff:ff:ff:ff kept for clarity.
+    _dst_mac_bytes: bytes | None = _resolve_dst_mac(dst_ip) if resolve_mac else None
+
+    # Stable TCP source port per scenario run — mimics a persistent client connection.
+    # Real ICS clients open one TCP session per master-RTU pair; all frames share the
+    # same 4-tuple (src_ip, src_port, dst_ip, dst_port). Random-per-frame src ports
+    # make NSMs model each frame as a separate session, which is unrealistic.
+    import hashlib as _hl
+    _sport_seed = int(_hl.md5(f'{src_ip}{dst_ip}{run_id or name}'.encode()).hexdigest()[:4], 16)
+    _tcp_sport: int = 49152 + (_sport_seed % 16383)  # ephemeral range 49152-65534
 
     events_dir = os.path.join(outdir, "events")
     pcaps_dir = os.path.join(outdir, "pcaps")
@@ -123,7 +137,7 @@ def run_scenario(
                         payload = profinet_dcp.build_payload(marker, style=style)
                         # Default multicast dst for DCP Identify
                         pkt = ether_frame(
-                            src_mac=_src_mac_from_ip(src_ip).hex(":"),
+                            src_mac=_src_mac_from_ip(src_ip, proto="profinet_dcp").hex(":"),
                             dst_mac="01:0e:cf:00:00:00",
                             ethertype=0x8892,
                             payload=payload,
@@ -169,7 +183,9 @@ def run_scenario(
                                 _modbus_tid = (_modbus_tid + 1) & 0xFFFF
                             _payload = payload_builder(marker, style=style, **_pkt_opts)
                             packets.append(tcp_packet(src_ip, dst_ip, dport,
-                                _payload, tcp_seq=_tcp_seq))
+                                _payload, tcp_seq=_tcp_seq,
+                                dst_mac=_dst_mac_bytes, proto=proto,
+                                sport=_tcp_sport))
                             _tcp_seq = (_tcp_seq + max(len(_payload), 1)) & 0xFFFF_FFFF
                             if interval and not skip_intervals:
                                 time.sleep(interval)
@@ -181,7 +197,9 @@ def run_scenario(
                             if proto == "bacnet":
                                 _udp_opts["bacnet_invoke_id"] = _bacnet_inv
                                 _bacnet_inv = (_bacnet_inv + 1) & 0xFF
-                            packets.append(udp_packet(src_ip, dst_ip, dport, payload_builder(marker, style=style, **_udp_opts)))
+                            packets.append(udp_packet(src_ip, dst_ip, dport,
+                                payload_builder(marker, style=style, **_udp_opts),
+                                dst_mac=_dst_mac_bytes, proto=proto))
                             if interval and not skip_intervals:
                                 time.sleep(interval)
 

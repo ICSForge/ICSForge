@@ -60,14 +60,16 @@ def api_receiver_overview():
     top_proto = sorted(protos.items(),     key=lambda x: x[1], reverse=True)[:8]
     l2_iface  = os.environ.get("ICSFORGE_L2_IFACE", "").strip()
     return jsonify({
-        "total":           total,
-        "runs":            len(runs),
-        "last_ts":         (last.get("@timestamp") or last.get("ts")) if last else None,
-        "last_run_id":     (last.get("run_id") if last else None),
-        "top_techniques":  top_tech,
-        "top_protocols":   top_proto,
-        "l2_iface":        l2_iface or None,
-        "l2_active":       bool(l2_iface),
+        "total":             total,
+        "runs":              len(runs),
+        "unique_techniques": len(techniques),
+        "unique_protocols":  len(protos),
+        "last_ts":           (last.get("@timestamp") or last.get("ts")) if last else None,
+        "last_run_id":       (last.get("run_id") if last else None),
+        "top_techniques":    top_tech,
+        "top_protocols":     top_proto,
+        "l2_iface":          l2_iface or None,
+        "l2_active":         bool(l2_iface),
     })
 
 

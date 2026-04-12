@@ -181,7 +181,47 @@ def api_matrix_status():
     executed: set = set()
     detected: set = set()
     gaps: set = set()
-    if run_id:
+    if run_id == "__all__":
+        # Aggregate executed/detected/gaps across ALL runs in the registry.
+        # list_runs() is lightweight (no artifacts); call get_run() per run_id
+        # to get the artifacts list, then scan each events JSONL.
+        try:
+            reg = _registry()
+            slim_runs = reg.list_runs(limit=500) if hasattr(reg, "list_runs") else []
+            for slim in slim_runs:
+                run = reg.get_run(slim["run_id"])
+                if not run:
+                    continue
+                # Techniques from events JSONL (ground-truth, most reliable)
+                ev_path = next(
+                    (a.get("path") for a in (run.get("artifacts") or [])
+                     if a.get("kind") == "events"), None
+                )
+                if ev_path and os.path.exists(ev_path):
+                    with open(ev_path, encoding="utf-8") as f:
+                        for line in f:
+                            try:
+                                t = json.loads(line).get("mitre.ics.technique")
+                                if t: executed.add(t)
+                            except json.JSONDecodeError:
+                                continue
+                # Fallback: techniques in run meta (campaign runs)
+                meta = run.get("meta") or {}
+                for t in (meta.get("techniques") or []):
+                    executed.add(t)
+                # Detections/gaps from correlation reports
+                for a in reversed(run.get("artifacts") or []):
+                    if a.get("kind") == "report" and a.get("path", "").endswith(".json"):
+                        try:
+                            corr = json.loads(Path(a["path"]).read_text(encoding="utf-8"))
+                            detected |= set(corr.get("observed") or [])
+                            gaps     |= set(corr.get("gaps")     or [])
+                            break
+                        except (OSError, json.JSONDecodeError):
+                            continue
+        except Exception as exc:
+            log.debug("Could not aggregate all runs for matrix status: %s", exc)
+    elif run_id:
         try:
             reg = _registry()
             run = reg.get_run(run_id) or {}

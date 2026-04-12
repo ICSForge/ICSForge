@@ -153,7 +153,7 @@ def index():
     return render_template(
         "index.html",
         title="ICSForge",
-        subtitle="OT/ICS security coverage validation platform",
+        subtitle="OT/ICS Cybersecurity Coverage Validation Platform",
         env_label="LOCAL",
         version=__version__,
         active_tab=True,

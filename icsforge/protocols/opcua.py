@@ -124,7 +124,10 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
     if style == "hello":
         dst = kwargs.get("dst_ip", "10.0.0.1")
         endpoint = kwargs.get("endpoint", f"opc.tcp://{dst}:4840").encode()
-        body = struct.pack("<IIIII", 0, 65536, 65536, 0, len(endpoint)) + endpoint + mb
+        # OPC UA HEL: version(4)+recv_buf(4)+send_buf(4)+max_msg_size(4)+max_chunk_count(4)
+        # then endpoint_url as UA_String: length(4, int32) + bytes
+        body = struct.pack("<IIIII", 0, 65536, 65536, 0, 0) + \
+               struct.pack("<I", len(endpoint)) + endpoint + mb
         return _opc_header(MSG_HEL, b"F", body)
 
     elif style == "get_endpoints":
@@ -367,5 +370,6 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
     else:
         # Fallback: hello
         endpoint = b"opc.tcp://10.0.0.1:4840"
-        body     = struct.pack("<IIIII", 0, 65536, 65536, 0, len(endpoint)) + endpoint + mb
+        body     = struct.pack("<IIIII", 0, 65536, 65536, 0, 0) + \
+                   struct.pack("<I", len(endpoint)) + endpoint + mb
         return _opc_header(MSG_HEL, b"F", body)

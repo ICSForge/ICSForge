@@ -21,11 +21,18 @@ from icsforge.log import get_logger as _get_logger
 
 _log = _get_logger(__name__)
 
+# Allowed destination networks for live traffic sends.
+# Private/lab ranges + loopback + link-local + RFC 5737 test nets.
+# Public internet IPs are blocked — ICSForge should not fire OT traffic at arbitrary hosts.
 TEST_NETS = [
-    ipaddress.ip_network("127.0.0.0/8"),
-    ipaddress.ip_network("192.0.2.0/24"),
-    ipaddress.ip_network("198.51.100.0/24"),
-    ipaddress.ip_network("203.0.113.0/24"),
+    ipaddress.ip_network("127.0.0.0/8"),       # loopback
+    ipaddress.ip_network("10.0.0.0/8"),         # RFC 1918 private
+    ipaddress.ip_network("172.16.0.0/12"),      # RFC 1918 private
+    ipaddress.ip_network("192.168.0.0/16"),     # RFC 1918 private
+    ipaddress.ip_network("169.254.0.0/16"),     # link-local
+    ipaddress.ip_network("192.0.2.0/24"),       # RFC 5737 TEST-NET-1
+    ipaddress.ip_network("198.51.100.0/24"),    # RFC 5737 TEST-NET-2
+    ipaddress.ip_network("203.0.113.0/24"),     # RFC 5737 TEST-NET-3
 ]
 
 MARKER = b"ICSFORGE_SYNTH"
@@ -41,12 +48,41 @@ _PCAP_GLOBAL_HDR = struct.pack("<IHHiIII",
     1,           # LINKTYPE_ETHERNET
 )
 
+def _extra_allowed_nets() -> list:
+    """
+    Parse ICSFORGE_ALLOWED_NETS environment variable.
+    Format: comma-separated CIDR ranges, e.g. '130.75.0.0/24,10.10.0.0/16'
+    Allows organisations using non-RFC1918 internal ranges to use the tool.
+    """
+    raw = os.environ.get("ICSFORGE_ALLOWED_NETS", "").strip()
+    if not raw:
+        return []
+    nets = []
+    for cidr in raw.split(","):
+        cidr = cidr.strip()
+        if not cidr:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(cidr, strict=False))
+        except ValueError:
+            pass  # ignore malformed entries
+    return nets
+
+
 def is_allowed_dest(ip_str: str) -> bool:
+    """
+    Return True if dst_ip is in an allowed range for live OT traffic sends.
+
+    Built-in: RFC 1918 private ranges, loopback, link-local, RFC 5737 test nets.
+    Extend:   set ICSFORGE_ALLOWED_NETS=130.75.0.0/24,... for non-standard internal ranges.
+    """
     try:
         ip = ipaddress.ip_address(ip_str)
     except ValueError:
         return False
-    return any(ip in net for net in TEST_NETS)
+    if any(ip in net for net in TEST_NETS):
+        return True
+    return any(ip in net for net in _extra_allowed_nets())
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -183,62 +219,88 @@ def write_pcap(packets: list, out_path: str, base_interval_ms: float = 50.0) -> 
 
 def replay_pcap(pcap_path: str, dst_ip: str, interval: float = 0.05) -> int:
     """
-    Re-send TCP payloads from a pcap to dst_ip.
+    Re-send packets from a PCAP to dst_ip, preserving original destination ports.
 
-    Reads Ethernet frames, extracts IP+TCP payload, and sends it via a
-    TCP connection.  Falls back to scapy if available for non-TCP frames.
+    Supports:
+      - IPv4/TCP  : open fresh TCP connection to (dst_ip, orig_dport), send payload
+      - IPv4/UDP  : send UDP datagram to (dst_ip, orig_dport)
+      - L2 frames : skipped (require raw socket + interface specification)
+
+    Returns count of frames successfully sent.
     """
-    if not is_allowed_dest(dst_ip):
-        raise ValueError("Replay blocked: destination IP not allowed (loopback/TEST-NET only).")
-
+    # No IP restriction on replay — user explicitly controls destination.
+    # Live-send functions enforce private/test-only; replay is different.
     sent = 0
+    errors = 0
+
     with open(pcap_path, "rb") as f:
-        # Parse global header
         gh = f.read(24)
         if len(gh) < 24:
             return 0
         magic = struct.unpack_from("<I", gh)[0]
-        endian = "<" if magic == 0xa1b2c3d4 else ">"
+        endian = "<" if magic in (0xa1b2c3d4, 0xa1b23c4d) else ">"
 
         while True:
             ph = f.read(16)
             if len(ph) < 16:
                 break
-            _, _, incl_len, _ = struct.unpack(f"{endian}IIII", ph)
+            _, _, incl_len, orig_len = struct.unpack(f"{endian}IIII", ph)
             raw = f.read(incl_len)
             if len(raw) < incl_len:
                 break
+            if len(raw) < 14:
+                continue
 
-            # Parse Ethernet + IPv4 + TCP
+            ethertype = struct.unpack(">H", raw[12:14])[0]
+            # Skip VLAN-tagged frames (0x8100) and non-IPv4 (PROFINET/GOOSE/ARP etc.)
+            if ethertype != 0x0800:
+                continue
+
             if len(raw) < 34:
                 continue
-            ethertype = struct.unpack(">H", raw[12:14])[0]
-            if ethertype != 0x0800:
-                continue  # skip non-IPv4 (e.g. PROFINET)
-            proto = raw[23]
-            if proto != 6:
-                continue  # skip non-TCP
+            ip_proto = raw[23]
             ihl = (raw[14] & 0x0F) * 4
-            tcp_offset = 14 + ihl
-            if len(raw) < tcp_offset + 20:
-                continue
-            dport = struct.unpack(">H", raw[tcp_offset + 2: tcp_offset + 4])[0]
-            tcp_hdr_len = ((raw[tcp_offset + 12] >> 4) & 0xF) * 4
-            payload = raw[tcp_offset + tcp_hdr_len:]
-            if not payload:
-                continue
+            ip_start = 14
 
-            try:
-                s = socket.create_connection((dst_ip, dport), timeout=2.0)
+            if ip_proto == 6:  # TCP
+                tcp_start = ip_start + ihl
+                if len(raw) < tcp_start + 20:
+                    continue
+                dport = struct.unpack(">H", raw[tcp_start + 2: tcp_start + 4])[0]
+                tcp_hdr_len = ((raw[tcp_start + 12] >> 4) & 0xF) * 4
+                payload = raw[tcp_start + tcp_hdr_len:]
+                if not payload:
+                    continue
                 try:
-                    s.sendall(payload)
-                finally:
-                    with suppress(Exception):
-                        s.shutdown(socket.SHUT_RDWR)
-                    s.close()
-                sent += 1
-            except Exception:
-                pass
+                    s = socket.create_connection((dst_ip, dport), timeout=2.0)
+                    try:
+                        s.sendall(payload)
+                        sent += 1
+                    finally:
+                        with suppress(Exception):
+                            s.shutdown(socket.SHUT_RDWR)
+                        s.close()
+                except Exception:
+                    errors += 1
+
+            elif ip_proto == 17:  # UDP
+                udp_start = ip_start + ihl
+                if len(raw) < udp_start + 8:
+                    continue
+                dport = struct.unpack(">H", raw[udp_start + 2: udp_start + 4])[0]
+                payload = raw[udp_start + 8:]
+                if not payload:
+                    continue
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.settimeout(2.0)
+                    try:
+                        s.sendto(payload, (dst_ip, dport))
+                        sent += 1
+                    finally:
+                        s.close()
+                except Exception:
+                    errors += 1
 
             if interval:
                 time.sleep(interval)

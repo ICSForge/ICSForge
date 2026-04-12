@@ -1,3 +1,563 @@
+## v0.60.0 (2026-04 — Allowed Networks UI, bug fixes: stealth preview, matrix overlay, PCAP replay)
+
+### Allowed Networks — web UI configuration (Tools page)
+
+Non-RFC1918 internal ranges (e.g. 130.75.0.0/24 — publicly-routed IPs used internally
+in OT environments) can now be configured directly from the Tools page without
+touching environment variables or restarting the server.
+
+  Tools → ⚙ Allowed Networks → enter CIDRs one per line → Save
+
+Stored in ~/.icsforge/web_config.json alongside other persisted settings. Takes
+effect immediately: IPs in saved ranges are accepted by /api/send on the next
+request without restart.
+
+The ICSFORGE_ALLOWED_NETS environment variable still works and is shown as a
+read-only note in the UI when set (e.g. from docker-compose or systemd unit).
+
+Validation: invalid CIDRs return an inline error before saving. Clearing all
+entries reverts to RFC1918-only mode. Both the core layer (syslog/kafka output
+sinks) and the web gate (/api/send) now honour the persisted list.
+
+API: GET/POST /api/config/allowed_nets
+  GET  → {allowed_nets: [...], env_nets: [...]}
+  POST → {cidrs: ["130.75.0.0/24", ...]} → validates and saves
+
+### IP restriction: all RFC1918 ranges now allowed by default
+
+Previously TEST_NETS in core.py only covered loopback + 3 RFC5737 documentation
+ranges. Live sends to 10.x, 172.16-31.x, 192.168.x all failed silently. Fixed.
+
+### PCAP replay: IP restriction removed (both layers)
+
+The guard existed in bp_runs.py (web layer) AND replay_pcap() in core.py.
+Both removed. Also fixed: core.py is_allowed_dest() now covers all RFC1918
+ranges so syslog/kafka output sinks work in real OT lab environments.
+
+### Bug fixes
+
+  Stealth preview: toggleStealth() moved inside the IIFE — was outside, so
+    selectedName and loadHexDump were undefined at call time. Preview now
+    updates immediately when toggling stealth on or off.
+
+  Matrix All-runs overlay: list_runs() returns no artifacts; fixed to call
+    get_run() per run_id to get the full artifact list including events files.
+
+  Post-IIFE functions (EVE tap, webhook): were referencing API, logln,
+    tlConfirmStep outside the IIFE where they are undefined. Fixed by exporting
+    from inside the IIFE as window._senderAPI etc.
+
+## v0.59.9-r2 (2026-04 — Stealth preview fix (real), All-runs overlay, PCAP replay)
+
+### Bug 3 (complete fix): PCAP replay IP restriction was in two places
+
+The IP restriction was removed from `bp_runs.py` (web layer) but `replay_pcap()`
+in `core.py` had its own identical guard:
+
+    if not is_allowed_dest(dst_ip):
+        raise ValueError('Replay blocked: destination IP not allowed...')
+
+So public IPs were still blocked at the core level. Both guards are now removed.
+The live-send functions in core.py (lines 107, 122) retain their guards — correct.
+Verified end-to-end: generate PCAP → upload → replay → 3/3 packets received by listener.
+
+
+### Bug 1: Stealth toggle preview — root cause finally fixed
+
+Previous attempts patched the wrong layer. The actual bug: sender.js wraps all
+its logic in an IIFE — `(function(){ ... })();`. `selectedName`, `hexStepIdx`,
+and `loadHexDump` are all IIFE-local. `window.toggleStealth` was defined AFTER
+the IIFE closed, so those names were `undefined` at global scope. The button
+visuals worked (pure DOM) but `loadHexDump` was silently never called.
+
+Fix: `window.toggleStealth` moved inside the IIFE, before `})();`. It now has
+genuine closure access to `selectedName`, `hexStepIdx`, and `loadHexDump`.
+Cache-busting timestamp on the preview URL is also kept.
+
+### Bug 2: Matrix "★ All runs" overlay highlights executed techniques
+
+`reg.list_runs()` is a lightweight query — no artifact paths in the result.
+The `__all__` aggregation was iterating slim records and finding no events files.
+Fixed: calls `reg.get_run(run_id)` per run to get the full artifact list.
+
+### Bug 3: PCAP replay accepts any destination IP
+
+Removed the private-IP restriction from `/api/pcap/replay`. PCAP replay is an
+explicit user action targeting real devices — the restriction made it unusable
+for any realistic lab setup. The live-send endpoint `/api/send` still enforces
+private/test/loopback only (correct for synthetic traffic generation).
+
+## v0.59.9-r1 (2026-04 — Bug fix: stealth preview root cause, PCAP replay IP unrestricted)
+
+### Bug 1 (stealth toggle): actual root cause found and fixed
+
+Previous attempt added a cache-busting timestamp to loadHexDump URLs. That was 
+correct but addressed a symptom. The real root cause:
+
+sender.js is wrapped in an IIFE — (function(){ ... })(); — making selectedName,
+hexStepIdx, and loadHexDump local to that function scope. window.toggleStealth
+was defined AFTER the closing })(); meaning it executed in the global scope where
+selectedName and loadHexDump are both undefined. The button visuals (borderColor,
+icon) updated correctly because those use only DOM APIs. But the if (selectedName)
+guard always evaluated to false, so loadHexDump was never called.
+
+Fix: window.toggleStealth moved inside the IIFE, just before the closing })();.
+selectedName, hexStepIdx, and loadHexDump are now genuinely in closure scope.
+The cache-busting timestamp on loadHexDump URLs is also retained as defence
+against browser caching when toggling back to the normal (no-marker) payload.
+
+### Bug 3 (PCAP replay): IP restriction removed
+
+/api/pcap/replay was applying the same private-IP-only allowlist as /api/send,
+returning "dst_ip blocked: must be private/test/link-local/loopback" for any
+public destination. PCAP replay is a different operation from live traffic
+generation: the user has a captured file and explicitly controls where they
+send it, including real OT devices on routable segments. The restriction is
+removed from the replay endpoint. /api/send keeps its private-IP enforcement
+(correct — that limits where the tool generates live synthetic OT traffic).
+Empty dst_ip is still rejected with 400.
+
+## v0.59.9 — Bug fixes: stealth preview, matrix All-runs overlay, PCAP replay dst_ip
+
+### Bug 1: Stealth toggle now immediately refreshes live payload preview
+
+Toggling stealth mode within an already-selected scenario did not update the hex
+dump. The backend correctly returns different payloads for `?no_marker=1` vs not,
+but the browser was caching the first GET response for the same URL path. When
+stealth was toggled ON the URL changed (`?step=0` → `?step=0&no_marker=1`) so the
+new payload appeared. When toggled back OFF the URL reverted to `?step=0` and the
+browser served the original cached response rather than re-fetching.
+
+Fix: `loadHexDump()` now appends `&_=${Date.now()}` to every preview URL, making
+each request unique and defeating the browser cache. Toggle ON and OFF now both
+immediately show the correct payload for the current stealth state.
+
+### Bug 2: Matrix "★ All runs" overlay now highlights executed techniques
+
+After running scenarios, clicking Apply with "★ All runs (aggregate)" selected
+showed no highlighted technique tiles — all remained grey.
+
+Root cause: `reg.list_runs()` is a lightweight query that returns slim run
+records without artifact paths. The `__all__` aggregation was iterating the slim
+records and looking for `artifacts` which weren't there, so no events files were
+opened and `executed` stayed empty.
+
+Fix: the `__all__` path now calls `reg.get_run(run_id)` for each run from
+`list_runs()` to get the full record including artifact paths, then reads each
+events JSONL for `mitre.ics.technique` fields. Verified: technique tiles now
+correctly highlight after runs are stored in the registry.
+
+### Bug 3: PCAP replay — "dst_ip required" error after upload
+
+After uploading a PCAP via the file picker, clicking Replay immediately returned
+`Error: dst_ip required`. The upload flow correctly set the `r_pcap` path field
+but left `r_dst` (Destination IP) empty. The server-side validation then rejected
+the request.
+
+Two fixes:
+  1. On tools page load, `GET /api/config/network` and auto-fill `r_dst` with the
+     saved receiver IP if available — so if you've already configured the receiver
+     in Network Settings, the field is pre-populated.
+  2. Client-side validation in `replayTool()` now checks both `pcap_path` and
+     `dst_ip` before sending, and shows a clear inline error message: "Enter the
+     receiver IP address in the Destination IP field above" — instead of a terse
+     JSON error from the server.
+
+The server-side validation remains in place as defence-in-depth.
+
+## v0.59.9 (2026-04 — TCP source port stability + full protocol realism audit)
+
+### TCP source port: stable per scenario run (session realism)
+
+Previously every TCP frame in a scenario run got a fresh random source port from
+`rnd.randint(1024, 65535)`. NSMs model TCP sessions by the 4-tuple
+(src_ip, src_port, dst_ip, dst_port). With random source ports, a 30-frame Modbus
+scenario appeared as 30 separate sessions instead of one persistent master-RTU
+connection. Wireshark's flow reassembly also failed to group the frames.
+
+Fixed: `run_scenario()` now derives a stable source port once per run:
+
+    _sport = 49152 + md5(src_ip + dst_ip + run_id)[:4] % 16383
+
+The port is always in the OS ephemeral range (49152–65534), is deterministic per
+run identity, and differs across scenarios, across protocols, and across run IDs.
+All frames in a single scenario run now share one source port — matching the
+behaviour of a real ICS master that opens one persistent TCP connection per RTU.
+
+The `sport` parameter added to `tcp_packet()` in `common.py`. The engine passes
+it for both synthetic (with markers) and stealth (no markers) traffic.
+
+### Full protocol realism audit — all scenario-used styles verified clean
+
+Systematic end-to-end audit of every protocol builder for the styles actually used
+in scenarios.yml. Findings:
+
+  Modbus/TCP   MBAP lengths, FCs, unit IDs, transaction IDs: all correct ✓
+  DNP3         FIR/FIN/UNS flags, app seq (mod-16 increment), CRCs: all correct ✓
+  IEC-104      SSN monotonically incrementing, COT=6 for commands, APDU lengths: all correct ✓
+  S7comm       _var_item bit-address encoding, PDU refs monotonic, USERDATA 12B: all correct ✓
+  EtherNet/IP  CIP symbolic paths (0x91), encapsulation lengths: all correct ✓
+  OPC UA       Seq numbers and request IDs monotonically incrementing, MSG/OPN/CLO types: all correct ✓
+  MQTT         QoS packet IDs unique and non-zero, remaining_length: all correct ✓
+  BACnet       confirmed/unconfirmed PDU type correct for all styles ✓
+  PROFINET DCP FrameID and ServiceID correct for all styles ✓
+  GOOSE        BER encoding structurally correct ✓
+
+Known acceptable limitations (require real RTU counterpart to fix):
+  IEC-104 RSN=0 — correct only when a real RTU responds; unidirectional synthetic sends
+                  cannot know how many frames the RTU has received
+  No TCP handshake (SYN/SYN-ACK/ACK) — by design for frame-level generation;
+                  NSMs that require full handshakes before classifying traffic will not
+                  fire on ICSForge frames (this is a known tradeoff)
+
+## v0.59.9 (2026-04 — Full protocol realism audit: S7 byte_addr, OPC UA HEL, PROFINET frame IDs)
+
+### S7comm: variable item byte address encoding fixed (all 9 affected styles)
+
+The `_var_item()` helper correctly encodes byte_addr as `bit_offset = byte_addr * 8`
+stored big-endian in 3 bytes. However, 9 styles bypassed `_var_item()` and used
+inline `bytes([..., 0x00, addr & 0xFF, 0x00])` — storing the raw byte address in
+the middle byte of the 3-byte field. This gives `bit_addr_24 = addr << 8` instead
+of `addr * 8`. Example: `byte_addr=10` produced `bit_addr_24=0x000A00=2560`
+(byte 320) instead of `0x000050=80` (byte 10). A real S7 PLC would access the
+wrong memory location or reject the item with an illegal address error.
+
+Fixed styles: `read_var`, `write_var`, `read_db`, `write_db`, `read_outputs`,
+`write_outputs`, `read_inputs`, `write_inputs`, `write_failsafe`, `read_all_dbs`.
+All now use `_var_item()` consistently with correct bit-offset encoding.
+Verified: byte_addr 0, 10, 100, 200 all decode correctly in generated frames.
+
+### OPC UA: HEL (Hello) frame endpoint URL missing length prefix
+
+The OPC UA Binary protocol encodes variable-length strings as UA_String:
+a 4-byte signed int32 length followed by the UTF-8 bytes. The `hello` and
+`force_reconnect` styles built the HEL body as:
+
+  struct.pack("<IIIII", version, recv_buf, send_buf, max_msg, len(endpoint)) + endpoint
+
+This placed `len(endpoint)` as the `max_chunk_count` field (5th uint32) and
+wrote the endpoint URL bytes directly after — no length prefix. Wireshark's
+OPC UA dissector parses the URL length as whatever 4-byte ASCII sequence starts
+the URL (`"opc."` = `0x2E63706F` = 778,268,783 bytes), then fails.
+
+Fixed: `struct.pack("<IIIII", 0, 65536, 65536, 0, 0)` (max_chunk_count=0=unlimited)
+followed by `struct.pack("<I", len(endpoint)) + endpoint`. Both `hello` and
+`force_reconnect` styles corrected. HEL frames now parse cleanly in Wireshark.
+
+### PROFINET DCP: frame IDs corrected per IEC 61158-6-10
+
+The frame ID constants were misassigned:
+
+  Old (wrong):                        Correct per IEC 61158-6-10:
+  0xFEFE = dcp_identify_multicast     0xFEFE = Identify Request (multicast)  ← same
+  0xFEFF = dcp_identify_unicast       0xFEFF = Identify Response (unicast)   ← same
+  0xFEFD = dcp_hello                  0xFEFD = Get/Set Request               ← WRONG
+                                      0xFEFC = Hello Request (boot)           ← MISSING
+
+The `hello` style used 0xFEFD (Get/Set) instead of 0xFEFC (Hello/boot).
+The `get_ip` and `get_name` styles used 0xFEFF (Identify Response) instead of
+0xFEFD (Get Request). The `set_ip`, `set_name`, `factory_reset` styles used
+0xFEFF instead of 0xFEFD (Set Request).
+
+Fixed: added `dcp_hello=0xFEFC` and `dcp_get_set=0xFEFD` constants. All styles
+now use the correct frame ID. PROFINET-aware tools (Wireshark, Siemens TIA Portal
+capture, Defender for IoT) will correctly classify each PDU type.
+
+### Full audit — all other protocols verified clean
+
+IP/TCP headers: TTL=64 (Linux), DF bit set, window=8192 — all realistic.
+Modbus MBAP, DNP3 CRCs, IEC-104 APDU, BACnet BVLC: all correct (confirmed again).
+OPC UA MSG sequence/request_id: monotonically incrementing per engine session.
+IEC-104 SSN: monotonically incrementing per engine session.
+S7 PDU reference: monotonically incrementing per engine session.
+BACnet invoke_id: correctly incremented for confirmed requests only.
+MQTT: protocol version 4 (v3.1.1), realistic keepalive, correct remaining_length.
+EtherNet/IP: session handle non-zero for SendRRData, CPF structure correct.
+
+## v0.59.8 (2026-04 — Protocol-aware OUI table: eliminate locally-administered MAC alerts)
+
+### Root cause of Defender for IoT / OT-NSM alerts
+
+Every source MAC generated by ICSForge had `0x02` as the first byte — the
+IEEE 802 "locally administered" bit. This immediately identifies synthetic traffic
+to any OT-aware network security monitoring tool:
+
+  - Wireshark shows "Locally Administered" in the MAC field
+  - Defender for IoT / Claroty / Dragos flag every frame as non-hardware traffic
+  - OUI vendor lookup returns nothing (no registered manufacturer)
+
+No real OT hardware (Siemens PLC, Rockwell controller, ABB relay, Schneider SCADA)
+ships with a locally-administered MAC. All real OT devices have OUI-registered MACs
+from their manufacturer.
+
+### Fix: protocol-aware OUI table
+
+Replaced `_src_mac_from_ip()` with a protocol-aware implementation that selects a
+registered OUI from the real OT vendor pool for each protocol:
+
+  modbus       → Schneider Electric (00:80:F4, 00:10:EC, 00:60:9C)
+  s7comm       → Siemens AG (00:0E:8C, 00:1B:1B, AC:64:17)
+  enip         → Rockwell Automation (00:00:BC, 00:0E:8C, EC:9A:74)
+  dnp3         → GE Grid Solutions / SEL (00:90:69, 00:30:A7, D4:BE:D9)
+  iec104       → ABB / Siemens (00:0A:DC, 00:0E:8C, 00:1A:4B)
+  iec61850     → GE / ABB / Alstom (00:90:69, 00:0A:DC, 00:01:72)
+  opcua        → Dell/HP server OUIs (18:DB:F2, 14:FE:B5, 00:25:64)
+  bacnet       → Automated Logic / Delta Controls (00:60:35, 00:A0:A5)
+  profinet_dcp → Siemens / Phoenix Contact (00:0E:8C, 00:A0:45)
+  mqtt         → Moxa / Advantech / AVEVA (00:90:E8, 00:D0:C9)
+
+The OUI is selected deterministically from the last octet of the source IP so the
+MAC is stable within a session but varies per host. The suffix bytes are derived
+from the full IP so each host gets a unique MAC within the OUI space.
+
+The "globally administered" and "unicast" bits are always clear (bit 0 = 0, bit 1 = 0)
+in the first octet — no NSM tool will flag these as synthetic.
+
+GOOSE and PROFINET DCP L2 frames also fixed: both previously used `0x02:xx:xx:...`
+random source MACs. Now GOOSE uses GE/ABB OUIs and PROFINET uses Siemens/Phoenix
+Contact OUIs matching real relay and controller hardware.
+
+`proto` parameter threaded through `tcp_packet()`, `udp_packet()`, and the engine
+frame builders so every protocol gets the correct vendor OUI automatically.
+
+## v0.59.7 (2026-04 — S7comm USERDATA header fix, full protocol correctness audit)
+
+### S7comm: USERDATA header corrected from 10 to 12 bytes
+
+The S7comm protocol defines two distinct PDU header formats:
+  - ROSCTR_JOB (0x01): 10 bytes — no error word
+  - ROSCTR_USERDATA (0x07): 12 bytes — includes error_class + error_code at the end
+
+The `szl_read` and `szl_clear` styles both use ROSCTR_USERDATA but were building
+a 10-byte header using the JOB format. The Wireshark S7comm dissector knows this
+distinction and flagged both styles as MALFORMED because the parameter block started
+at byte 10 instead of byte 12. A real Siemens S7 PLC would reject these frames.
+
+Fixed: added `_s7_userdata_header(pdu_ref, param_len, data_len)` helper that packs
+the 12-byte structure correctly with error_class=0x00, error_code=0x00. Both styles
+now pass Wireshark dissection without MALFORMED warnings.
+
+Impact: `szl_read` covers T0868 (Theft of Operational Information) and T0882
+(Theft of Operational Data) — SZL enumeration is a key S7 reconnaissance technique.
+`szl_clear` covers T0872 (Indicator Removal on Host). Both were structurally wrong.
+
+### Full protocol correctness audit — all other protocols clean
+
+Systematic check of every protocol builder for length field accuracy, correct
+header structure, and spec-valid framing:
+
+  Modbus/TCP   — MBAP length field correct for all 10 styles ✓
+  DNP3         — header CRC + all per-block data CRCs valid for all 28 styles ✓
+  IEC-104      — APDU start byte and length field correct for all 15 styles ✓
+  BACnet/IP    — BVLC type and length field correct for all 15 styles ✓
+  EtherNet/IP  — encapsulation length field correct for all scenario-used styles ✓
+  OPC UA       — message size field correct for all 29 scenario-used styles;
+                 correct type bytes (HEL/MSG/OPN/CLO/ERR) ✓
+  MQTT         — remaining_length encoding correct for all 17 styles ✓
+  PROFINET DCP — L2, no length-critical fields ✓
+  GOOSE        — BER-encoded, structurally correct ✓
+
+The malformed_ucmm EtherNet/IP style (T0866 exploitation) is intentionally malformed
+by design — that is the attack it represents.
+
+## v0.59.6 (2026-04 — Matrix "All runs" overlay, live payload preview stealth fix, MAC realism)
+
+### Matrix: "★ All runs (aggregate)" overlay
+
+The overlay run selector now includes a permanent "★ All runs (aggregate)" option
+at the top of the list, available before and after loading individual runs.
+
+Selecting it and clicking Apply calls `/api/matrix_status?run_id=__all__`, which
+aggregates executed techniques across ALL runs in the registry — scanning each
+run's events file for `mitre.ics.technique` fields and each correlation report
+for observed/gaps sets. The result is a union overlay showing every technique
+that has ever been executed or detected across all your test runs.
+
+This lets you see your cumulative ATT&CK coverage at a glance without having
+to pick a specific run.
+
+### Live payload preview: reloads when stealth mode is toggled
+
+Toggling "Stealth mode — real traffic, no synthetic tags" within an already-selected
+scenario did not refresh the hex dump preview. The preview kept showing the
+previous (marker-present) payload until a different scenario was selected.
+
+Root cause: `toggleStealth()` was defined inline in `sender.html` and used
+`window.selectedName`, but `selectedName` in `sender.js` is a `let` variable
+(not on `window`), so it was always `undefined`.
+
+Fixed: `toggleStealth()` moved into `sender.js` where it has direct closure
+access to `selectedName` and `hexStepIdx`. The hex dump now reloads immediately
+when stealth is toggled, showing marker-free bytes when stealth is on.
+
+### Destination MAC: realistic unicast in live-send PCAPs
+
+Live-send PCAP artifacts now use a realistic destination MAC instead of
+`ff:ff:ff:ff:ff:ff` (broadcast).
+
+`_resolve_dst_mac(dst_ip)` in `common.py`:
+  1. Reads the kernel ARP cache (`/proc/net/arp` on Linux, `arp -n` on macOS)
+     — populated automatically after the kernel TCP/UDP socket connects.
+  2. Falls back to a deterministic locally-administered unicast MAC derived
+     from the destination IP when the ARP cache is empty.
+
+`run_scenario()` accepts `resolve_mac=True` (set by live-send paths in
+`bp_scenarios.py`). Offline PCAP generation keeps `ff:ff:ff:ff:ff:ff`.
+
+## v0.59.5 (2026-04 — GOOSE receiver, PCAP replay, receiver reset, KPI display fix, MAC realism, stealth preview fix)
+
+### IEC 61850 GOOSE receiver listener
+
+The receiver had no listener for EtherType 0x88B8. Every GOOSE scenario sent frames
+that were never captured. Added _parse_goose_frame() and _l2_goose_listener() mirroring
+the PROFINET DCP listener. --l2-iface eth0 now starts both PROFINET DCP and GOOSE
+listeners on the same interface. config.yml documents the new l2_listen.iec61850 key.
+
+### PCAP replay: handles TCP and UDP, correct port routing
+
+The old replay_pcap() only handled IPv4/TCP, skipping UDP (BACnet) and all L2 frames,
+returning 0 sent for most ICSForge PCAPs. Rewritten to:
+  - IPv4/TCP: connect to (dst_ip, original_dport), send application payload
+  - IPv4/UDP: sendto (dst_ip, original_dport)
+  - pcapng magic (0xa1b23c4d) recognised alongside pcap (0xa1b2c3d4)
+  - L2 frames skipped with a note in the UI response
+
+api_pcap_upload fixed: was using Path(__file__).resolve().parents[2] (wrong level,
+same bug as _safe_outdir had) — now uses _repo_root().
+api_pcap_replay: relative paths resolved against repo root.
+Tools page default replay dst_ip was TEST-NET (198.51.100.42) — replaced with empty
+field and placeholder directing user to the receiver IP.
+
+### Receiver reset button
+
+receiver.html did not load main.js, so window.fetchJSON was undefined. The reset
+POST had no CSRF token → 403 → silent failure → button stuck at "Resetting…".
+Fixed: main.js loaded before receiver.js; resetReceipts() uses window.fetchJSON.
+
+### Receiver KPI counters: unique technique/protocol counts (not capped at 8)
+
+api_receiver_overview returned top_techniques[:8] and top_protocols[:8].
+The UI displayed .length of those lists — always showing 8 regardless of actual
+unique count. The user reported "8 techniques, 8 protocols" even after running
+50 scenarios across many techniques. The scenarios were correct; the display was wrong.
+
+Fixed: overview now returns unique_techniques and unique_protocols as full integer
+counts. Both receiver.js and sender.js use these fields for KPI badges.
+The top-8 lists are still returned for the table display beneath the KPIs.
+
+L2 banner updated: was "PROFINET L2 listener active" — now "L2 listeners active
+(PROFINET DCP + GOOSE)" since both are started by --l2-iface.
+
+### Cosmetic: removed misaligning note in Network Settings bar
+
+The "→ auto-fills Destination IP below" span beneath the Receiver IP input caused
+vertical misalignment between the Sender IP, Receiver IP, and Receiver Port fields
+(the other fields have no subtext, only this one did). Removed the span; the
+relationship is still explained in the input's title tooltip (hover to see it).
+
+## v0.59.5 (2026-04 — GOOSE receiver, PCAP replay fixed, receiver reset fixed)
+
+### IEC 61850 GOOSE receiver listener (new)
+
+The receiver had no listener for GOOSE frames (EtherType 0x88B8). Every GOOSE
+scenario fired frames into the void — they were sent correctly by the sender but
+never captured. Added `_parse_goose_frame()` and `_l2_goose_listener()` mirroring
+the existing PROFINET DCP listener:
+
+  - Opens AF_PACKET raw socket in promiscuous mode on the L2 interface
+  - Filters by EtherType 0x88B8 (GOOSE)
+  - Extracts src_mac, dst_mac, payload, and ICSForge correlation marker
+  - Writes receipts to receipts.jsonl (same path as all other protocols)
+
+The `--l2-iface eth0` CLI flag now starts BOTH PROFINET DCP and GOOSE listeners
+on the same interface (they share the NIC — no separate flag needed).
+`config.yml` documents the new `l2_listen.iec61850` key for per-protocol config.
+
+Note on MAC injection: GOOSE uses IEC 61850-8-1 Annex C multicast MACs
+(`01:0c:cd:01:xx:xx`). Injecting the receiver's unicast MAC is unnecessary —
+the listener runs in promiscuous mode and captures all frames regardless of
+destination MAC. Changing the multicast MACs would violate protocol semantics.
+
+### PCAP replay: now actually works
+
+The old `replay_pcap()` only handled IPv4+TCP and skipped everything else,
+producing "0 sent" for nearly all ICSForge PCAPs:
+
+  - Non-TCP (UDP, L2) frames: skipped unconditionally
+  - TCP frames: only sent if they had application payload bytes after TCP header
+  - Port routing: each frame opens a fresh connection to (dst_ip, original_dport)
+
+Rewritten:
+  - IPv4/TCP: connect to (dst_ip, original_dport), send application payload
+  - IPv4/UDP: sendto (dst_ip, original_dport) for BACnet and similar
+  - L2 frames (PROFINET/GOOSE): skipped with a note in the UI response
+  - pcapng magic (0xa1b23c4d) now recognised in addition to pcap (0xa1b2c3d4)
+  - Verified: 29 TCP packets parsed and would be sent for T0855 Modbus PCAP
+
+Also fixed:
+  - `api_pcap_upload` was using `Path(__file__).resolve().parents[2]` (wrong level)
+    → now uses `_repo_root()` consistently
+  - `api_pcap_replay` path validation: relative paths now resolved against repo root
+  - Tools page: replay dst_ip default was `198.51.100.42` (TEST-NET, nothing listens)
+    → replaced with empty field and placeholder "e.g. 127.0.0.1 (receiver IP)"
+  - Replay result display now shows packet count and a note about L2 skips
+
+### Receiver reset button: now works
+
+The reset button in the receiver UI called `fetch("/api/receiver/reset", {method:"POST"})`
+with no CSRF token. The 403 response was parsed as JSON, threw silently, and the button
+stayed in "Resetting…" state.
+
+Root cause: `receiver.html` loaded `receiver.js` but not `main.js`, so
+`window.fetchJSON` (which injects CSRF tokens) was undefined. The reset call was
+the only fetch in receiver.js that hadn't been updated to use `window.fetchJSON`.
+
+Fixes:
+  - `receiver.html` now loads `main.js` before `receiver.js`
+  - `resetReceipts()` uses `window.fetchJSON()` which handles CSRF automatically
+
+### Destination MAC: realistic unicast in live-send PCAPs
+
+Previously all Ethernet frames in ICSForge-generated PCAPs used `ff:ff:ff:ff:ff:ff`
+(broadcast) as the destination MAC, even during live sends. This made PCAPs look
+synthetic and would cause issues with any L2-mode replay tool.
+
+Added `_resolve_dst_mac(dst_ip)` in `common.py`:
+  1. Reads `/proc/net/arp` (Linux) or runs `arp -n` (macOS/BSD) to get the real
+     MAC from the kernel ARP cache — populated automatically after the kernel
+     TCP/UDP socket has connected to the receiver during live send.
+  2. Falls back to a deterministic locally-administered unicast MAC derived from
+     the destination IP (same algorithm as `_src_mac_from_ip`) when the ARP cache
+     is empty (offline/container/unreachable host) or on unsupported platforms.
+  3. Never returns `ff:ff:ff:ff:ff:ff`.
+
+`tcp_packet()` and `udp_packet()` now accept an optional `dst_mac` parameter.
+`run_scenario()` accepts `resolve_mac: bool = False`. When `True` (live send paths
+in `bp_scenarios.py`), the MAC is resolved once per scenario and passed to every
+frame builder. Offline PCAP generation (tools page) leaves `resolve_mac=False`,
+preserving `ff:ff:ff:ff:ff:ff` for the offline path as requested.
+
+Verified: same dst IP always produces the same deterministic MAC; different IPs
+produce different MACs. In production with a reachable receiver the real hardware
+MAC appears in the PCAP.
+
+### Live payload preview: now reloads when stealth mode is toggled
+
+Toggling "Stealth mode — real traffic, no synthetic tags" within an already-selected
+scenario did not refresh the hex dump. The preview showed the previous (marker-present)
+payload until a different scenario was selected.
+
+Root cause: `toggleStealth()` was defined in an inline `<script>` block in
+`sender.html` and called `loadHexDump(window.selectedName, ...)`. But `selectedName`
+in `sender.js` is declared with `let` — it is NOT on `window`. So `window.selectedName`
+was always `undefined` and `loadHexDump` was never called.
+
+Fix: `toggleStealth()` moved entirely into `sender.js` where it has direct closure
+access to `selectedName` and `hexStepIdx`. Exposed as `window.toggleStealth` so
+the button `onclick` attribute continues to work. The hex dump now reloads
+immediately when stealth is toggled, passing `no_marker=1` to the preview API.
+
+
 ## v0.59.4 (2026-04 — Path bug: out/ always inside project folder regardless of CWD)
 
 ### Root cause

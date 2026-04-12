@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "icsforge"
 dynamic = ["version"]
-description = "OT/ICS security coverage validation platform — MITRE ATT&CK for ICS aligned"
+description = "OT/ICS Cybersecurity Coverage Validation Framework — MITRE ATT&CK for ICS aligned"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.10"

@@ -14,9 +14,8 @@
         <label style="font-size:11px;margin-bottom:3px">Receiver IP (DST)</label>
         <input id="cfg_receiver_ip" placeholder="e.g. 192.168.1.50"
           style="padding:6px 10px;font-size:13px"
-          title="Auto-fills the Destination IP field below"
+          title="Auto-fills the Destination IP in Configuration below"
           oninput="const v=this.value.trim();if(v){const d=document.getElementById('dst_ip');if(d)d.value=v;}">
-        <span style="font-size:10px;color:var(--muted)">→ auto-fills Destination IP below</span>
       </div>
       <div class="field" style="min-width:70px;max-width:90px;margin:0">
         <label style="font-size:11px;margin-bottom:3px">Receiver Port</label>
@@ -308,16 +307,7 @@ function toggleConfirm(){
   if(cb.checked){btn.style.borderColor="var(--good)";btn.style.background="rgba(0,230,138,.08)";btn.style.color="var(--good)";ico.textContent="✓";}
   else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
 }
-function toggleStealth(){
-  const cb=document.getElementById("stealth_mode");
-  const btn=document.getElementById("btn_stealth");
-  const ico=document.getElementById("stealth_icon");
-  cb.checked=!cb.checked;
-  if(cb.checked){btn.style.borderColor="var(--bad)";btn.style.background="rgba(255,59,92,.08)";btn.style.color="var(--bad)";ico.textContent="●";}
-  else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
-  // Reload hex dump to reflect stealth mode (markers hidden/shown)
-  if(window.selectedName) loadHexDump(window.selectedName, window.hexStepIdx||0);
-}
+// toggleStealth() is defined in sender.js (needs closure access to selectedName/hexStepIdx)
 </script>
 <script src="/static/js/sender.js"></script>
 {% endblock %}

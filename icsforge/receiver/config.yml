@@ -16,10 +16,12 @@ udp_listen:
 
 # Layer-2 listeners (Linux AF_PACKET, requires root/CAP_NET_RAW)
 # Set the interface name for the NIC connected to the OT network segment.
-# Leave blank or comment out to disable (PROFINET traffic will not be captured).
-# Can also be overridden at runtime: icsforge-receiver --l2-iface eth0
+# --l2-iface eth0 at the CLI enables ALL L2 listeners on that interface.
+# Alternatively set per-protocol below; iec61850 and profinet_dcp can share the same NIC.
+# Leave blank to disable.
 l2_listen:
-  profinet_dcp: ""    # e.g. "eth0" or "ens3"
+  profinet_dcp: ""    # e.g. "eth0" or "ens3"  (EtherType 0x8892)
+  iec61850:     ""    # e.g. "eth0" or "ens3"  (EtherType 0x88B8 GOOSE)
 
 log:
   receipts: ./receiver_out/receipts.jsonl
