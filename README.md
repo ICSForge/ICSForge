@@ -1,20 +1,21 @@
 
 [//]: [![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
+[![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.60.0-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
+[![Version](https://img.shields.io/badge/version-0.61.0-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
 ICSForge focuses on what can actually be observed on the network and generates realistic OT traffic and PCAPs in **10 industrial protocols (Modbus/TCP, DNP3, S7comm, IEC-104, OPC UA, EtherNet/IP, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP)** which are aligned with **68 of 83 unique techniques in MITRE ATT&CK for ICS v18 (82% coverage)** — without exploiting real systems or causing unsafe process impact — to help asset owners and defenders assess the quality of existing security countermeasures such as firewalls, OT NSM sensors and ACLs and identify hidden gaps.
 
-ICSForge is developed with a **safe-by-design** approach, operating within a **Sender-Receiver architecture** and interacting only with the designated sender and receiver, without touching other OT devices.
-
+ICSForge is developed with a **defender-first** and **safe-by-design** approach around a **Sender-Receiver architecture** and interacting with the designated sender and receiver, without the need of touching other OT devices.
+By default, live traffic sends are restricted to RFC 1918 / loopback addresses, and PCAP replay is restricted to private ranges unless explicitly unlocked via Tools → Send Policy.
 > Most ICS security tools promise coverage - ICSForge lets you **prove it**.
 ---
 
-## Key Numbers (v0.60)
+## Key Numbers (v0.61.0)
 
 | Metric | Value |
 |---|---|
@@ -75,6 +76,7 @@ sudo ./icsforge.sh web        				# Sender dashboard on :8080
 sudo ./icsforge.sh receiver   				# Receiver dashboard on :9090
 sudo ./icsforge.sh receiver --l2-iface eth0 # Receiver with Profinet Listener
 ```
+> **Token:** Generated automatically on first sender setup and shown in the setup UI. Copy it to the receiver launch command. Required for receipt integrity.
 
 ### Or with Docker
 
@@ -88,15 +90,19 @@ docker compose up
 
 On first launch, ICSForge prompts you to create an admin account. All subsequent access requires login. Credentials are stored with scrypt KDF (N=16384, file mode 0600).
 
-**Always-public endpoints** (no auth required): `/api/health`, `/api/version`, `/api/technique_support`, `/api/receiver/callback`, `/api/config/set_callback`. When `callback_token` is configured, the callback endpoint also requires `X-ICSForge-Callback-Token`.
+**Always-public endpoints** (no auth required): `/api/health`, `/api/version`, `/api/technique_support`, `/api/receiver/callback`.
+
+**Callback receipt endpoint** (`/api/receiver/callback`): always requires `X-ICSForge-Callback-Token` once a token is configured (auto-generated on first setup).
+
+**Callback registration** (`/api/config/set_callback`): loopback callers (127.x, same-host) are trusted without a token. Remote callers must supply the correct `X-ICSForge-Callback-Token`. If no token is configured, remote registration is rejected.
 
 ## Network Configuration: Receiver IP vs Destination IP
 
 ICSForge uses two related but distinct IP concepts in the sender UI:
 
-**Receiver IP (Network Settings panel)** — the IP of the machine running `icsforge receiver`. Setting this via Network Settings saves the address to persistent config and attempts to register a callback URL with the receiver so it can push receipts back to the sender automatically.
+**Receiver IP (Network Settings panel)** — the IP of the machine running `icsforge receiver`. Setting this saves the address to persistent config and attempts to register a callback URL with the receiver so it can push receipts back to the sender automatically. It also auto-fills the Destination IP field below it.
 
-**Destination IP (Configuration panel)** — the IP written into generated packet headers as the target address. Auto-populated from Receiver IP when you click Save & Connect, but can be overridden independently.
+**Destination IP (Configuration panel)** — the IP written into generated packet headers as the target address. Auto-populated from Receiver IP when you click Save & Connect, but can be overridden independently. For example: if testing against a real PLC you may want `dst_ip` = the PLC's IP while the receiver runs on a different monitoring host.
 
 **Sync modes:**
 
@@ -116,7 +122,7 @@ curl -X POST http://localhost:8080/api/config/network \
   -d '{"receiver_ip": "192.168.1.50", "receiver_port": 9090}'
 ```
 
-ICSForge can be run from **command line interface** as well;
+ICSForge can be run from the **command line interface** as well;
 
 ### CLI — generate a PCAP offline
 
@@ -209,11 +215,11 @@ ICSForge implements 68 of 83 ATT&CK for ICS techniques at the network-observable
 | Page | URL | Purpose |
 |---|---|---|
 | **Home** | `/` | KPIs, top techniques by protocol coverage, scenario browser |
-| **Sender** | `/sender` | Launch scenarios and chains; configure network; view live receipts |
-| **ATT&CK Matrix** | `/matrix` | Interactive coverage overlay; click any runnable tile to fire traffic |
+| **Sender** | `/sender` | Launch scenarios and chains; configure network; live payload preview; receiver feed |
+| **ATT&CK Matrix** | `/matrix` | Interactive coverage overlay; click any runnable tile to fire traffic with full technique description |
 | **Campaigns** | `/campaigns` | Multi-step campaign playbooks and named attack chains with SSE progress |
-| **Report** | `/report` | Coverage report generation and download; correlation gap analysis |
-| **Tools** | `/tools` | Offline PCAP generation, alerts ingestion, detection rule download |
+| **Report** | `/report` | Coverage report generation and inline preview; correlation gap analysis; HTML download |
+| **Tools** | `/tools` | Offline PCAP generation, PCAP upload & replay, alerts ingestion, detection rule download |
 
 ---
 
@@ -310,12 +316,16 @@ Use stealth mode for IDS/NGFW validation exercises where the marker would trivia
 
 ## Security Model
 
-- **Destination IP enforcement:** `/api/send` only accepts RFC1918, loopback, link-local, and TEST-NET addresses — public IPs return HTTP 403. The CLI `--confirm-live-network` flag is required for any live send regardless.
+- **Destination IP enforcement:** `/api/send` and `/api/technique/send` only accept RFC1918, loopback, link-local, and TEST-NET addresses — public IPs return HTTP 403. Extend via Tools → Allowed Networks for non-RFC1918 internal ranges (persisted, no restart needed).
+- **Receipt integrity:** A callback token is auto-generated on first setup and required on all receipt POSTs. Forged receipts without the correct token are rejected with 401. The token is shown in the setup UI with a one-click copy and the exact receiver launch command.
+- **Callback registration:** Loopback callers (same-host) are trusted. Remote receivers must supply the matching token via `X-ICSForge-Callback-Token`.
 - **Path traversal protection:** `outdir` and alert ingest `path` parameters are validated against the project root via `os.path.realpath()`.
 - **CSRF protection:** All state-mutating API endpoints require `X-CSRF-Token` header matching the session token.
 - **Security headers:** `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy`, `Referrer-Policy` on all responses.
 - **Password storage:** scrypt KDF (N=16384, r=8, p=1, dklen=32) with random salt.
 - **Rate limiting:** 5 login attempts per 60 seconds per IP; 5-minute lockout.
+- **Upload limits:** PCAP uploads capped at 100 MB.
+
 
 ---
 
@@ -355,13 +365,15 @@ ICSForge is **defender-first**, **safe by design**, and **honest about what each
 
 ## Protocol Notes
 
-**Layer 2 protocols (IEC 61850 GOOSE, PROFINET DCP)** require a raw network interface for live traffic:
+**Layer 2 protocols (IEC 61850 GOOSE, PROFINET DCP)** require a raw network interface and the same L2 broadcast domain (no routers between sender and receiver):
 ```bash
-python -m icsforge.receiver --l2-iface eth0  # receiver side
-icsforge send --name T0855__unauth_command__iec61850 \
-  --dst-ip ff:ff:ff:ff:ff:ff --iface eth0 --confirm-live-network
+# Receiver — start with L2 listener
+sudo ./icsforge.sh receiver --l2-iface eth0
+
+# Sender — set Interface (L2) field in the UI, or:
+sudo ./icsforge.sh web  # then set iface=eth0 in sender UI
 ```
-Offline PCAP generation (`icsforge generate`) works without an interface.
+Both PROFINET DCP (`01:0E:CF:00:00:00`) and GOOSE (`01:0C:CD:01:00:00`) listeners start automatically with `--l2-iface`. Raw socket access requires root or `CAP_NET_RAW`. Offline PCAP generation works without an interface.
 
 **MQTT** generates all packet types including CONNECT (with credentials and Will message), PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, and DISCONNECT. All 17 styles produce spec-valid frames with correct `remaining_length` encoding. Requires a broker at the destination IP (default port 1883).
 
@@ -395,8 +407,14 @@ Offline PCAP generation (`icsforge generate`) works without an interface.
 ### ATT&CK for ICS Matrix
 ![ATT&CK Matrix](screenshots/attack_matrix.png)
 
+### ATT&CK for ICS Matrix with Run Scenarios Overlay
+![ATT&CK Matrix](screenshots/attack_matrix_overlay.png)
+
 ### Coverage Report
 ![Coverage Report](screenshots/coverage_report.png)
+
+### Tools for PCAP Generation and Replay
+![Tools](screenshots/tools.png)
 
 ### Receiver - Live Traffic View
 ![Receiver Live View](screenshots/receiver.png)
@@ -404,6 +422,8 @@ Offline PCAP generation (`icsforge generate`) works without an interface.
 ### Receiver - ATT&CK for ICS Matrix - Light Theme
 ![Receiver ATT&CK for ICS Matrix](screenshots/attack_matrix_receiver.png)
 
+### Receiver - ATT&CK for ICS Matrix - Dark Theme
+![Receiver ATT&CK for ICS Matrix](screenshots/attack_matrix_receiver_dark.png)
 ---
 
 ## License
