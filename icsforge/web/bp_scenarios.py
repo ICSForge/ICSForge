@@ -442,6 +442,11 @@ def api_technique_send():
         return jsonify({"error": "technique required"}), 400
     if not dst_ip:
         return jsonify({"error": "dst_ip required"}), 400
+    if not _is_safe_private_ip(dst_ip):
+        return jsonify({"error": (
+            f"Destination IP {dst_ip!r} is not a private/safe address. "
+            "ICSForge only sends to RFC1918, loopback, link-local, and TEST-NET ranges."
+        )}), 403
 
     scenario_name = technique if not variant else f"{technique}__{variant}"
 

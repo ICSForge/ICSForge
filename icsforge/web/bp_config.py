@@ -1,6 +1,7 @@
 """ICSForge config blueprint — network config, callback setup, health, interfaces."""
 import json
 import os
+import secrets
 import re
 import socket
 import subprocess
@@ -122,9 +123,40 @@ def api_config_receiver_ip():
     })
 
 
-# ── Set callback (receiver-side, auth-exempt)
+# ── Set callback (receiver-side, auth-exempt for loopback; token-required for remote)
 @bp.route("/api/config/set_callback", methods=["POST"])
 def api_config_set_callback():
+    """
+    Called by the receiver process to register its callback URL with the sender.
+    Security model:
+      - Loopback callers (127.x, ::1) are trusted without a token — same-host deployments.
+      - Remote callers must supply X-ICSForge-Callback-Token matching the sender's
+        configured callback_token. If no token is configured on the sender, remote
+        registration is rejected (forces operators to set a token for multi-host setups).
+    """
+    import ipaddress as _ip
+    # Use ONLY request.remote_addr — never X-Forwarded-For.
+    # Trusting X-Forwarded-For allows any remote caller to spoof 127.0.0.1
+    # and bypass the loopback trust gate. If the app runs behind a reverse
+    # proxy, the proxy should strip or rewrite the header upstream.
+    remote_addr = (request.remote_addr or "").strip()
+    try:
+        is_loopback = _ip.ip_address(remote_addr).is_loopback
+    except ValueError:
+        is_loopback = False
+
+    if not is_loopback:
+        # Remote caller: require callback token to match sender's configured token
+        sender_token = (_h._callback_token or "").strip()
+        if not sender_token:
+            return jsonify({"error": (
+                "Remote callback registration requires a callback token. "
+                "Set a shared token in Network Settings on both sender and receiver."
+            )}), 401
+        supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
+        if not supplied or not secrets.compare_digest(supplied, sender_token):
+            return jsonify({"error": "invalid callback token"}), 401
+
     data = request.get_json(force=True) or {}
     callback_url = (data.get("callback_url") or "").strip()
     callback_token = (data.get("callback_token") or "").strip()
@@ -222,8 +254,16 @@ def api_selftest():
     live = bool(data.get("live"))
     dst_ip = (data.get("dst_ip") or "127.0.0.1").strip()
     bind = (data.get("bind") or "127.0.0.1").strip()
-    cwd = (data.get("cwd") or _repo_root()).strip()
-    receipts = (data.get("receipts") or "receiver_out/receipts.jsonl").strip()
+    # cwd is always the repo root — not caller-supplied.
+    # Accepting arbitrary cwd from the web layer lets authenticated users
+    # set unexpected subprocess working directories. Fixed: always use repo root.
+    cwd = _repo_root()
+    rr = os.path.realpath(cwd)
+    raw_receipts = (data.get("receipts") or "receiver_out/receipts.jsonl").strip()
+    receipts_abs = os.path.realpath(os.path.join(rr, raw_receipts.lstrip("/")))
+    if not receipts_abs.startswith(rr):
+        return jsonify({"error": "receipts path must be inside repo root"}), 400
+    receipts = receipts_abs
     cmd = [sys.executable, "-m", "icsforge", "selftest"]
     if live:
         cmd += ["--live", "--dst-ip", dst_ip, "--bind", bind]
@@ -257,10 +297,35 @@ def api_version():
         chains = sum(1 for k in sc if k.startswith("CHAIN__"))
     except Exception:
         standalone = chains = None
+    # Technique coverage — derive live from scenarios.yml (source of truth)
+    try:
+        _sc_path = _canonical_scenarios_path()
+        _sc_doc = _load_yaml(_sc_path) or {}
+        _sc_map = _sc_doc.get('scenarios') or {}
+        # Count unique technique IDs from non-chain scenario steps
+        _techs = set()
+        for _name, _data in _sc_map.items():
+            if _name.startswith('CHAIN__'):
+                continue
+            for _step in (_data.get('steps') or []):
+                _t = _step.get('technique')
+                if _t:
+                    _techs.add(_t)
+        runnable_count = len(_techs)
+        # Total ATT&CK for ICS techniques is fixed at 83
+        total_techniques = 83
+    except Exception:
+        runnable_count = total_techniques = None
+    total_scenarios = None
+    if standalone is not None and chains is not None:
+        total_scenarios = standalone + chains
     return jsonify({
-        "version": getattr(icsforge, "__version__", "unknown"),
-        "protocols": 10,
-        "scenarios": {"standalone": standalone, "chains": chains},
+        "version":    getattr(icsforge, "__version__", "unknown"),
+        "protocols":  10,
+        "scenarios":  total_scenarios,
+        "scenarios_detail": {"standalone": standalone, "chains": chains},
+        "techniques": runnable_count,
+        "techniques_total": total_techniques,
     })
 
 
@@ -448,4 +513,26 @@ def api_config_allowed_nets():
     _h._allowed_nets = validated
     _h._save_persisted_config()
     return jsonify({"ok": True, "allowed_nets": validated})
+
+
+@bp.route("/api/config/send_policy", methods=["GET", "POST"])
+def api_config_send_policy():
+    """
+    GET  → return current send policy settings.
+    POST → {webhook_allow_public: bool, replay_allow_public: bool} — save.
+    """
+    if request.method == "GET":
+        return jsonify({
+            "webhook_allow_public": _h._webhook_allow_public,
+            "replay_allow_public":  _h._replay_allow_public,
+        })
+    data = request.get_json(force=True) or {}
+    _h._webhook_allow_public = bool(data.get("webhook_allow_public", False))
+    _h._replay_allow_public  = bool(data.get("replay_allow_public",  False))
+    _h._save_persisted_config()
+    return jsonify({
+        "ok": True,
+        "webhook_allow_public": _h._webhook_allow_public,
+        "replay_allow_public":  _h._replay_allow_public,
+    })
 

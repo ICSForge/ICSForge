@@ -33,6 +33,25 @@
           <a class="nav-tab {{ 'active' if request.endpoint == 'web.tools' }}" href="{{ url_for('web.tools') }}">Tools</a>
         {% endif %}
       </nav>
+  {%- if not no_auth and not callback_token_set %}
+  <div id="token_warn" style="background:#7c1d1d;color:#fca5a5;font-size:11px;padding:6px 16px;display:flex;align-items:center;gap:8px;justify-content:space-between">
+    <span>⚠ No callback token configured — receipt integrity is not enforced. Set a shared token in Network Settings to protect against forged receipts.</span>
+    <a href="/sender#network_bar" style="color:#fca5a5;white-space:nowrap">Configure →</a>
+  </div>
+  {%- endif %}
+  {%- if no_auth %}
+  <div style="background:#78350f;color:#fde68a;font-size:11px;padding:6px 16px;display:flex;align-items:center;gap:8px">
+    <span>⚠ Authentication disabled — this instance has no access control. Do not expose to untrusted networks.</span>
+  </div>
+  {%- endif %}
+  <div id="policy_warn_replay" style="display:none;background:#78350f;color:#fde68a;font-size:11px;padding:6px 16px;align-items:center;gap:8px;justify-content:space-between">
+    <span>⚠ Public PCAP replay targets enabled — replay can reach any IP. Disable in Tools → Send Policy when not needed.</span>
+    <a href="/tools" style="color:#fde68a;white-space:nowrap">Send Policy →</a>
+  </div>
+  <div id="policy_warn_webhook" style="display:none;background:#78350f;color:#fde68a;font-size:11px;padding:6px 16px;align-items:center;gap:8px;justify-content:space-between">
+    <span>⚠ Public webhook URLs enabled — webhooks can POST to any internet address. Disable in Tools → Send Policy when not needed.</span>
+    <a href="/tools" style="color:#fde68a;white-space:nowrap">Send Policy →</a>
+  </div>
 
       <div class="nav-right">
         <span class="chip">{{ env_label }}</span>
@@ -49,5 +68,16 @@
       <span class="mono">v{{ version }}</span>
     </div>
   </div>
+<script>
+(async () => {
+  try {
+    const d = await fetch('/api/config/send_policy').then(r => r.json());
+    const wr = document.getElementById('policy_warn_replay');
+    const ww = document.getElementById('policy_warn_webhook');
+    if (wr) wr.style.display = d.replay_allow_public  ? 'flex' : 'none';
+    if (ww) ww.style.display = d.webhook_allow_public ? 'flex' : 'none';
+  } catch(_) {}
+})();
+</script>
 </body>
 </html>

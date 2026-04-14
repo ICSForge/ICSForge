@@ -118,6 +118,21 @@ def api_receiver_callback():
         supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
         if not supplied or not secrets.compare_digest(supplied, _h._callback_token):
             return jsonify({"error": "invalid callback token"}), 401
+        # HMAC integrity check — mandatory when token is configured.
+        # Receiver must sign the payload body with HMAC-SHA256(token, body).
+        # A token-bearing callback without a valid HMAC is rejected.
+        import hmac as _hmac, hashlib as _hl
+        raw_body = request.get_data()
+        supplied_hmac = (request.headers.get("X-ICSForge-HMAC") or "").strip()
+        if not supplied_hmac:
+            return jsonify({"error": "HMAC required: receiver must sign callbacks with X-ICSForge-HMAC"}), 401
+        expected = _hmac.new(
+            _h._callback_token.encode("utf-8"),
+            raw_body,
+            _hl.sha256,
+        ).hexdigest()
+        if not _hmac.compare_digest(supplied_hmac, expected):
+            return jsonify({"error": "HMAC verification failed"}), 401
     data = request.get_json(force=True, silent=True) or {}
     if not data.get("marker_found"):
         return jsonify({"ok": True, "stored": False})

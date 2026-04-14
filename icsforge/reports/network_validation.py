@@ -74,7 +74,13 @@ def build_network_validation_report(
             "expected_techniques": exp,
             "received_packets": len(rec),
             "received_techniques_from_marker": rec_tech,
-            "delivery_ratio": (1.0 if len(rec) > 0 else 0.0),
+            # Delivery ratio: fraction of expected techniques confirmed by markers.
+            # A technique is "delivered" if at least one receipt carries its ID.
+            "delivered_techniques": sorted({x.get("technique") for x in rec if x.get("technique")} & set(exp)),
+            "delivery_ratio": (
+                round(len({x.get("technique") for x in rec if x.get("technique")} & set(exp)) / len(exp), 3)
+                if exp else (1.0 if len(rec) > 0 else 0.0)
+            ),
         }
         if alerts_jsonl:
             obs = sorted(observed_by_run.get(run, set()))

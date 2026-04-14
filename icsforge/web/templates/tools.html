@@ -88,6 +88,9 @@
     <div class="card">
       <h2>PCAP Replay</h2>
       <div class="small">Replay a PCAP toward a destination IP (requires sudo/root for raw send on many systems).</div>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#fbbf24">
+        ⚠ Replay accepts any destination IP including addresses outside RFC 1918. Only replay PCAPs to devices you own and have explicit permission to test.
+      </div>
       <div class="hr"></div>
       <div class="row">
         <div class="field">
@@ -167,6 +170,59 @@
         <a href="/api/report/heatmap" class="btn primary" target="_blank">⬇ Download Coverage Heatmap</a>
         <a href="/report" class="btn">Custom Report Builder →</a>
       </div>
+    </div>
+
+    <div class="card" {% if ui_mode != 'sender' %}style="display:none"{% endif %}>
+      <h2>🔒 Send Policy</h2>
+      <p class="small muted" style="margin-bottom:16px">
+        By default ICSForge only sends traffic to private and lab IP ranges.
+        Enable these options when you have explicit permission to reach public-facing targets.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--fg)">Allow public webhook URLs</div>
+              <div class="small muted" style="margin-top:3px">
+                Permits webhook delivery to public services like Slack, PagerDuty, or Teams.
+                Off by default — webhooks are restricted to private/localhost ranges.
+              </div>
+            </div>
+            <label style="position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0">
+              <input type="checkbox" id="sp_webhook_public" onchange="saveSendPolicy()"
+                style="opacity:0;width:0;height:0">
+              <span id="sp_webhook_track" style="position:absolute;cursor:pointer;inset:0;
+                background:var(--border);border-radius:24px;transition:.2s"></span>
+              <span id="sp_webhook_thumb" style="position:absolute;content:'';height:18px;width:18px;
+                left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s"></span>
+            </label>
+          </div>
+        </div>
+
+        <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--fg)">Allow public PCAP replay targets</div>
+              <div class="small muted" style="margin-top:3px">
+                Permits PCAP replay to any destination IP, including public addresses.
+                Only enable this if you own the target device and have explicit permission.
+              </div>
+            </div>
+            <label style="position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0">
+              <input type="checkbox" id="sp_replay_public" onchange="saveSendPolicy()"
+                style="opacity:0;width:0;height:0">
+              <span id="sp_replay_track" style="position:absolute;cursor:pointer;inset:0;
+                background:var(--border);border-radius:24px;transition:.2s"></span>
+              <span id="sp_replay_thumb" style="position:absolute;content:'';height:18px;width:18px;
+                left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div id="sp_status" class="small muted" style="margin-top:10px;height:16px"></div>
     </div>
 
     <div class="card" {% if ui_mode != 'sender' %}style="display:none"{% endif %}>
@@ -332,6 +388,52 @@
     {% endif %}
 
 
+
+    function _applyToggle(checkId, trackId, thumbId, on) {
+      const cb = document.getElementById(checkId);
+      const track = document.getElementById(trackId);
+      const thumb = document.getElementById(thumbId);
+      if (!cb) return;
+      cb.checked = on;
+      track.style.background = on ? 'var(--accent, #3b82f6)' : 'var(--border)';
+      thumb.style.transform = on ? 'translateX(18px)' : 'translateX(0)';
+    }
+
+    async function loadSendPolicy() {
+      try {
+        const d = await fetchJSON('/api/config/send_policy');
+        if (d.error) return;
+        _applyToggle('sp_webhook_public','sp_webhook_track','sp_webhook_thumb', d.webhook_allow_public);
+        _applyToggle('sp_replay_public','sp_replay_track','sp_replay_thumb', d.replay_allow_public);
+      } catch(_) {}
+    }
+
+    async function saveSendPolicy() {
+      const webhook = document.getElementById('sp_webhook_public').checked;
+      const replay  = document.getElementById('sp_replay_public').checked;
+      _applyToggle('sp_webhook_public','sp_webhook_track','sp_webhook_thumb', webhook);
+      _applyToggle('sp_replay_public','sp_replay_track','sp_replay_thumb', replay);
+      const st = document.getElementById('sp_status');
+      st.textContent = 'Saving…';
+      const res = await fetch('/api/config/send_policy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {getAttribute:()=>''}).getAttribute('content') || ''
+        },
+        body: JSON.stringify({webhook_allow_public: webhook, replay_allow_public: replay})
+      });
+      const d = await res.json();
+      if (d.ok) {
+        st.style.color = 'var(--good)';
+        st.textContent = '✓ Saved';
+        setTimeout(() => { st.textContent = ''; st.style.color = ''; }, 2500);
+      } else {
+        st.style.color = 'var(--bad)';
+        st.textContent = 'Error: ' + (d.error || 'save failed');
+      }
+    }
+
     async function loadAllowedNets(){
       const data = await fetchJSON("/api/config/allowed_nets");
       if(data.error){ document.getElementById("an_status").textContent = "Error: "+data.error; return; }
@@ -380,6 +482,7 @@
       } catch(_) {}
     })();
     {% if ui_mode == 'sender' %}
+    loadSendPolicy();
     loadAllowedNets();
     loadGenerateScenarios();
     const f=document.getElementById("g_filter"); if(f){ f.addEventListener("input", filterGenerateScenarios); }

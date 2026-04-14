@@ -56,6 +56,15 @@ def inject_ui_mode():
         mode = "sender"
     return {"ui_mode": mode}
 
+@web.app_context_processor
+def inject_token_status():
+    """Expose callback_token_set and no_auth to all templates."""
+    from icsforge.web import helpers as _helpers
+    return {
+        "callback_token_set": bool(_helpers._callback_token),
+        "no_auth": bool(os.environ.get("ICSFORGE_NO_AUTH")),
+    }
+
 @web.before_app_request
 def _guard_ui_mode():
     mode = os.environ.get("ICSFORGE_UI_MODE", "sender").strip().lower()
@@ -316,7 +325,24 @@ def report():
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.secret_key = os.environ.get("ICSFORGE_SECRET_KEY") or secrets.token_hex(32)
+    app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100 MB — sufficient for real PCAPs
+    # Persist session secret across restarts so sessions survive app restarts.
+    # Priority: ICSFORGE_SECRET_KEY env var → persisted file → generate+save new.
+    _sk = os.environ.get("ICSFORGE_SECRET_KEY", "").strip()
+    if not _sk:
+        _sk_path = os.path.join(os.path.expanduser("~"), ".icsforge", "secret_key")
+        try:
+            if os.path.exists(_sk_path):
+                _sk = open(_sk_path).read().strip()
+            if not _sk:
+                _sk = secrets.token_hex(32)
+                os.makedirs(os.path.dirname(_sk_path), exist_ok=True)
+                with open(_sk_path, "w") as _f:
+                    _f.write(_sk)
+                os.chmod(_sk_path, 0o600)
+        except OSError:
+            _sk = secrets.token_hex(32)  # fallback: ephemeral
+    app.secret_key = _sk
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=12)

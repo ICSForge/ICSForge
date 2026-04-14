@@ -1,53 +1,366 @@
-## v0.60.0 (2026-04 — Allowed Networks UI, bug fixes: stealth preview, matrix overlay, PCAP replay)
+## v0.61.0 (2026-04-13) — Three-tier detection content
 
-### Allowed Networks — web UI configuration (Tools page)
+### Detection generator completely rewritten
 
-Non-RFC1918 internal ranges (e.g. 130.75.0.0/24 — publicly-routed IPs used internally
-in OT environments) can now be configured directly from the Tools page without
-touching environment variables or restarting the server.
+Previous generator produced one rule per scenario using port + first 8 header
+bytes + optional marker. A detection engineer's correct assessment: mostly lab
+scaffolding. The semantic depth was not there.
 
-  Tools → ⚙ Allowed Networks → enter CIDRs one per line → Save
+The new generator produces three separate, explicitly-labeled rule sets:
 
-Stored in ~/.icsforge/web_config.json alongside other persisted settings. Takes
-effect immediately: IPs in saved ranges are accepted by /api/send on the next
-request without restart.
+---
 
-The ICSFORGE_ALLOWED_NETS environment variable still works and is shown as a
-read-only note in the UI when set (e.g. from docker-compose or systemd unit).
+#### Tier 1 — icsforge_lab.rules (149 rules)
 
-Validation: invalid CIDRs return an inline error before saving. Clearing all
-entries reverts to RFC1918-only mode. Both the core layer (syslog/kafka output
-sinks) and the web gate (/api/send) now honour the persisted list.
+  Requires ICSFORGE_SYNTH marker in payload.
+  Zero false positives on non-ICSForge traffic.
+  Use only during validation runs. Not useful against real adversaries.
 
-API: GET/POST /api/config/allowed_nets
-  GET  → {allowed_nets: [...], env_nets: [...]}
-  POST → {cidrs: ["130.75.0.0/24", ...]} → validates and saves
+---
 
-### IP restriction: all RFC1918 ranges now allowed by default
+#### Tier 2 — icsforge_heuristic.rules (145 rules)
 
-Previously TEST_NETS in core.py only covered loopback + 3 RFC5737 documentation
-ranges. Live sends to 10.x, 172.16-31.x, 192.168.x all failed silently. Fixed.
+  Matches protocol magic bytes at exact offsets:
+    Modbus:    0x00 0x00 at offset 4-5 (Protocol Identifier field)
+    DNP3:      0x05 0x64 at offset 0-1 (Link-layer start bytes)
+    S7comm:    0x03 0x00 at offset 0-1 (TPKT header)
+    IEC-104:   0x68 at offset 0 (APCI start byte)
+    MQTT:      0x10 at offset 0 (CONNECT packet type)
+    BACnet:    0x81 0x0A at offset 0-1 (BVLC header)
+    EtherNet/IP: command word at offset 0-1
 
-### PCAP replay: IP restriction removed (both layers)
+  Will fire on any traffic matching that protocol. Use to confirm NSM
+  visibility. Does not distinguish adversary from legitimate OT traffic.
 
-The guard existed in bp_runs.py (web layer) AND replay_pcap() in core.py.
-Both removed. Also fixed: core.py is_allowed_dest() now covers all RFC1918
-ranges so syslog/kafka output sinks work in real OT lab environments.
+---
+
+#### Tier 3 — icsforge_semantic.rules (227 rules)  ← recommended
+
+  Matches specific function codes and application-layer commands:
+    Modbus:    FC byte at offset 7 (Read Coils/01, Write Multiple/10, etc.)
+    DNP3:      Application FC at offset 12 (Direct Operate/05, Restart/0D, etc.)
+    S7comm:    PDU type byte at offset 8 (Job/01, Userdata/07, etc.)
+    IEC-104:   ASDU Type ID at offset 6 (C_SC_NA/2D, C_DC_NA/2E, etc.)
+    MQTT:      Packet type nibble (PUBLISH/30, SUBSCRIBE/82, etc.)
+    BACnet:    Service choice byte at offset 7 (writeProperty/0F, etc.)
+    EtherNet/IP: Command word (ListIdentity/6300, RegisterSession/6500, etc.)
+
+  Low false-positive rate in properly segmented OT environments where those
+  specific function codes should be absent or rare. This is the tier that
+  would fire on a real adversary performing the same operation, not just
+  generating the same protocol.
+
+---
+
+### Sigma rules: tiered detection blocks
+
+Each sigma/<scenario>.yml now contains all three tiers in one file:
+
+  detection:
+    lab_marker:            payload|contains: 'ICSFORGE_SYNTH'
+    protocol_heuristic:    dst_port + network.protocol fields
+    semantic:              protocol-specific Zeek field matching
+                           (modbus.func_code, dnp3.app_func_code,
+                            mqtt.packet_type_name, bacnet.service_choice)
+    condition: lab_marker or protocol_heuristic or semantic
+
+  falsepositives block explicitly documents per-tier FP expectations.
+  confidence_tiers in custom: block machine-readable for tooling.
+
+### Download now provides all three files
+
+GET /api/detections/download produces a zip with:
+  icsforge_lab.rules
+  icsforge_heuristic.rules
+  icsforge_semantic.rules  (was previously icsforge_ics.rules)
+  sigma/<scenario>.yml x149
+  README.txt with tier explanation and usage examples
+
+GET /api/detections/preview now returns rule_counts per tier.
+
+## v0.60.1 patch — mandatory HMAC, honest README, policy banners (2026-04)
+
+### HMAC now mandatory when callback token is configured
+
+Previously HMAC was only checked if the X-ICSForge-HMAC header was present —
+a token-bearing callback without HMAC was accepted. This made HMAC optional
+integrity, which is effectively weak integrity.
+
+Fixed: if a callback token is configured, X-ICSForge-HMAC is now required.
+A token-correct callback without the header returns 401 "HMAC required".
+If no token is configured, no HMAC check applies (backwards compat for
+no-token setups). When token IS configured the full chain is enforced:
+correct token + correct HMAC-SHA256(token, body) = accepted.
+
+### README safety claims corrected
+
+The README said:
+  "operating within a Sender-Receiver architecture and interacting only with
+   the designated sender and receiver, without touching other OT devices"
+
+That is not true — replay can reach any private IP by default, and the tool
+is designed to be a flexible lab platform. Replaced with accurate language:
+  "By default, live traffic sends are restricted to RFC 1918 / loopback
+   addresses, and PCAP replay is restricted to private ranges unless
+   explicitly unlocked via Tools → Send Policy. It is a flexible lab
+   platform — not a zero-touch sandbox."
+
+Also fixed:
+  - Version badge: 0.60.0 → 0.60.1
+  - Upload cap: 1 GB → 100 MB (was stale from before the cap change)
+  - "safe-by-design" and "without touching other OT devices" removed
+
+### Warning banners for active risk states
+
+Three new amber banners appear in the nav header when dangerous states are on:
+
+  ⚠ Authentication disabled (ICSFORGE_NO_AUTH) — always shown when no-auth mode
+    is active, so operators can't forget they're running without access control.
+
+  ⚠ Public PCAP replay targets enabled — shown dynamically via JS when the
+    replay toggle is on. Links to Tools → Send Policy.
+
+  ⚠ Public webhook URLs enabled — shown dynamically when the webhook toggle
+    is on. Links to Tools → Send Policy.
+
+All three are amber (not red) to distinguish from the critical token-missing
+banner, which remains red.
+
+## v0.60.1 (2026-04-13)
+
+### Send Policy toggles are now the sole authority
+
+The `ICSFORGE_REPLAY_ALLOW_PUBLIC` and `ICSFORGE_WEBHOOK_ALLOW_PUBLIC` environment
+variables previously bypassed the UI toggles — if set in the shell, public targets
+were allowed regardless of what the toggle showed. This was the root cause of the
+"I replayed to 8.8.8.8 with the toggle off" issue.
+
+Both gates now check only the persisted config globals (`_replay_allow_public`,
+`_webhook_allow_public`). Environment variables no longer have any effect on
+these gates. The UI toggle in Tools → Send Policy is the single source of truth.
+
+Default state: both toggles off. If a user enables one and then turns it off,
+public targets are blocked again immediately — no restart needed.
+
+The `ICSFORGE_ALLOWED_NETS` env var for non-RFC1918 networks is also superseded
+by the Tools → Allowed Networks UI. Env var support in the allowed-networks check
+was kept for backwards compatibility but the recommended workflow is now the UI.
 
 ### Bug fixes
 
-  Stealth preview: toggleStealth() moved inside the IIFE — was outside, so
-    selectedName and loadHexDump were undefined at call time. Preview now
-    updates immediately when toggling stealth on or off.
+- Token warning banner (base.html): `inject_token_status` context processor was
+  written but never registered — went into a dead code path from a failed string
+  replace. Now correctly registered as `@web.app_context_processor`. Additionally,
+  `saveNetworkConfig` in `sender.js` now immediately hides the banner client-side
+  in a `finally` block — no page reload required.
 
-  Matrix All-runs overlay: list_runs() returns no artifacts; fixed to call
-    get_run() per run_id to get the full artifact list including events files.
+- IEC 61850 `invalid literal for int() with base 10: '0x0004'`: The APPID field
+  in the sender UI sends the default as the string `"0x0004"`. `int("0x0004")`
+  fails without `base=16`. Fixed with a `_int()` helper using `int(v, 0)` (base 0
+  auto-detects `0x` prefix) applied to all kwargs int() calls in iec61850.py.
 
-  Post-IIFE functions (EVE tap, webhook): were referencing API, logln,
-    tlConfirmStep outside the IIFE where they are undefined. Fixed by exporting
-    from inside the IIFE as window._senderAPI etc.
+### Documentation
 
-## v0.59.9-r2 (2026-04 — Stealth preview fix (real), All-runs overlay, PCAP replay)
+- README: security model updated — send policy, HMAC receipt signing, path
+  traversal fixes all documented. Env var references removed.
+- HOWTO.md: Send Policy section added (section 10). Non-RFC1918 section updated
+  to point to UI instead of env var.
+- INSTALL.md: Non-RFC1918 section updated to point to UI.
+
+## v0.60.0 security hardening round 3 — third audit fixes (2026-04)
+
+### Critical: credentials removed from release artifact
+
+The shipped tarball contained out/.credentials.json (with username and password hash)
+and out/run_index.json (with absolute developer machine paths). This is a release
+hygiene failure that gives reviewers ammunition before the demo starts.
+
+Fixed in two ways:
+  1. Credentials moved from out/.credentials.json to ~/.icsforge/credentials.json —
+     outside the project tree entirely, impossible to accidentally include in a release.
+  2. release.sh now explicitly excludes out/.credentials.json, out/run_index.json,
+     and out/alerts/, and runs a post-build sanity check that aborts with an error
+     if any runtime state appears in the artifact.
+
+### High: webhook URL restricted to private/localhost by default
+
+Webhook fire_webhook() accepted any URL including public internet addresses, giving
+an authenticated operator an unrestricted outbound HTTP client. Fixed:
+  - Only http/https schemes accepted
+  - Host must be loopback, private, or link-local by default
+  - Set ICSFORGE_WEBHOOK_ALLOW_PUBLIC=1 to allow public URLs (Slack, PagerDuty, etc.)
+
+### High: PCAP replay fenced to private ranges by default
+
+/api/pcap/replay intentionally allowed any dst_ip, directly contradicting the
+safe-by-design posture of /api/send. Fixed:
+  - Private/loopback ranges always allowed (lab use)
+  - Public IPs return 403 with a clear message
+  - Set ICSFORGE_REPLAY_ALLOW_PUBLIC=1 to allow public targets when you have
+    explicit permission to send to that device
+
+This makes the safety model consistent across all send paths.
+
+### High: HMAC receipt signing added
+
+Receipts are now signed by the receiver with HMAC-SHA256 over the full JSON body
+using the shared callback token. The sender verifies the HMAC on ingest:
+  - Receiver adds X-ICSForge-HMAC header to every callback POST
+  - Sender verifies it if present; unsigned receipts from token-authenticated
+    connections are still accepted for backwards compat with older receivers
+  - A forged receipt with token but wrong HMAC returns 401 "HMAC verification failed"
+  - A forged receipt without token continues to return 401 as before
+
+This is the cryptographic binding that changes the Demo Labs answer: receipts
+are now mathematically bound to the shared token, not just checked for its presence.
+
+### Medium: upload cap reduced from 1 GB to 100 MB
+
+1 GB was a DoS allowance, not hardening. 100 MB is sufficient for real PCAPs
+(typical multi-protocol scenario captures are 1-10 MB).
+
+### Medium: SameSite=Lax added to session cookies
+
+Reduces CSRF attack surface for cross-site request scenarios.
+
+## v0.60.0 security hardening round 2 — second audit fixes (2026-04)
+
+### Critical: X-Forwarded-For trust removed from callback registration
+
+The previous fix to /api/config/set_callback checked X-Forwarded-For to determine
+if a caller was loopback-trusted. An attacker could send:
+
+  X-Forwarded-For: 127.0.0.1
+
+and bypass the token requirement entirely, registering an arbitrary callback URL
+and redirecting all receipt telemetry.
+
+Fixed: only request.remote_addr is used. X-Forwarded-For is completely ignored.
+If the app runs behind a trusted reverse proxy, the proxy must handle IP rewriting
+upstream before the request reaches Flask.
+
+### High: net_validate_custom paths confined to repo root
+
+The custom network validation endpoint accepted arbitrary events, receipts, and
+output paths with no confinement. An authenticated user could read arbitrary
+JSONL-parseable files or write reports anywhere the process could write.
+
+Fixed: all three paths are now resolved relative to repo root and validated via
+os.path.realpath() + startswith check. Paths outside repo root return 400.
+
+### High: selftest cwd removed from web input
+
+/api/selftest accepted a caller-supplied cwd parameter and passed it to both the
+subprocess argument list and subprocess.run(cwd=...). Fixed: cwd is always the
+repo root. The receipts path is also validated to stay inside repo root.
+
+### Medium: session secret now persisted across restarts
+
+The app previously generated a new random secret key on every restart, invalidating
+all active sessions and CSRF tokens. This caused "why did I get logged out" failures
+at inconvenient demo moments.
+
+Fixed: secret key is generated once, written to ~/.icsforge/secret_key (mode 0600),
+and reused on subsequent starts. ICSFORGE_SECRET_KEY env var still overrides.
+
+### Medium: replay warning banner added to Tools page
+
+PCAP replay intentionally accepts any destination IP. This contradicts a strict
+reading of "safe-by-design." Added a visible amber warning on the Tools → PCAP
+Replay card: "Only replay PCAPs to devices you own and have permission to test."
+
+# ICSForge Changelog
+
+## v0.60.0 (2026-04-13)
+
+### Security hardening — mandatory callback token
+
+A callback token is now auto-generated during first-time setup and required on all
+receipt and registration endpoints. This closes the forged-receipt attack: a reviewer
+who POSTs `{marker_found: true}` to `/api/receiver/callback` without the token gets
+HTTP 401. The token is shown in the setup UI with a one-click Copy button and the
+exact receiver launch command.
+
+  - First-launch setup generates `secrets.token_urlsafe(24)`, persists it, and
+    displays it in the setup page with the receiver start command
+  - `/api/receiver/callback` always rejects unauthenticated POSTs when token is set
+  - `/api/config/set_callback`: loopback callers trusted; remote callers require token
+  - Receiver CLI: `--callback-token <token>` argument added
+  - Red warning banner on all pages until token is configured (for upgrades)
+
+### IP allowlist — Allowed Networks UI
+
+Non-RFC1918 internal ranges (e.g. 130.75.0.0/24) now configurable in-UI without
+restarting. Tools → ⚙ Allowed Networks. Persisted to `~/.icsforge/web_config.json`.
+Env var `ICSFORGE_ALLOWED_NETS` still works and is shown read-only in the UI.
+
+All RFC 1918 ranges (`10.x`, `172.16-31.x`, `192.168.x`), loopback, and link-local
+are allowed by default without any configuration.
+
+### Matrix send path: IP check now consistent
+
+`/api/technique/send` now enforces the same `_is_safe_private_ip()` check as
+`/api/send`. Previously the matrix tile send path had no IP guard — public IP bypass
+confirmed. Fixed.
+
+### Delivery ratio: per-technique fraction, not binary
+
+`delivery_ratio` was `1.0` if any receipt existed, `0.0` otherwise. Now:
+
+    delivered_techniques = expected_techniques ∩ receipted_techniques
+    delivery_ratio = len(delivered_techniques) / len(expected_techniques)
+
+`delivered_techniques` added to report output so the exact gap is visible.
+
+### Detection generator: dynamic version label
+
+Suricata and Sigma rule headers were hardcoded to `v0.42`. Now uses `__version__`.
+
+### Upload size limit: 1 GB
+
+`MAX_CONTENT_LENGTH = 1 GB` applied to the Flask app. Prevents disk exhaustion
+via large PCAP uploads.
+
+### Protocol realism
+
+  - Source MACs use registered OT vendor OUIs per protocol — no locally-administered
+    bit (eliminates Defender for IoT / Claroty "synthetic MAC" alerts)
+  - TCP source port stable per scenario run — all frames share one port, matching
+    real ICS persistent master-RTU connections (was random per frame)
+  - S7comm USERDATA header corrected to 12 bytes (was 10 — caused Wireshark MALFORMED
+    on `szl_read` and `szl_clear` styles)
+  - Full protocol correctness audit: Modbus MBAP, DNP3 CRCs, IEC-104 SSN/COT,
+    OPC UA sequence numbers, BACnet PDU types, MQTT QoS IDs — all verified clean
+
+### UI fixes
+
+  - Stealth toggle now immediately refreshes hex dump preview (was broken — IIFE
+    scope issue: `toggleStealth` was outside the IIFE so `selectedName` was undefined)
+  - Matrix "★ All runs" overlay now correctly highlights executed techniques
+    (was broken — `list_runs()` returns no artifacts; fixed to call `get_run()` per run)
+  - PCAP replay: IP restriction removed from both web layer and `core.py`
+  - Receiver reset button: missing `main.js` load caused CSRF 403 — fixed
+  - KPI counters: unique technique/protocol counts (not capped at 8)
+  - Sender Network Settings: removed misaligning "→ auto-fills" subtext
+
+### GOOSE receiver listener
+
+IEC 61850 GOOSE (EtherType 0x88B8) receiver added — `_l2_goose_listener()` runs
+alongside PROFINET DCP when `--l2-iface` is specified.
+
+### Housekeeping
+
+  - Removed: `docs/PHASE.md` (stale, 9 protocols/175 scenarios), `docs/LIVE_SOC_DEMO_FLOW.md`
+    (referenced deleted CLI), `icsforge/data/technique_variants.json` (71 stale entries,
+    API derives live from scenarios.yml)
+  - Post-IIFE functions (EVE tap, webhook) were referencing IIFE-local `API`, `logln`,
+    `tlConfirmStep` — fixed by exporting from inside IIFE as `window._senderAPI` etc.
+  - `docker-compose.yml`: stale `v0.4` comment removed
+  - `docs/INSTALL.md`, `docs/HOWTO.md`: rewritten for current version
+
+---
+
+## v0.59.10 (2026-04 — Stealth preview fix (real), All-runs overlay, PCAP replay)
 
 ### Bug 3 (complete fix): PCAP replay IP restriction was in two places
 

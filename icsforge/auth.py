@@ -51,11 +51,13 @@ PUBLIC_PREFIXES = ("/static/",)
 def _cred_path():
     if _CRED_FILE:
         return _CRED_FILE
-    # Store inside the project's out/ directory — not in the user home.
-    # This means credentials reset when the project directory is replaced,
-    # which is the expected behaviour for version upgrades and clean reinstalls.
-    here = os.path.dirname(os.path.abspath(__file__))          # icsforge/
-    project_root = os.path.dirname(here)                        # project root
+    # Store inside the project's out/ directory.
+    # Each installation has its own credentials — they are scoped to the
+    # project folder, so installing a new version means a fresh setup.
+    # The release script and .gitignore exclude out/.credentials.json from
+    # tarballs and commits.
+    here = os.path.dirname(os.path.abspath(__file__))   # icsforge/
+    project_root = os.path.dirname(here)                 # project root
     return os.path.join(project_root, "out", ".credentials.json")
 
 
@@ -103,7 +105,20 @@ def create_credentials(username, password):
         json.dump(data, f, indent=2)
     os.chmod(p, 0o600)
     log.info("Credentials created for user %s", username)
-    return {"ok": True, "username": username}
+
+    # Auto-generate and persist a callback token on first setup.
+    # This ensures receipt integrity is enforced by default without
+    # requiring manual token configuration.
+    token = secrets.token_urlsafe(24)
+    try:
+        from icsforge.web import helpers as _wh
+        _wh._callback_token = token
+        _wh._save_persisted_config()
+        log.info("Callback token auto-generated and persisted")
+    except Exception as exc:
+        log.warning("Could not persist auto-generated callback token: %s", exc)
+
+    return {"ok": True, "username": username, "callback_token": token}
 
 
 
@@ -166,7 +181,7 @@ button:hover{background:rgba(240,165,0,.25)}
 </style></head>
 <body><div class=card>
 <h1>ICSForge Setup</h1>
-<p>Create admin credentials for the web interface.<br><span style="font-size:11px;color:#566882">Credentials stored in <code style="color:#8499b5">out/.credentials.json</code> inside the project directory.</span></p>
+<p>Create admin credentials for the web interface.<br><span style="font-size:11px;color:#566882">Credentials stored in <code style="color:#8499b5">out/.credentials.json</code> inside this installation folder.</span></p>
 <div class=err id=err></div>
 <form id=f>
   <label>Username</label><input id=u required>

@@ -32,6 +32,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
   border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
 .success.show{display:block}
 .pw-req{font-size:12px;color:#64748b;margin-top:4px}
+.token-box{background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-top:12px;display:none}
+.token-box h3{color:#93c5fd;font-size:13px;font-weight:600;margin-bottom:8px}
+.token-box p{color:#64748b;font-size:12px;line-height:1.5;margin-bottom:10px}
+.token-val{font-family:monospace;font-size:13px;color:#f8fafc;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:8px 12px;word-break:break-all;margin-bottom:8px;display:block}
+.copy-btn{background:#1e3a5f;color:#93c5fd;border:1px solid #1e3a5f;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600}
+.copy-btn:hover{background:#172554}
+.receiver-cmd{font-family:monospace;font-size:11px;color:#7dd3fc;background:#0c1929;border-radius:6px;padding:8px 10px;margin-top:8px;word-break:break-all;display:block}
 </style>
 </head>
 <body>
@@ -47,6 +54,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
   </div>
   <div class="error" id="error"></div>
   <div class="success" id="success"></div>
+  <div class="token-box" id="token_box">
+    <h3>🔑 Callback Token (generated for you)</h3>
+    <p>ICSForge auto-generated a shared token to protect receipt integrity. Copy it now — you will need to set it on the receiver so it can register its callback.</p>
+    <span class="token-val" id="token_val"></span>
+    <button class="copy-btn" onclick="copyToken()">Copy Token</button>
+    <p style="margin-top:10px;margin-bottom:4px">Start the receiver with this token:</p>
+    <code class="receiver-cmd" id="receiver_cmd"></code>
+  </div>
   <div class="field">
     <label for="username">Admin Username</label>
     <input type="text" id="username" autocomplete="username" autofocus placeholder="admin">
@@ -79,12 +94,30 @@ function doSetup(){
   .then(r=>r.json().then(d=>({status:r.status,data:d})))
   .then(({status,data})=>{
     if(status===200&&data.ok){
-      suc.textContent='Account created! Redirecting...';suc.className='success show';
-      setTimeout(()=>window.location.href='/',1000);
+      suc.textContent='Account created.';suc.className='success show';
+      if(data.callback_token){
+        document.getElementById('token_val').textContent=data.callback_token;
+        document.getElementById('receiver_cmd').textContent=
+          './icsforge.sh receiver --callback-token '+data.callback_token;
+        document.getElementById('token_box').style.display='';
+        // Redirect after a delay so user can copy token
+        document.querySelector('.btn').textContent='Continue →';
+        document.querySelector('.btn').disabled=false;
+        document.querySelector('.btn').onclick=()=>window.location.href='/';
+      } else {
+        setTimeout(()=>window.location.href='/',1500);
+      }
     }else{err.textContent=data.error||'Setup failed';err.className='error show';btn.disabled=false;}
   }).catch(e=>{err.textContent='Connection error';err.className='error show';btn.disabled=false;});
 }
 document.getElementById('password2').addEventListener('keydown',e=>{if(e.key==='Enter')doSetup()});
+function copyToken(){
+  const t=document.getElementById('token_val').textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const b=document.querySelector('.copy-btn');
+    b.textContent='Copied!';setTimeout(()=>b.textContent='Copy Token',2000);
+  });
+}
 </script>
 </body>
 </html>

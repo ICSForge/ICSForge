@@ -88,6 +88,11 @@ def _send_callback(ev: dict):
         headers = {"Content-Type": "application/json"}
         if _callback_token:
             headers["X-ICSForge-Callback-Token"] = _callback_token
+            # Sign payload with HMAC-SHA256 so sender can verify receipt integrity
+            import hmac as _hmac, hashlib as _hl
+            headers["X-ICSForge-HMAC"] = _hmac.new(
+                _callback_token.encode("utf-8"), data, _hl.sha256
+            ).hexdigest()
         req = urllib.request.Request(
             url, data=data,
             headers=headers,
@@ -375,6 +380,7 @@ def main():
     ap.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
     ap.add_argument("--log-file", default=None, help="Log to file in addition to stderr")
     ap.add_argument("--callback-url", default="", help="Sender callback URL for live receipt forwarding")
+    ap.add_argument("--callback-token", default="", help="Shared token for callback authentication (must match sender)")
     args = ap.parse_args()
 
     configure_logging(level=args.log_level, log_file=args.log_file)
@@ -394,7 +400,7 @@ def main():
     global _callback_url, _callback_token, _callback_timeout
     cb_cfg = cfg.get("callback") or {}
     cb_url = (args.callback_url or "").strip() or (cb_cfg.get("url") or "").strip()
-    cb_token = (cb_cfg.get("token") or "").strip()
+    cb_token = (getattr(args, 'callback_token', '') or "").strip() or (cb_cfg.get("token") or "").strip()
     _callback_timeout = int(cb_cfg.get("timeout", 2))
     if cb_url:
         set_callback_url(cb_url)

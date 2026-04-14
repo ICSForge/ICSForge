@@ -258,10 +258,16 @@ def api_pcap_replay():
     allowed_out = os.path.realpath(os.path.join(rr, "out"))
     if not real.startswith(allowed_out):
         return jsonify({"error": "pcap_path must be inside out/"}), 400
+    # IP check before path check so policy errors surface regardless of file state
+    from icsforge.web.helpers import _is_safe_private_ip as _safe
+    import icsforge.web.helpers as _h_mod
+    if not _safe(dst_ip) and not _h_mod._replay_allow_public:
+        return jsonify({"error": (
+            f"Replay to {dst_ip!r} blocked: public IPs are not allowed. "
+            "Enable 'Allow public replay targets' in Tools → Send Policy."
+        )}), 403
     if not os.path.exists(real):
         return jsonify({"error": "pcap not found"}), 404
-    # PCAP replay allows any dst_ip — the user explicitly controls where captured
-    # frames are replayed. This is intentional: replay may target real devices.
     if allowlist and dst_ip not in allowlist:
         return jsonify({"error": "dst_ip not in allowlist"}), 400
     try:
@@ -375,14 +381,30 @@ def api_download():
 @bp.route("/api/net_validate_custom", methods=["POST"])
 def api_net_validate_custom():
     data = request.get_json(force=True) or {}
-    events = (data.get("events") or "").strip()
-    receipts = (data.get("receipts") or "").strip()
+    rr = os.path.realpath(_repo_root())
+
+    def _safe_path(p: str, must_exist: bool = True) -> str | None:
+        """Resolve path relative to repo root; reject traversal outside it."""
+        if not p:
+            return None
+        resolved = os.path.realpath(os.path.join(rr, p.lstrip("/")))
+        if not resolved.startswith(rr):
+            return None
+        if must_exist and not os.path.exists(resolved):
+            return None
+        return resolved
+
+    events  = _safe_path((data.get("events")   or "").strip())
+    receipts = _safe_path((data.get("receipts") or "").strip())
     alerts_jsonl = (data.get("alerts_jsonl") or "").strip() or None
-    out_path = (data.get("out") or "out/network_validation_custom.json").strip()
-    if not events or not os.path.exists(events):
-        return jsonify({"error": "events path invalid"}), 400
-    if not receipts or not os.path.exists(receipts):
-        return jsonify({"error": "receipts path invalid"}), 400
+    raw_out = (data.get("out") or "out/network_validation_custom.json").strip()
+    out_path = _safe_path(raw_out, must_exist=False)
+    if not events:
+        return jsonify({"error": "events path invalid or outside repo root"}), 400
+    if not receipts:
+        return jsonify({"error": "receipts path invalid or outside repo root"}), 400
+    if not out_path:
+        return jsonify({"error": "out path must be inside repo root"}), 400
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     tmp_alerts = None
     try:

@@ -216,12 +216,14 @@ _sender_callback_url: str | None = None
 _callback_token: str | None = None
 _pull_enabled: bool = False
 _allowed_nets: list[str] = []  # extra CIDRs for non-RFC1918 internal ranges
+_webhook_allow_public: bool = False   # allow webhook POSTs to public internet URLs
+_replay_allow_public: bool = False    # allow PCAP replay to public IPs
 
 _CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".icsforge", "web_config.json")
 
 
 def _load_persisted_config() -> None:
-    global _receiver_ip, _sender_ip, _receiver_port, _sender_callback_url, _callback_token, _pull_enabled, _allowed_nets
+    global _receiver_ip, _sender_ip, _receiver_port, _sender_callback_url, _callback_token, _pull_enabled, _allowed_nets, _webhook_allow_public, _replay_allow_public
     if not os.path.exists(_CONFIG_PATH):
         return
     try:
@@ -234,6 +236,8 @@ def _load_persisted_config() -> None:
         _callback_token = cfg.get("callback_token") or None
         _pull_enabled = bool(cfg.get("pull_enabled", False))
         _allowed_nets = [c.strip() for c in cfg.get("allowed_nets", []) if isinstance(c, str) and c.strip()]
+        _webhook_allow_public = bool(cfg.get("webhook_allow_public", False))
+        _replay_allow_public  = bool(cfg.get("replay_allow_public",  False))
     except (OSError, json.JSONDecodeError, ValueError):
         pass
 
@@ -249,6 +253,8 @@ def _save_persisted_config() -> None:
             "callback_token": _callback_token or "",
             "pull_enabled": _pull_enabled,
             "allowed_nets": _allowed_nets,
+            "webhook_allow_public": _webhook_allow_public,
+            "replay_allow_public":  _replay_allow_public,
         }, f, indent=2)
 
 
@@ -286,9 +292,35 @@ def get_webhook_url() -> str | None:
     return _webhook_url
 
 
+def _is_safe_webhook_url(url: str) -> bool:
+    """Validate webhook URL: must be http/https and not a public IP unless ICSFORGE_WEBHOOK_ALLOW_PUBLIC is set."""
+    import urllib.parse as _up, ipaddress as _ip
+    try:
+        p = _up.urlparse(url)
+        if p.scheme not in ("http", "https"):
+            return False
+        host = p.hostname or ""
+        # Allow if public webhooks explicitly enabled via persisted UI config
+        if _webhook_allow_public:
+            return bool(host)
+        # Otherwise restrict to private/loopback/link-local
+        try:
+            a = _ip.ip_address(host)
+            return a.is_loopback or a.is_private or a.is_link_local
+        except ValueError:
+            # Hostname — allow non-public FQDNs (localhost, internal hostnames)
+            # Block obvious public patterns
+            return host == "localhost" or "." not in host or host.endswith(".local")
+    except Exception:
+        return False
+
+
 def fire_webhook(event_type: str, payload: dict) -> bool:
     """POST payload to configured webhook URL. Returns True on success."""
     if not _webhook_url or event_type not in _webhook_events:
+        return False
+    if not _is_safe_webhook_url(_webhook_url):
+        log.warning("Webhook URL blocked (public/unsafe): %s — enable 'Allow public webhook URLs' in Tools → Send Policy", _webhook_url)
         return False
     body = json.dumps({
         "event": event_type,

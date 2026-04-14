@@ -42,9 +42,24 @@ docker compose up
 # Receiver UI: http://localhost:9090
 ```
 
-## Auth
+## First Launch & Callback Token
 
-First launch prompts for an admin account. Credentials stored with scrypt KDF.
+First launch prompts you to create an admin account. On completion, ICSForge
+auto-generates a callback token and displays it with the exact receiver command:
+
+```
+Callback Token: abcXYZ123...
+Receiver command: ./icsforge.sh receiver --callback-token abcXYZ123...
+```
+
+Copy the token. Use it every time you start the receiver:
+
+```bash
+sudo ./icsforge.sh receiver --callback-token abcXYZ123...
+```
+
+The token ensures receipts cannot be forged. The sender rejects callback POSTs
+without the correct token with HTTP 401.
 
 ```bash
 # Disable auth for local lab development only
@@ -53,20 +68,12 @@ ICSFORGE_NO_AUTH=1 python -m icsforge.web
 
 ## Non-RFC1918 Internal Networks
 
-If your OT network uses public IP ranges internally (e.g. `130.75.0.0/24`), set the `ICSFORGE_ALLOWED_NETS` environment variable:
+If your OT network uses publicly-routed IPs internally (e.g. `130.75.0.0/24`),
+go to **Tools → ⚙ Allowed Networks** and add your CIDRs. No environment variables
+or restarts needed — settings are persisted to `~/.icsforge/web_config.json`.
 
-```bash
-export ICSFORGE_ALLOWED_NETS="130.75.0.0/24"
-sudo ./icsforge.sh web
-```
-
-Multiple ranges are comma-separated:
-
-```bash
-export ICSFORGE_ALLOWED_NETS="130.75.0.0/24,195.10.20.0/24"
-```
-
-RFC 1918 ranges (`10.x`, `172.16-31.x`, `192.168.x`), loopback, and link-local are always allowed without any configuration. Only non-standard ranges need this setting.
+RFC 1918 ranges (`10.x`, `172.16-31.x`, `192.168.x`), loopback, and link-local
+are always allowed without any configuration.
 
 ## Layer-2 Requirements (PROFINET DCP, IEC 61850 GOOSE)
 

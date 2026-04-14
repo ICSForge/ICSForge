@@ -24,9 +24,12 @@ rsync -a --exclude='.git' \
          --exclude='.pytest_cache' \
          --exclude='*.egg-info' \
          --exclude='out/runs.db' \
+         --exclude='out/run_index.json' \
+         --exclude='out/.credentials.json' \
          --exclude='out/reports' \
          --exclude='out/events' \
          --exclude='out/pcaps' \
+         --exclude='out/alerts' \
          --exclude='.venv' \
          --exclude='dist' \
          --exclude='build' \
@@ -61,4 +64,15 @@ tar tf "$OUT" --verbose | grep "bin/icsforge" | head -1
 rm -rf "$DIST_DIR"
 
 echo ""
+# Sanity check: ensure no runtime state leaked into release
+echo "Release sanity check..."
+LEAKED=$(tar tf "$OUT" | grep -E '(\.credentials\.json|run_index\.json|runs\.db|/events/|/pcaps/|/reports/)' || true)
+if [ -n "$LEAKED" ]; then
+  echo "ERROR: Release artifact contains runtime state:"
+  echo "$LEAKED"
+  echo "Aborting — do not distribute this artifact."
+  rm -f "$OUT"
+  exit 1
+fi
+echo "Sanity check passed — no runtime state in release."
 echo "Done. Distribute: $OUT"
