@@ -101,7 +101,7 @@ ICSForge uses two related but distinct IP concepts in the sender UI:
 
 **Receiver IP (Network Settings panel)** — the IP of the machine running `icsforge receiver`. Setting this saves the address to persistent config and attempts to register a callback URL with the receiver so it can push receipts back to the sender automatically. It also auto-fills the Destination IP field below it.
 
-**Destination IP (Configuration panel)** — the IP written into generated packet headers as the target address. Auto-populated from Receiver IP when you click Save & Connect, but can be overridden independently. For example: if testing against a real PLC you may want `dst_ip` = the PLC's IP while the receiver runs on a different monitoring host.
+**Destination IP (Configuration panel)** — the IP written into generated packet headers as the target address. Auto-populated from Receiver IP when you click Save & Connect, but can be overridden independently.
 
 **Sync modes:**
 
