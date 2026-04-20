@@ -1,0 +1,175 @@
+# ICSForge — Conference demo stack
+#
+# One command:   docker compose -f docker-compose.demo.yml up
+#
+# What you get:
+#   Sender UI          http://localhost:8080   run scenarios & campaigns
+#   Receiver UI        http://localhost:9090   live receipt feed & matrix overlay
+#   Alert viewer UI    http://localhost:3000   live Suricata alerts colour-coded by technique
+#
+# Shutdown:      docker compose -f docker-compose.demo.yml down -v
+#
+# This is a conference-demo configuration. Traffic is confined to the
+# internal icsforge-net bridge (172.28.0.0/24). Suricata runs in promiscuous
+# mode on that bridge only. No traffic leaves the Docker host.
+
+services:
+
+  # ── Sender: the control plane + scenario/campaign engine ──────────────
+  sender:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: icsforge/sender:demo
+    ports:
+      - "8080:8080"
+    environment:
+      - ICSFORGE_UI_MODE=sender
+      - ICSFORGE_LOG_LEVEL=INFO
+      - ICSFORGE_NO_AUTH=1   # demo only — skips login setup so reviewers can see the UI immediately
+      - ICSFORGE_DEMO_MODE=1 # enables walk-up mode on /sender?mode=demo
+    volumes:
+      - shared-data:/app/out
+      - shared-pcaps:/app/pcaps
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.10
+    command: ["python", "-m", "icsforge.web", "--host", "0.0.0.0", "--port", "8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  # ── Receiver: protocol sinks + receipt correlation + matrix overlay ───
+  receiver:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.receiver
+    image: icsforge/receiver:demo
+    ports:
+      - "9090:9090"
+      - "502:502"      # Modbus/TCP
+      - "20000:20000"  # DNP3
+      - "102:102"      # S7comm
+      - "2404:2404"    # IEC-104
+      - "4840:4840"    # OPC UA
+      - "44818:44818"  # EtherNet/IP
+      - "1883:1883"    # MQTT
+      - "47808:47808/udp"  # BACnet/IP
+    environment:
+      - ICSFORGE_UI_MODE=receiver
+      - ICSFORGE_LOG_LEVEL=INFO
+      - ICSFORGE_NO_AUTH=1
+    volumes:
+      - receiver-data:/app/receiver_out
+      - shared-pcaps:/app/pcaps
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.20
+    command: >
+      python -m icsforge.receiver
+      --bind 0.0.0.0
+      --web-host 0.0.0.0
+      --web-port 9090
+      --callback-url http://172.28.0.10:8080/api/receiver/callback
+    depends_on:
+      sender:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/api/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  # ── Suricata: loads ICSForge's own three-tier rules ───────────────────
+  suricata:
+    image: jasonish/suricata:7.0
+    volumes:
+      - ./docker/suricata.yaml:/etc/suricata/suricata.yaml:ro
+      - ./docker/suricata-classification.config:/etc/suricata/classification.config:ro
+      - ./docker/suricata-reference.config:/etc/suricata/reference.config:ro
+      - shared-rules:/etc/suricata/rules
+      - suricata-logs:/var/log/suricata
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.30
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    # Suricata needs the rule files to exist before it starts. We seed them
+    # from the sender container on first boot via rule-loader, then run.
+    command: >
+      sh -c "
+      while [ ! -f /etc/suricata/rules/icsforge_semantic.rules ]; do
+        echo '[suricata] waiting for rules to be seeded…';
+        sleep 2;
+      done;
+      echo '[suricata] rules present, starting';
+      exec suricata
+        -c /etc/suricata/suricata.yaml
+        --af-packet=eth0
+        -l /var/log/suricata
+      "
+    depends_on:
+      rule-loader:
+        condition: service_completed_successfully
+
+  # ── Rule loader: one-shot that copies ICSForge's rules into shared vol ─
+  # We generate rules from the sender's detection module so they always
+  # reflect the current scenario library.
+  rule-loader:
+    image: icsforge/sender:demo
+    volumes:
+      - shared-rules:/out
+    networks:
+      icsforge-net: {}
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "python -m icsforge.detection.generator --outdir /out &&
+       ls -la /out &&
+       echo '[rule-loader] rules written'"
+    depends_on:
+      sender:
+        condition: service_started
+
+  # ── Alert viewer: live colour-coded Suricata feed ─────────────────────
+  viewer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.viewer
+    image: icsforge/viewer:demo
+    ports:
+      - "3000:3000"
+    volumes:
+      - suricata-logs:/var/log/suricata:ro
+    environment:
+      - ICSFORGE_EVE_PATH=/var/log/suricata/eve.json
+    networks:
+      icsforge-net:
+        ipv4_address: 172.28.0.40
+    depends_on:
+      - suricata
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/api/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 8s
+
+volumes:
+  shared-data:
+  shared-pcaps:
+  shared-rules:
+  receiver-data:
+  suricata-logs:
+
+networks:
+  icsforge-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

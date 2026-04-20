@@ -60,51 +60,7 @@ Run it standalone:
     # or via the unified CLI:
     icsforge viewer --port 3000 --eve-path /var/log/suricata/eve.json
 
-### 3 · Demo stack — `docker-compose.demo.yml`
-
-One command:
-
-    docker compose -f docker-compose.demo.yml up
-
-Brings up Sender (:8080), Receiver (:9090), Suricata (with ICSForge's own
-three-tier rules auto-loaded by a one-shot `rule-loader` service) and the
-live alert viewer (:3000), all on a single isolated bridge network
-(icsforge-net 172.28.0.0/24). Health checks gate the start order so the
-receiver waits for the sender and Suricata waits for its rules to be seeded.
-
-Supporting files added:
-
-  docker/suricata.yaml                    — first real Suricata config ever
-                                            committed (the existing
-                                            docker-compose.yml referenced
-                                            one that did not exist)
-  docker/suricata-classification.config   — minimal classification map
-                                            with ICSForge-specific classes
-  docker/suricata-reference.config        — reference URL map
-  docker/Dockerfile.viewer                — viewer container image
-
-### 4 · Walk-up /demo page — intentionally not in the nav
-
-`GET /demo` (direct URL only — not added to the header nav) shows four
-large campaign tiles: Industroyer2, Water Treatment, OPC UA Espionage,
-Safety System Attack. One click fires the full playbook against the
-configured receiver and streams live step-by-step progress via SSE.
-
-Designed for conference booths:
-
-  - Readable from 3m distance
-  - Dark theme default (projector-safe)
-  - One giant Receiver-IP field, prefilled to the demo stack address
-  - No advanced sender configuration visible
-  - Escape hatches in the top-right back to /sender and /campaigns
-  - Side panel shows a big receipts counter and a pill cloud of
-    techniques fired, linking out to /matrix, /report, the receiver UI,
-    and the Suricata alert viewer
-
-The `/demo` route does NOT appear in the main nav — this is enforced by
-a regression test (`TestDemoPage::test_demo_not_in_main_nav`).
-
-### 5 · CLI subcommands — parity with the Web UI
+### 3 · CLI subcommands — parity with the Web UI
 
 Five new top-level commands, all tested:
 
@@ -127,7 +83,7 @@ a terminal.
 Safety rails preserved: `campaign run` refuses to send unless
 `--confirm-live-network` is passed, exactly like `icsforge send`.
 
-### 6 · Detection generator now writes files
+### 4 · Detection generator now writes files
 
 `python -m icsforge.detection --outdir out/detections` (or
 `icsforge detections export --outdir …` / `--zip …`) writes:
@@ -142,7 +98,7 @@ Counts match the v0.61.0 CHANGELOG claim exactly. The Web UI
 (/api/detections/download) was already doing this; now the CLI does too,
 and both share the same `_write_outputs()` helper.
 
-### 7 · Community hygiene files
+### 5 · Community hygiene files
 
 Added:
 
@@ -153,7 +109,7 @@ Added:
                        (defender-first; exploitation is out of scope).
   CITATION.cff       — Academic citation metadata. Enables Zenodo DOI.
 
-### 8 · Test coverage
+### 6 · Test coverage
 
 `tests/test_v062_additions.py` adds 34 tests covering every new surface:
 
@@ -171,7 +127,7 @@ Added:
 All 34 new tests pass. Zero regressions against the pre-existing 269
 passing tests.
 
-### 9 · Known data-integrity issue flagged (not fixed)
+### 7 · Known data-integrity issue flagged (not fixed)
 
 `icsforge/data/detection_rules_specs.json` references 71 techniques while
 `scenarios.yml` references 68:
@@ -183,7 +139,7 @@ The README's "68 techniques / 82%" is authoritative. A v0.63 pass should
 reconcile by either adding scenarios for the orphan rules or removing
 them.
 
-### 10 · Pre-existing test failures: FIXED
+### 8 · Pre-existing test failures: FIXED
 
 The 11 failures that were pre-existing on v0.61.0 are now fixed in v0.62.0:
 
@@ -199,10 +155,10 @@ The 11 failures that were pre-existing on v0.61.0 are now fixed in v0.62.0:
 Full suite now: **324 passed, 0 failed**. See
 `tests/test_auth.py::auth_app` fixture for the one-line concept fix.
 
-### 11 · Coverage consistency locks
+### 9 · Coverage consistency locks
 
 New `tests/test_coverage_consistency.py` locks the detection-rule /
-scenario drift (Blocker 1 for Arsenal):
+scenario drift
 
   - 4 orphan specs (T0841, T0842, T0875, T0876) documented and locked
   - 1 missing spec (T0879) documented and locked
@@ -212,7 +168,7 @@ scenario drift (Blocker 1 for Arsenal):
 Any future drift breaks CI. When the drift is closed, shrink the
 baseline sets in that test file.
 
-### 12 · Reference detection coverage — published for the first time
+### 10 · Reference detection coverage — published for the first time
 
 ICSForge has always shipped auto-generated Suricata rules but never
 published how well those rules actually fire against its own PCAPs.
@@ -257,7 +213,7 @@ Per-protocol semantic-tier rate ranges from 66% (S7comm) down to 0%
 `_PROTO_MAGIC` entries in the generator but don't currently emit
 semantic rules — a honest gap, flagged for v0.63+.
 
-### 13 · IEC 60870-5-104 U-format spec fix (discovered via Wireshark validation)
+### 11 · IEC 60870-5-104 U-format spec fix (discovered via Wireshark validation)
 
 During Phase 3 third-party parser validation, Wireshark's ICS
 dissector flagged every IEC-104 packet after the first as
@@ -280,7 +236,7 @@ correctly parsing subsequent I-format frames in the same flow,
 which it previously gave up on after seeing the malformed U-frame
 tails.
 
-### 14 · Independent third-party NSM validation — Wireshark/tshark
+### 12 · Independent third-party NSM validation — Wireshark/tshark
 
 New `docs/third_party_validation/MALCOLM_VALIDATION_v0.62.0.md`
 documents the third-party parser validation. Wireshark 4.2.2 (the
