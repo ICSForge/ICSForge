@@ -33,7 +33,14 @@ class TestIsAllowedDest:
     def test_public_ip_blocked(self):
         assert is_allowed_dest("8.8.8.8") is False
         assert is_allowed_dest("1.1.1.1") is False
-        assert is_allowed_dest("192.168.1.1") is False  # RFC1918 not in allowlist
+        assert is_allowed_dest("74.125.224.72") is False
+
+    def test_rfc1918_allowed(self):
+        # RFC1918 is in the default allowlist — this is ICSForge's core
+        # safety rail: lab/OT ranges allowed, public internet blocked.
+        assert is_allowed_dest("192.168.1.1") is True
+        assert is_allowed_dest("10.0.0.1") is True
+        assert is_allowed_dest("172.16.5.10") is True
 
     def test_invalid_ip(self):
         assert is_allowed_dest("not-an-ip") is False

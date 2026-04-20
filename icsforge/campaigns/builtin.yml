@@ -1,7 +1,17 @@
 # ICSForge Built-in Campaign Playbooks
+#
+# A campaign is a time-sequenced list of scenario steps with explicit labels
+# and delays. Campaigns produce a single run_id, a unified events JSONL, and
+# a live SSE progress feed on the /campaigns page.
+#
+# These 11 playbooks map 1:1 to the named attack chains advertised in README.md.
+# Each playbook can also be executed as a single multi-step scenario via the
+# matching CHAIN__* entry in scenarios.yml — the playbooks below add labelled
+# phasing, tunable delays, and live step-by-step progress for the web UI.
 
 campaigns:
 
+  # ── 1 · Full ICS Kill Chain ──────────────────────────────────────────
   full_ics_kill_chain:
     name: "Full ICS Kill Chain"
     description: >
@@ -39,12 +49,13 @@ campaigns:
         delay: 10s
         label: "Phase 6 · Impact: CPU STOP + program reload"
 
+  # ── 2 · Stuxnet-style Campaign ───────────────────────────────────────
   stuxnet_ttps:
     name: "Stuxnet-Style Campaign"
     description: >
       Reproduces the Stuxnet attack sequence: PROFINET device discovery,
       S7comm fingerprinting, program upload, modification, and re-injection.
-      Covers T0840, T0888, T0845, T0843, T0875.
+      Covers T0840, T0888, T0845, T0843, T0889.
     icon: "⚙"
     estimated_duration: "~90 seconds"
     steps:
@@ -64,6 +75,7 @@ campaigns:
         delay: 10s
         label: "CPU STOP command"
 
+  # ── 3 · AitM + Sensor Spoofing ───────────────────────────────────────
   sensor_spoofing:
     name: "AitM + Sensor Spoofing"
     description: >
@@ -89,6 +101,7 @@ campaigns:
         delay: 15s
         label: "Suppress alarms via OPC UA limit node"
 
+  # ── 4 · OT Credential Harvest ────────────────────────────────────────
   credential_harvest:
     name: "OT Credential Harvest"
     description: >
@@ -113,6 +126,7 @@ campaigns:
         delay: 15s
         label: "Lateral movement via OPC UA session pivot"
 
+  # ── 5 · Safety System Attack (Triton-style) ──────────────────────────
   safety_system_attack:
     name: "Safety System Attack (Triton-style)"
     description: >
@@ -137,3 +151,216 @@ campaigns:
       - scenario: T0880__loss_safety__s7comm_failsafe_zero
         delay: 15s
         label: "Zero S7comm F-CPU failsafe outputs"
+
+  # ── 6 · Industroyer2 ─────────────────────────────────────────────────
+  industroyer2:
+    name: "Industroyer2 — Ukraine 2022 Power Grid"
+    description: >
+      Reproduces the April 2022 Industroyer2 / Sandworm campaign against
+      Ukrainian electricity transmission. IEC-104 reconnaissance, station
+      capability probe, setpoint manipulation, remote-control command
+      injection, STOPDT to blind the operator, productivity disruption
+      via setpoint spam, and a final S7comm data-destruction step.
+      Covers T0840, T0888, T0836, T0831, T0855, T0815, T0828, T0809.
+    icon: "⚡"
+    estimated_duration: "~100 seconds"
+    steps:
+      - scenario: T0840__network_enum__iec104_interrogation
+        delay: 0s
+        label: "Phase 1 · Recon: IEC-104 general interrogation"
+      - scenario: T0888__remote_sys_info__iec104_capability
+        delay: 8s
+        label: "Phase 1 · Recon: IEC-104 station capability probe"
+      - scenario: T0836__modify_param__iec104_setpoint
+        delay: 10s
+        label: "Phase 2 · Modify: IEC-104 setpoint parameter change"
+      - scenario: T0831__manipulation_control__iec104_setpoint
+        delay: 10s
+        label: "Phase 3 · Control: IEC-104 direct setpoint manipulation"
+      - scenario: T0855__unauth_command__iec104
+        delay: 12s
+        label: "Phase 4 · Impact: Unauthorised IEC-104 C_SC/C_DC command"
+      - scenario: T0815__denial_of_view__iec104_stopdt
+        delay: 10s
+        label: "Phase 5 · Blind: STOPDT to cut operator visibility"
+      - scenario: T0828__loss_productivity__iec104_setpoint_spam
+        delay: 15s
+        label: "Phase 6 · Disrupt: Setpoint spam for loss of productivity"
+      - scenario: T0809__data_destruction__s7comm_zero_db
+        delay: 15s
+        label: "Phase 7 · Cleanup: S7comm DB zero-out (data destruction)"
+
+  # ── 7 · Water Treatment (Oldsmar-style) ──────────────────────────────
+  water_treatment:
+    name: "Water Treatment Tampering"
+    description: >
+      Oldsmar-style setpoint tampering on a water treatment plant.
+      Modbus reconnaissance, register mapping, chemical-dosing setpoint
+      change, manipulation of operator-facing values, alarm suppression,
+      and a final IEC-104 unauthorised command to simulate SCADA-side
+      impact. Covers T0840, T0888, T0861, T0836, T0831, T0832, T0878, T0855.
+    icon: "💧"
+    estimated_duration: "~90 seconds"
+    steps:
+      - scenario: T0840__network_enum__modbus_device_scan
+        delay: 0s
+        label: "Phase 1 · Recon: Modbus device scan"
+      - scenario: T0888__remote_sys_info__modbus_device_id
+        delay: 8s
+        label: "Phase 1 · Recon: FC43 device ID read"
+      - scenario: T0861__point_tag_id__modbus_register_sweep
+        delay: 8s
+        label: "Phase 2 · Mapping: Modbus register sweep (identify dosing points)"
+      - scenario: T0836__modify_parameter__modbus
+        delay: 10s
+        label: "Phase 3 · Tamper: Modify dosing-rate setpoint"
+      - scenario: T0831__manipulation_control__modbus_setpoint
+        delay: 10s
+        label: "Phase 3 · Tamper: Direct setpoint manipulation (Oldsmar-style)"
+      - scenario: T0832__manipulation_of_view__modbus_spoof
+        delay: 10s
+        label: "Phase 4 · Cover: Spoof operator-facing Modbus reads"
+      - scenario: T0878__alarm_suppress__modbus_coil_write
+        delay: 10s
+        label: "Phase 4 · Cover: Suppress alarms via coil write"
+      - scenario: T0855__unauth_command__iec104
+        delay: 12s
+        label: "Phase 5 · Impact: IEC-104 unauthorised SCADA-side command"
+
+  # ── 8 · OPC UA Industrial Espionage ──────────────────────────────────
+  opcua_espionage:
+    name: "OPC UA Industrial Espionage"
+    description: >
+      Silent data exfiltration via OPC UA sessions. Server discovery,
+      namespace browsing, process tag identification, value subscription,
+      bulk historical read from the historian, and full-fidelity
+      theft of operational data. Zero process impact — pure reconnaissance
+      and exfiltration. Covers T0840, T0888, T0861, T0801, T0877, T0811, T0882.
+    icon: "🕵"
+    estimated_duration: "~70 seconds"
+    steps:
+      - scenario: T0840__network_enum__opcua_browse
+        delay: 0s
+        label: "Phase 1 · Discover: OPC UA server discovery"
+      - scenario: T0888__remote_sys_info__opcua_discovery
+        delay: 6s
+        label: "Phase 1 · Discover: GetEndpoints fingerprint"
+      - scenario: T0861__point_tag_id__opcua_browse
+        delay: 8s
+        label: "Phase 2 · Map: Browse namespace, enumerate tags"
+      - scenario: T0801__monitor_process__opcua_subscription
+        delay: 10s
+        label: "Phase 3 · Collect: Subscribe to live process values"
+      - scenario: T0877__io_image__opcua_bulk_read
+        delay: 10s
+        label: "Phase 3 · Collect: Bulk I/O image read"
+      - scenario: T0811__data_repositories__opcua_historian
+        delay: 12s
+        label: "Phase 4 · Exfil: Historian repository access"
+      - scenario: T0882__theft_operational_info__opcua_history
+        delay: 12s
+        label: "Phase 4 · Exfil: Full historical read (espionage payload)"
+
+  # ── 9 · EtherNet/IP Manufacturing Line Attack ────────────────────────
+  enip_manufacturing:
+    name: "EtherNet/IP Manufacturing Attack"
+    description: >
+      Allen-Bradley / Rockwell CIP manipulation on a manufacturing line.
+      EtherNet/IP ListIdentity sweep, Identity object fingerprint,
+      CIP tag enumeration, parameter tamper, unauthorised tag write,
+      detect operating mode, program download, and an EtherNet/IP
+      service stop to halt the line. Covers T0840, T0888, T0861, T0836,
+      T0855, T0868, T0889, T0881.
+    icon: "🏭"
+    estimated_duration: "~90 seconds"
+    steps:
+      - scenario: T0840__network_enum__enip_sweep
+        delay: 0s
+        label: "Phase 1 · Recon: EtherNet/IP ListIdentity sweep"
+      - scenario: T0888__remote_sys_info__enip_identity
+        delay: 6s
+        label: "Phase 1 · Recon: CIP Identity object read"
+      - scenario: T0861__point_tag_id__enip_tag_enum
+        delay: 8s
+        label: "Phase 2 · Map: CIP tag enumeration"
+      - scenario: T0868__detect_operating_mode__enip
+        delay: 8s
+        label: "Phase 2 · Map: Detect PLC operating mode"
+      - scenario: T0836__modify_parameter__enip_parameter
+        delay: 10s
+        label: "Phase 3 · Tamper: Modify CIP parameter"
+      - scenario: T0855__unauth_command__enip_write_tag
+        delay: 10s
+        label: "Phase 3 · Tamper: Unauthorised tag write"
+      - scenario: T0889__modify_program__enip
+        delay: 12s
+        label: "Phase 4 · Impact: CIP program modification"
+      - scenario: T0881__service_stop__enip_stop
+        delay: 10s
+        label: "Phase 5 · Impact: EtherNet/IP service stop (line halt)"
+
+  # ── 10 · Firmware Persistence ────────────────────────────────────────
+  firmware_persistence:
+    name: "Firmware Persistence (S7comm)"
+    description: >
+      Establish persistent foothold on a Siemens S7 PLC by modifying
+      firmware. S7comm SZL fingerprint, default-credential acquisition,
+      valid account session, program modification, module firmware
+      implant, system firmware reflash, and an operating-mode cycle
+      to load the new firmware. Covers T0888, T0812, T0859, T0889,
+      T0839, T0857, T0858.
+    icon: "🔧"
+    estimated_duration: "~100 seconds"
+    steps:
+      - scenario: T0888__remote_sys_info__s7comm_szl
+        delay: 0s
+        label: "Phase 1 · Recon: S7comm SZL fingerprint"
+      - scenario: T0812__default_creds__s7comm_blank_auth
+        delay: 8s
+        label: "Phase 2 · Access: S7comm default credential"
+      - scenario: T0859__valid_accounts__s7comm
+        delay: 8s
+        label: "Phase 2 · Access: Valid account session"
+      - scenario: T0889__modify_program__s7comm_upload_dl
+        delay: 10s
+        label: "Phase 3 · Stage: Program modification"
+      - scenario: T0839__module_firmware__s7comm_module_flash
+        delay: 12s
+        label: "Phase 4 · Implant: Module firmware flash"
+      - scenario: T0857__system_firmware__s7comm_full_flash
+        delay: 15s
+        label: "Phase 5 · Implant: Full system firmware reflash"
+      - scenario: T0858__change_opmode__s7comm_mode_cycle
+        delay: 10s
+        label: "Phase 6 · Activate: Operating-mode cycle to load firmware"
+
+  # ── 11 · Loss of Availability — Multi-protocol concurrent DoS ────────
+  loss_of_availability:
+    name: "Loss of Availability (Multi-protocol)"
+    description: >
+      Coordinated denial of availability across Modbus, DNP3, IEC-104,
+      and S7comm. Each stream independently attacks the underlying OT
+      control path: Modbus flood, DNP3 flood, IEC-104 flood + STOPDT,
+      S7comm service stop, and a final unified T0826 loss-of-availability
+      marker. Covers T0814 (3 variants), T0815, T0881, T0826.
+    icon: "🛑"
+    estimated_duration: "~80 seconds"
+    steps:
+      - scenario: T0814__denial_of_service__modbus_flood
+        delay: 0s
+        label: "Phase 1 · Flood: Modbus/TCP flood"
+      - scenario: T0814__denial_of_service__dnp3_flood
+        delay: 8s
+        label: "Phase 1 · Flood: DNP3 flood"
+      - scenario: T0814__denial_of_service__iec104_flood
+        delay: 8s
+        label: "Phase 1 · Flood: IEC-104 flood"
+      - scenario: T0815__denial_of_view__iec104_stopdt
+        delay: 10s
+        label: "Phase 2 · Blind: IEC-104 STOPDT (deny operator view)"
+      - scenario: T0881__service_stop__s7comm
+        delay: 10s
+        label: "Phase 3 · Stop: S7comm service stop"
+      - scenario: T0826__loss_availability__multi_protocol_dos
+        delay: 10s
+        label: "Phase 4 · Confirm: Unified T0826 loss-of-availability marker"

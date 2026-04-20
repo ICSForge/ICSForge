@@ -45,7 +45,7 @@ _SID_BASE = 9_800_000
 _PROTO_MAGIC = {
     "modbus": {
         "port": 502, "transport": "tcp",
-        "magic": "00 00", "magic_offset": 4, "magic_depth": 6,
+        "magic": "00 00", "magic_offset": 2, "magic_depth": 4,
         "magic_label": "Modbus/TCP Protocol Identifier (0x0000)",
         "fc_offset": 7, "fc_depth": 8,
         "function_codes": {
@@ -319,7 +319,7 @@ def _tier1_marker(spec: dict, sid: int) -> str:
     return (
         f'alert {transport} any any -> any {port} '
         f'(msg:"{msg}"; '
-        f'flow:established,to_server; '
+        f'flow:to_server; '
         f'content:"{_hex_str(_MARKER_HEX.replace(" ", ""))}"; '
         f'classtype:policy-violation; '
         f'sid:{sid}; rev:1; '
@@ -345,7 +345,7 @@ def _tier2_heuristic(spec: dict, sid: int) -> str | None:
     return (
         f'alert {transport} any any -> any {port} '
         f'(msg:"{msg}"; '
-        f'flow:established,to_server; '
+        f'flow:to_server; '
         f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
         f'classtype:protocol-command-decode; '
         f'sid:{sid}; rev:1; '
@@ -382,7 +382,7 @@ def _tier3_semantic(spec: dict, sid_start: int) -> list[str]:
         rules.append(
             f'alert {transport} any any -> any {port} '
             f'(msg:"{msg}"; '
-            f'flow:established,to_server; '
+            f'flow:to_server; '
             f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
             f'content:"{fc_hex}"; offset:{pm["fc_offset"]}; depth:{pm["fc_depth"]}; '
             f'classtype:attempted-admin; '
@@ -576,3 +576,84 @@ def generate_all(
             "semantic":           c3,
         },
     }
+
+
+# ── CLI entry: python -m icsforge.detection.generator --outdir /path ─────
+def _write_outputs(outdir: str, result: dict[str, Any]) -> None:
+    """Write the three Suricata rule files + per-scenario Sigma rules to outdir."""
+    import os as _os
+
+    _os.makedirs(outdir, exist_ok=True)
+    with open(_os.path.join(outdir, "icsforge_lab.rules"), "w", encoding="utf-8") as f:
+        f.write(result["suricata_lab"])
+    with open(_os.path.join(outdir, "icsforge_heuristic.rules"), "w", encoding="utf-8") as f:
+        f.write(result["suricata_heuristic"])
+    with open(_os.path.join(outdir, "icsforge_semantic.rules"), "w", encoding="utf-8") as f:
+        f.write(result["suricata_semantic"])
+
+    sigma_dir = _os.path.join(outdir, "sigma")
+    _os.makedirs(sigma_dir, exist_ok=True)
+    for sc_id, body in result["sigma"].items():
+        safe = "".join(c for c in sc_id if c.isalnum() or c in "._-")[:180] or "scenario"
+        with open(_os.path.join(sigma_dir, f"{safe}.yml"), "w", encoding="utf-8") as f:
+            f.write(body)
+
+    readme = (
+        "ICSForge detection content\n"
+        "==========================\n\n"
+        "Three confidence tiers (recommendation: deploy tier 3 only):\n\n"
+        "  icsforge_lab.rules        Tier 1 — requires ICSFORGE_SYNTH marker\n"
+        "                            Use only during ICSForge runs.\n"
+        "                            Zero false positives.\n\n"
+        "  icsforge_heuristic.rules  Tier 2 — protocol magic bytes.\n"
+        "                            Fires on ANY legit protocol traffic.\n"
+        "                            Use to validate NSM visibility only.\n\n"
+        "  icsforge_semantic.rules   Tier 3 — function-code / command-level.\n"
+        "                            Recommended for real networks.\n"
+        "                            Low FP rate in segmented OT.\n\n"
+        f"Rule counts:  lab={result['rule_counts']['lab_marker']}  "
+        f"heuristic={result['rule_counts']['protocol_heuristic']}  "
+        f"semantic={result['rule_counts']['semantic']}\n"
+        f"Scenarios covered: {result['count']}\n"
+        f"Unique techniques: {len(result['techniques'])}\n"
+    )
+    with open(_os.path.join(outdir, "README.txt"), "w", encoding="utf-8") as f:
+        f.write(readme)
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse as _argparse
+
+    p = _argparse.ArgumentParser(
+        prog="icsforge.detection.generator",
+        description="Generate ICSForge Suricata + Sigma detection content.",
+    )
+    p.add_argument("--outdir", default="out/detections",
+                   help="Directory to write rule files (default: out/detections)")
+    p.add_argument("--technique", action="append", default=None,
+                   help="Filter to one or more technique IDs (e.g. T0855). Repeatable.")
+    p.add_argument("--no-marker", action="store_true",
+                   help="Omit lab_marker tier (tier 1) from output.")
+    p.add_argument("--quiet", action="store_true", help="Suppress progress output.")
+    args = p.parse_args(argv)
+
+    result = generate_all(
+        technique_filter=args.technique,
+        include_marker=not args.no_marker,
+    )
+    _write_outputs(args.outdir, result)
+
+    if not args.quiet:
+        counts = result["rule_counts"]
+        print(f"[generator] wrote to {args.outdir}")
+        print(f"[generator] lab={counts['lab_marker']} "
+              f"heuristic={counts['protocol_heuristic']} "
+              f"semantic={counts['semantic']}")
+        print(f"[generator] {result['count']} scenarios, "
+              f"{len(result['techniques'])} unique techniques")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys as _sys
+    _sys.exit(main())

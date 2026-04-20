@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.10"
 authors = [
-    {name = "ICSForge Contributors"},
+    {name = "Can Kurnaz"},
 ]
 keywords = ["ics", "ot", "scada", "cybersecurity", "mitre-attack", "pcap", "modbus", "dnp3", "s7comm", "iec104", "iec61850-goose", "bacnet", "mqtt", "opcua", "enip", "profinet"]
 classifiers = [

@@ -1,0 +1,875 @@
+{
+  "results": [
+    {
+      "scenario": "T0801__monitor_process__iec104_subscribe",
+      "technique": "T0801",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 39,
+        "heuristic": 432,
+        "semantic": 165
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__iec104",
+      "technique": "T0848",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 176,
+        "semantic": 101
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__iec104",
+      "technique": "T0855",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 24,
+        "heuristic": 312,
+        "semantic": 196
+      }
+    },
+    {
+      "scenario": "T0831__manipulation_control__iec104_setpoint",
+      "technique": "T0831",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 22,
+        "heuristic": 293,
+        "semantic": 166
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__iec104_stopdt",
+      "technique": "T0815",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 175,
+        "semantic": 33
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppression__iec104_inhibit",
+      "technique": "T0878",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 151,
+        "semantic": 43
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_service__iec104_flood",
+      "technique": "T0814",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 671,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__iec104_clock_inject",
+      "technique": "T0849",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 131,
+        "semantic": 41
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__iec104_setpoint_spam",
+      "technique": "T0828",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 34,
+        "heuristic": 481,
+        "semantic": 246
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__iec104_param_threshold",
+      "technique": "T0838",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 183,
+        "semantic": 65
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__iec104_meas_inject",
+      "technique": "T0856",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 25,
+        "heuristic": 328,
+        "semantic": 123
+      }
+    },
+    {
+      "scenario": "T0832__manip_view__iec104_meas_inject",
+      "technique": "T0832",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 85,
+        "semantic": 38
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__iec104_interrogation",
+      "technique": "T0840",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 37,
+        "semantic": 22
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__iec104_interrogation",
+      "technique": "T0882",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 49,
+        "semantic": 25
+      }
+    },
+    {
+      "scenario": "T0836__modify_param__iec104_setpoint",
+      "technique": "T0836",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 11,
+        "heuristic": 63,
+        "semantic": 46
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__iec104_capability",
+      "technique": "T0888",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 29,
+        "semantic": 15
+      }
+    },
+    {
+      "scenario": "T0877__io_image__iec104_full_scan",
+      "technique": "T0877",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 47,
+        "semantic": 27
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__iec104",
+      "technique": "T0832",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 65,
+        "semantic": 27
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__iec104_interrogation",
+      "technique": "T0888",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 9,
+        "heuristic": 19,
+        "semantic": 16
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__iec104_test",
+      "technique": "T0840",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 20,
+        "semantic": 9
+      }
+    },
+    {
+      "scenario": "T0830__aitm__iec104_inject",
+      "technique": "T0830",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 66,
+        "semantic": 26
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__iec104_startdt_flood",
+      "technique": "T0813",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 231,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__iec104",
+      "technique": "T0803",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 121,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__std_app_protocol__iec104",
+      "technique": "T0869",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 86,
+        "semantic": 37
+      }
+    },
+    {
+      "scenario": "T0883__internet_accessible__iec104",
+      "technique": "T0883",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 42,
+        "semantic": 6
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__iec104_stopdt",
+      "technique": "T0829",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 44,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__iec104_stopdt",
+      "technique": "T0881",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 44,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__iec104_setpoint",
+      "technique": "T0835",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 11,
+        "heuristic": 90,
+        "semantic": 64
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__iec104_interrogation",
+      "technique": "T0861",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 20,
+        "semantic": 14
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__iec104",
+      "technique": "T0802",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 108,
+        "semantic": 57
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__iec104",
+      "technique": "T0816",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 44,
+        "semantic": 5
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__iec104",
+      "technique": "T0839",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 77,
+        "semantic": 24
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__iec104_protection_block",
+      "technique": "T0880",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 121,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_program_state__iec104",
+      "technique": "T0858",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 44,
+        "semantic": 5
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__iec104",
+      "technique": "T0889",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 11,
+        "heuristic": 100,
+        "semantic": 69
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__iec104",
+      "technique": "T0800",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 55,
+        "semantic": 6
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__iec104",
+      "technique": "T0891",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 56,
+        "semantic": 32
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__iec104",
+      "technique": "T0859",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 62,
+        "semantic": 42
+      }
+    },
+    {
+      "scenario": "T0843__program_download__iec104",
+      "technique": "T0843",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 130,
+        "semantic": 39
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__iec104",
+      "technique": "T0811",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 20,
+        "semantic": 11
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__iec104",
+      "technique": "T0819",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 88,
+        "semantic": 22
+      }
+    },
+    {
+      "scenario": "T0885__common_port__iec104",
+      "technique": "T0885",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 54,
+        "semantic": 41
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__iec104",
+      "technique": "T0809",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 44,
+        "semantic": 14
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__iec104",
+      "technique": "T0806",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 425,
+        "semantic": 310
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__iec104",
+      "technique": "T0821",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 66,
+        "semantic": 20
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__iec104",
+      "technique": "T0822",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 62,
+        "semantic": 48
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__iec104",
+      "technique": "T0866",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 110,
+        "semantic": 22
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__iec104",
+      "technique": "T0886",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 52,
+        "semantic": 43
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__iec104",
+      "technique": "T0857",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 154,
+        "semantic": 45
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__iec104",
+      "technique": "T0868",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 53,
+        "semantic": 14
+      }
+    },
+    {
+      "scenario": "T0868__detect_mode__iec104",
+      "technique": "T0868",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 53,
+        "semantic": 10
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__iec104",
+      "technique": "T0804",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 77,
+        "semantic": 9
+      }
+    }
+  ],
+  "per_tier": {
+    "lab": {
+      "pcaps_tested": 52,
+      "pcaps_hit": 46,
+      "total_alerts": 670
+    },
+    "heuristic": {
+      "pcaps_tested": 52,
+      "pcaps_hit": 52,
+      "total_alerts": 6546
+    },
+    "semantic": {
+      "pcaps_tested": 52,
+      "pcaps_hit": 46,
+      "total_alerts": 2439
+    }
+  },
+  "per_proto": {
+    "iec104": {
+      "scenarios": 52,
+      "pcaps_ok": 52,
+      "lab_hit": 46,
+      "heuristic_hit": 52,
+      "semantic_hit": 46
+    }
+  },
+  "totals": {
+    "scenarios_considered": 52,
+    "pcaps_generated": 52
+  },
+  "metadata": {
+    "dry_run": false,
+    "filters": {
+      "technique": null,
+      "protocol": "iec104",
+      "limit": null
+    },
+    "elapsed_sec": 109.6
+  }
+}

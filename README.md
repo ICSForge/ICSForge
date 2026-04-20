@@ -1,9 +1,9 @@
 
-[//]: [![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
+[![CI](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/ICSforge/ICSforge/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.61.0-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
+[![Version](https://img.shields.io/badge/version-0.62.0-orange.svg)](https://github.com/ICSforge/ICSforge/releases)
 
 **ICSForge™** is an open-source **OT/ICS security coverage validation platform** designed to help defenders, SOC teams, and OT security engineers validate detection, visibility, and readiness against real-world industrial attack techniques.
 
@@ -14,7 +14,7 @@ By default, live traffic sends are restricted to RFC 1918 / loopback addresses, 
 > Most ICS security tools promise coverage - ICSForge lets you **prove it**.
 ---
 
-## Key Numbers (v0.61.0)
+## Key Numbers (v0.62.0)
 
 | Metric | Value |
 |---|---|
@@ -146,6 +146,47 @@ icsforge send --name T0855__unauth_command__modbus \
   --dst-ip 127.0.0.1 --confirm-live-network --no-marker
 ```
 
+### CLI — run a campaign playbook (full parity with the `/campaigns` Web UI)
+
+```bash
+# List all 11 built-in campaigns
+icsforge campaign list
+
+# Validate campaign YAML against the scenario library
+icsforge campaign validate
+
+# Fire a playbook — same SSE progress feed as the Web UI, streamed to stdout
+icsforge campaign run --id industroyer2 \
+  --dst-ip 127.0.0.1 --confirm-live-network
+```
+
+### CLI — generate detection rules (full parity with Tools → Download rules)
+
+```bash
+# Tier counts without writing files
+icsforge detections preview
+
+# Write Suricata .rules + per-scenario Sigma YAMLs to a directory
+icsforge detections export --outdir out/detections
+
+# Or write a zip (same layout as the Web UI download)
+icsforge detections export --zip icsforge_rules.zip
+```
+
+### CLI — browse the scenario library
+
+```bash
+icsforge scenarios list --technique T0855
+icsforge scenarios list --proto dnp3 --json
+icsforge scenarios list --search aitm
+```
+
+### CLI — launch the live Suricata alert viewer
+
+```bash
+icsforge viewer --port 3000 --eve-path /var/log/suricata/eve.json
+```
+
 ---
 ## Protocol Coverage
 
@@ -216,7 +257,7 @@ ICSForge implements 68 of 83 ATT&CK for ICS techniques at the network-observable
 | **Home** | `/` | KPIs, top techniques by protocol coverage, scenario browser |
 | **Sender** | `/sender` | Launch scenarios and chains; configure network; live payload preview; receiver feed |
 | **ATT&CK Matrix** | `/matrix` | Interactive coverage overlay; click any runnable tile to fire traffic with full technique description |
-| **Campaigns** | `/campaigns` | Multi-step campaign playbooks and named attack chains with SSE progress |
+| **Campaigns** | `/campaigns` | 11 named attack-chain playbooks (Industroyer2, Stuxnet, TRITON-style, Water Treatment, OPC UA Espionage, EtherNet/IP Manufacturing, Firmware Persistence, Loss of Availability, OT Credential Harvest, AitM + Sensor Spoofing, Full ICS Kill Chain) with SSE progress |
 | **Report** | `/report` | Coverage report generation and inline preview; correlation gap analysis; HTML download |
 | **Tools** | `/tools` | Offline PCAP generation, PCAP upload & replay, alerts ingestion, detection rule download |
 
@@ -285,9 +326,65 @@ ICSForge auto-generates detection rules directly from its scenario catalog:
 # Via Web UI: Tools → Generate Detection Rules
 # Preview:  GET  /api/detections/preview
 # Download: GET  /api/detections/download
+
+# Via CLI (v0.62+)
+icsforge detections preview
+icsforge detections export --outdir out/rules/						   
 ```
 
 Output formats: **Suricata rules** (`.rules`) matching ICSForge correlation markers, and **Sigma rules** (`.yml`) for SIEM integration.
+
+Three-tier rules are produced per scenario:
+
+- **Tier 1 `lab_marker`** — requires the `ICSFORGE_SYNTH` correlation marker. Zero false positives; useful only for validating ICSForge itself.
+- **Tier 2 `protocol_heuristic`** — matches protocol magic bytes at known offsets. Will fire on legitimate OT traffic. Useful for NSM visibility validation.
+- **Tier 3 `semantic`** — specific function codes / CIP services / FC types at application layer. Low false-positive rate in segmented OT networks. The closest we get to firing on a real adversary. **This is the recommended tier for production deployment.**
+
+### Reference detection coverage (v0.62.0)
+
+Measured by `scripts/measure_detection_coverage.py` — ICSForge generates each scenario's PCAP, the three-tier Suricata rules are auto-generated, then Suricata 7.0.3 runs offline against the PCAPs and alerts are counted per tier and per protocol.
+
+Two measurement modes produce slightly different numbers and both are included for honesty:
+
+**Mode 1 — batched (fast, ~10 min for 536 scenarios):** all scenarios' PCAPs are merged into one file with `mergecap`, each scenario's src IP is rewritten to a unique address with `tcprewrite` for attribution, and Suricata runs once over the merged PCAP.
+
+**Mode 2 — per-protocol (slower, accurate):** each protocol gets its own Suricata run over only its scenarios' PCAPs. Tends to produce higher hit rates because Suricata's TCP stream reassembler is never confused by cross-scenario flows.
+
+| Tier | Batched (all 535) | Per-protocol (IEC-104 as example) |
+|---|---:|---:|
+| Tier 1 lab_marker | 30.1% | 88.5% |
+| Tier 2 protocol_heuristic | 18.3% | 100.0% |
+| Tier 3 semantic | 25.6% | 88.5% |
+
+The per-protocol numbers are the fairer reflection of how the rules would perform in a real OT network, where Suricata sees protocol-separated traffic through its normal stream engine. The batched numbers reflect a stress-test scenario — hundreds of parallel flows, many rules firing simultaneously — which is informative but understates real-world detection.
+
+**Per-protocol semantic-tier hit rate** (batched mode, full 535-scenario run):
+
+| Protocol | Scenarios | Semantic hit rate |
+|---|---:|---:|
+| S7comm | 59 | **66.1%** |
+| Modbus | 56 | **62.5%** |
+| DNP3 | 57 | 42.1% |
+| IEC-104 | 52 | 38.5% (88.5% in per-protocol mode) |
+| MQTT | 52 | 19.2% |
+| EtherNet/IP | 57 | 8.8% |
+| OPC UA | 59 | 6.8% |
+| BACnet/IP | 54 | 0.0% |
+| IEC 61850 GOOSE | 43 | 0.0% |
+| PROFINET DCP | 47 | 0.0% |
+
+These numbers are **honest**. They represent genuine coverage gaps we are actively closing, not coverage claims pulled from a scenario-count divided by a rule-count. The gap in L2 protocols (IEC 61850, PROFINET DCP) and UDP-only protocols (BACnet/IP) reflects the detection generator's current bias toward TCP/IP application-layer rules; widening semantic coverage for these protocols is a v0.63+ roadmap item.
+
+**Independent third-party parser validation:** all 10 protocols dissect 100% cleanly by Wireshark/tshark 4.x (same dissector library used by Malcolm's Zeek and Arkime). See `docs/third_party_validation/MALCOLM_VALIDATION_v0.62.0.md` for the per-protocol parse table.
+
+To reproduce on your own machine:
+
+```bash
+# Install Suricata 7+ and tshark, then:
+python scripts/measure_detection_coverage.py --batch \
+    --out /tmp/coverage.json --markdown /tmp/coverage.md
+# Runtime: ~10 minutes for all 536 scenarios with --batch mode
+```
 
 ---
 

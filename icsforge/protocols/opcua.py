@@ -144,18 +144,34 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "open_session":
-        # OPN message with CreateSessionRequest
-        # Asymmetric header: algorithm URI (null), sender cert (null), thumbprint (null)
-        asym_hdr = struct.pack("<III", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
-        ep_url   = kwargs.get("endpoint", "opc.tcp://10.0.0.1:4840").encode()
-        sess_name= b"ICSForge-Session"
-        nonce    = bytes([rnd.randint(0, 255) for _ in range(32)])
-        payload  = struct.pack("<I", len(ep_url)) + ep_url + \
-                   struct.pack("<I", len(sess_name)) + sess_name + \
-                   struct.pack("<I", len(nonce)) + nonce + mb
-        body     = struct.pack("<III", sc_id, 0, 0) + _seq_header() + \
-                   _node_id(SVC["CreateSession"]) + _request_header() + payload
-        return _opc_header(MSG_OPN, b"F", asym_hdr + body)
+        # OPN (OpenSecureChannel) message layout per OPC UA spec Part 6 §7.1.2:
+        #   MessageHeader(8)                     ← emitted by _opc_header
+        #   SecureChannelId(4)                   ← 0xFFFFFFFF = new channel
+        #   AsymmetricAlgorithmSecurityHeader:
+        #     SecurityPolicyUri.Length(4) = -1   ← null string (no security)
+        #     SenderCertificate.Length(4)  = -1  ← null ByteString
+        #     RecvCertThumbprint.Length(4) = -1  ← null ByteString
+        #   SequenceHeader(8): seq(4) + reqId(4)
+        #   Service payload: OpenSecureChannelRequest encoded
+        # Historical bug: we emitted SecureChannelId AFTER asym_hdr and also
+        # packed two stray zero uint32s, which produced a malformed frame
+        # that Wireshark's OPC UA dissector flagged at the ReceiverCert
+        # thumbprint field. Now fixed to spec order.
+        ep_url    = kwargs.get("endpoint", "opc.tcp://10.0.0.1:4840").encode()
+        sess_name = b"ICSForge-Session"
+        nonce     = bytes([rnd.randint(0, 255) for _ in range(32)])
+        svc_payload = _node_id(SVC["CreateSession"]) + _request_header() + \
+                      struct.pack("<I", len(ep_url)) + ep_url + \
+                      struct.pack("<I", len(sess_name)) + sess_name + \
+                      struct.pack("<I", len(nonce)) + nonce + mb
+        # OPN-specific body: sc_id + asym_hdr(nulls) + seq_header + service payload
+        opn_body = (
+            struct.pack("<I", 0xFFFFFFFF) +                  # SecureChannelId = new
+            struct.pack("<III", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF) +  # null asym_hdr
+            _seq_header() +
+            svc_payload
+        )
+        return _opc_header(MSG_OPN, b"F", opn_body)
 
     elif style == "activate_session":
         # ActivateSession — credential presentation (T0859)

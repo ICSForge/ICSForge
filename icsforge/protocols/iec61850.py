@@ -170,7 +170,15 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
       relay_inject      — T0830 AitM GOOSE relay with modified data
     """
     rnd = random.Random(kwargs.get("seed"))
-    mb = marker_bytes(marker)
+    # IEC 61850 GOOSE: marker is OMITTED for spec compliance. The GOOSE
+    # L2 length header declares the total frame size and the GoosePdu
+    # BER envelope has its own length byte. Appending marker bytes after
+    # the BER envelope makes Wireshark/Zeek/Malcolm GOOSE dissectors
+    # recurse into the trailing bytes as if they were additional BER TLVs,
+    # eventually tripping the dissector's recursion_depth safeguard.
+    # Run correlation remains available via the JSONL events file.
+    mb = b""
+    _ignored_marker_bytes = marker_bytes(marker)  # noqa: F841
 
     # Configurable parameters
     ied_ref    = str(kwargs.get("ied_ref",    "IED1LD0/LLN0"))

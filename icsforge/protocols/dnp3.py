@@ -181,20 +181,24 @@ def build_payload(marker: str, style: str = "read", **kwargs) -> bytes:
         app = _app_layer(FC["write"], obj_group=10, obj_var=2, count=rnd.randint(1,4), extra=mb)
 
     elif style == "select":
-        # Select before operate: Group 12 Var 1 (CROB)
-        crob = bytes([0x03, 0x01]) + struct.pack('<II', 200, 0)  # PULSE_ON, count=1, on=200ms, off=0ms
+        # Select before operate: Group 12 Var 1 (CROB — 11 bytes per IEEE 1815-2012 §11.3.5.2)
+        # control_code(1) + count(1) + on_time(4) + off_time(4) + status(1) = 11 bytes
+        crob = bytes([0x03, 0x01]) + struct.pack('<II', 200, 0) + bytes([0x00])  # PULSE_ON, on=200ms, off=0, status=success
         app  = _app_layer(FC["select"], obj_group=12, obj_var=1, count=1, extra=crob + mb, seq=_dnp3_seq)
 
     elif style == "operate":
-        crob = bytes([0x03, 0x01, 0x00, 0x00, 0xC8, 0x00, 0x00, 0x00])
+        # CROB g12v1 (11 bytes): PULSE_ON, count=1, on=200ms, off=0, status=success
+        crob = bytes([0x03, 0x01]) + struct.pack('<II', 200, 0) + bytes([0x00])
         app  = _app_layer(FC["operate"], obj_group=12, obj_var=1, count=1, extra=crob + mb, seq=_dnp3_seq)
 
     elif style == "direct_operate":
-        crob = bytes([0x41, 0x01]) + struct.pack('<II', 200, 0)  # LATCH_ON, count=1, on=200ms
+        # CROB g12v1 (11 bytes): LATCH_ON, count=1, on=200ms, off=0, status=success
+        crob = bytes([0x41, 0x01]) + struct.pack('<II', 200, 0) + bytes([0x00])
         app  = _app_layer(FC["direct_operate"], obj_group=12, obj_var=1, count=1, extra=crob + mb, seq=_dnp3_seq)
 
     elif style == "direct_operate_nr":
-        crob = bytes([0x41, 0x01, 0x00, 0x00, 0xC8, 0x00, 0x00, 0x00])
+        # CROB g12v1 (11 bytes): LATCH_ON, count=1, on=200ms, off=0, status=success
+        crob = bytes([0x41, 0x01]) + struct.pack('<II', 200, 0) + bytes([0x00])
         app  = _app_layer(FC["direct_operate_nr"], obj_group=12, obj_var=1, count=1, extra=crob + mb, seq=_dnp3_seq)
 
     elif style == "cold_restart":

@@ -1,0 +1,8674 @@
+{
+  "results": [
+    {
+      "scenario": "T0840__network_enum__enip_sweep",
+      "technique": "T0840",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 27,
+        "heuristic": 176,
+        "semantic": 67
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__profinet_identify",
+      "technique": "T0840",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__enip_identity",
+      "technique": "T0888",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__opcua_discovery",
+      "technique": "T0888",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 28,
+        "heuristic": 44,
+        "semantic": 18
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__s7comm_szl",
+      "technique": "T0888",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 187
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__opcua_browse",
+      "technique": "T0861",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 60,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__modbus_register_sweep",
+      "technique": "T0861",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 33,
+        "heuristic": 239,
+        "semantic": 643
+      }
+    },
+    {
+      "scenario": "T0846__remote_sys_discovery__dnp3_probe",
+      "technique": "T0846",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 364,
+        "semantic": 80
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process__modbus_poll",
+      "technique": "T0801",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 29,
+        "heuristic": 224,
+        "semantic": 512
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process__iec104_subscribe",
+      "technique": "T0801",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 466,
+        "semantic": 164
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process__opcua_subscription",
+      "technique": "T0801",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__modbus_burst",
+      "technique": "T0802",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 67,
+        "heuristic": 504,
+        "semantic": 1094
+      }
+    },
+    {
+      "scenario": "T0882__theft_operational_info__opcua_history",
+      "technique": "T0882",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0882__theft_operational_info__s7comm_db_extract",
+      "technique": "T0882",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 24,
+        "heuristic": 0,
+        "semantic": 516
+      }
+    },
+    {
+      "scenario": "T0883__internet_accessible__multi",
+      "technique": "T0883",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 34,
+        "heuristic": 169,
+        "semantic": 137
+      }
+    },
+    {
+      "scenario": "T0822__external_remote_services__opcua",
+      "technique": "T0822",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 28,
+        "heuristic": 22,
+        "semantic": 10
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__opcua_cred",
+      "technique": "T0859",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 22,
+        "semantic": 10
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__modbus",
+      "technique": "T0848",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 24,
+        "heuristic": 99,
+        "semantic": 372
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__dnp3",
+      "technique": "T0848",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 102,
+        "semantic": 168
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__iec104",
+      "technique": "T0848",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 186,
+        "semantic": 102
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__modbus",
+      "technique": "T0855",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 157,
+        "semantic": 277
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__dnp3_direct_operate",
+      "technique": "T0855",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 133,
+        "semantic": 182
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__iec104",
+      "technique": "T0855",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 330,
+        "semantic": 198
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__s7comm",
+      "technique": "T0855",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 389
+      }
+    },
+    {
+      "scenario": "T0831__manipulation_control__modbus_setpoint",
+      "technique": "T0831",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 21,
+        "heuristic": 169,
+        "semantic": 215
+      }
+    },
+    {
+      "scenario": "T0831__manipulation_control__dnp3_sbo",
+      "technique": "T0831",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 104,
+        "semantic": 211
+      }
+    },
+    {
+      "scenario": "T0831__manipulation_control__iec104_setpoint",
+      "technique": "T0831",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 315,
+        "semantic": 161
+      }
+    },
+    {
+      "scenario": "T0831__manipulation_control__opcua_write",
+      "technique": "T0831",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__modbus",
+      "technique": "T0836",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 21,
+        "heuristic": 131,
+        "semantic": 253
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__s7comm_db",
+      "technique": "T0836",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 329
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__enip_parameter",
+      "technique": "T0836",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__modbus",
+      "technique": "T0806",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 38,
+        "heuristic": 186,
+        "semantic": 691
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__s7comm_stop",
+      "technique": "T0813",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 112
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__modbus_coils_off",
+      "technique": "T0813",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 21,
+        "heuristic": 213,
+        "semantic": 111
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__iec104_stopdt",
+      "technique": "T0815",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 184,
+        "semantic": 35
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__dnp3_disable_unsol",
+      "technique": "T0815",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 99,
+        "semantic": 36
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__opcua_delete_sub",
+      "technique": "T0815",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppression__iec104_inhibit",
+      "technique": "T0878",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 164,
+        "semantic": 42
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_service__modbus_flood",
+      "technique": "T0814",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 45,
+        "heuristic": 0,
+        "semantic": 1170
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_service__dnp3_flood",
+      "technique": "T0814",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 567,
+        "semantic": 648
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_service__iec104_flood",
+      "technique": "T0814",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 671,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__s7comm",
+      "technique": "T0816",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 127
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__enip_reset",
+      "technique": "T0816",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__s7comm",
+      "technique": "T0881",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 187
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__enip_stop",
+      "technique": "T0881",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__multi",
+      "technique": "T0827",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 19,
+        "heuristic": 88,
+        "semantic": 173
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__modbus_spoof",
+      "technique": "T0832",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 28,
+        "heuristic": 167,
+        "semantic": 120
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__opcua_write_sensor",
+      "technique": "T0832",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0820__exploitation_evasion__modbus_exception",
+      "technique": "T0820",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 130,
+        "semantic": 169
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__profinet_set_name",
+      "technique": "T0849",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__iec104_clock_inject",
+      "technique": "T0849",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 140,
+        "semantic": 43
+      }
+    },
+    {
+      "scenario": "T0821__modify_controller_tasking__s7comm",
+      "technique": "T0821",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 239
+      }
+    },
+    {
+      "scenario": "T0843__program_download__s7comm",
+      "technique": "T0843",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 32,
+        "heuristic": 0,
+        "semantic": 478
+      }
+    },
+    {
+      "scenario": "T0845__program_upload__s7comm",
+      "technique": "T0845",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 314
+      }
+    },
+    {
+      "scenario": "T0871__execution_through_api__opcua_call",
+      "technique": "T0871",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_operating_mode__enip",
+      "technique": "T0868",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__s7comm",
+      "technique": "T0800",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 155
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__enip",
+      "technique": "T0800",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__dnp3_broadcast",
+      "technique": "T0803",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 20,
+        "heuristic": 95,
+        "semantic": 200
+      }
+    },
+    {
+      "scenario": "T0803__block_command__modbus_channel_flood",
+      "technique": "T0803",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 18,
+        "heuristic": 13,
+        "semantic": 299
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__modbus_listen_only",
+      "technique": "T0804",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 9,
+        "heuristic": 0,
+        "semantic": 96
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__dnp3_disable_unsolicited",
+      "technique": "T0804",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 108,
+        "semantic": 27
+      }
+    },
+    {
+      "scenario": "T0805__block_serial_com__modbus_gateway_flood",
+      "technique": "T0805",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 54,
+        "heuristic": 0,
+        "semantic": 1461
+      }
+    },
+    {
+      "scenario": "T0807__cmdline_dnp3_file_transfer__dnp3",
+      "technique": "T0807",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 78,
+        "semantic": 12
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__s7comm_zero_db",
+      "technique": "T0809",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 0,
+        "semantic": 226
+      }
+    },
+    {
+      "scenario": "T0811__data_repositories__opcua_historian",
+      "technique": "T0811",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repositories__s7comm_db_dump",
+      "technique": "T0811",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 0,
+        "semantic": 301
+      }
+    },
+    {
+      "scenario": "T0812__default_creds__s7comm_blank_auth",
+      "technique": "T0812",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 127
+      }
+    },
+    {
+      "scenario": "T0812__default_creds__opcua_anonymous",
+      "technique": "T0812",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0812__default_creds__modbus_device_id",
+      "technique": "T0812",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 13,
+        "heuristic": 50,
+        "semantic": 72
+      }
+    },
+    {
+      "scenario": "T0812__default_creds__enip_default_auth",
+      "technique": "T0812",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 22,
+        "semantic": 11
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public_app__s7comm_malformed",
+      "technique": "T0819",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 0,
+        "semantic": 211
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public_app__opcua_malformed",
+      "technique": "T0819",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 28,
+        "heuristic": 11,
+        "semantic": 6
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public_app__enip_ucmm_crash",
+      "technique": "T0819",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 27,
+        "heuristic": 22,
+        "semantic": 11
+      }
+    },
+    {
+      "scenario": "T0826__loss_availability__multi_protocol_dos",
+      "technique": "T0826",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 54,
+        "heuristic": 487,
+        "semantic": 1754
+      }
+    },
+    {
+      "scenario": "T0826__loss_availability__s7comm_read_flood",
+      "technique": "T0826",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 32,
+        "heuristic": 0,
+        "semantic": 883
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__modbus_setpoint_chaos",
+      "technique": "T0828",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 35,
+        "heuristic": 189,
+        "semantic": 481
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__iec104_setpoint_spam",
+      "technique": "T0828",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 510,
+        "semantic": 252
+      }
+    },
+    {
+      "scenario": "T0830__aitm__opcua_relay_session",
+      "technique": "T0830",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__dnp3_spoof_response",
+      "technique": "T0830",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 132,
+        "semantic": 138
+      }
+    },
+    {
+      "scenario": "T0834__native_api__s7comm_cotp_raw",
+      "technique": "T0834",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 142
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io_image__modbus_input_write",
+      "technique": "T0835",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 9,
+        "heuristic": 7,
+        "semantic": 224
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io_image__s7comm_io_override",
+      "technique": "T0835",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 284
+      }
+    },
+    {
+      "scenario": "T0837__loss_protection__modbus_relay_thresholds",
+      "technique": "T0837",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 9,
+        "heuristic": 8,
+        "semantic": 193
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__modbus_threshold",
+      "technique": "T0838",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 202
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__opcua_write_limit_node",
+      "technique": "T0838",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__iec104_param_threshold",
+      "technique": "T0838",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 192,
+        "semantic": 67
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__s7comm_module_flash",
+      "technique": "T0839",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 140
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__enip_io_module",
+      "technique": "T0839",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0853__scripting_dnp3_file_push__dnp3",
+      "technique": "T0853",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 91,
+        "semantic": 14
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__iec104_meas_inject",
+      "technique": "T0856",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 346,
+        "semantic": 126
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__opcua_write_sensor",
+      "technique": "T0856",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__dnp3_unsolicited",
+      "technique": "T0856",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 174,
+        "semantic": 171
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__s7comm_full_flash",
+      "technique": "T0857",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 134
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__enip_plc_reimage",
+      "technique": "T0857",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_opmode__s7comm_mode_cycle",
+      "technique": "T0858",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 67
+      }
+    },
+    {
+      "scenario": "T0858__change_opmode__dnp3_restart",
+      "technique": "T0858",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 84,
+        "semantic": 6
+      }
+    },
+    {
+      "scenario": "T0864__transient_asset__profinet_new_device",
+      "technique": "T0864",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote_services__s7comm_malformed",
+      "technique": "T0866",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 0,
+        "semantic": 211
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote_services__enip_ucmm",
+      "technique": "T0866",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 27,
+        "heuristic": 22,
+        "semantic": 11
+      }
+    },
+    {
+      "scenario": "T0867__lateral_tool__s7comm_db_transfer",
+      "technique": "T0867",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 0,
+        "semantic": 181
+      }
+    },
+    {
+      "scenario": "T0867__lateral_tool__enip_cip_transfer",
+      "technique": "T0867",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__c2_protocol__modbus_register_beacon",
+      "technique": "T0869",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 260,
+        "semantic": 100
+      }
+    },
+    {
+      "scenario": "T0869__c2_protocol__enip_cip_beacon",
+      "technique": "T0869",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__c2_protocol__opcua_write_custom_node",
+      "technique": "T0869",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0872__indicator_removal__dnp3_clear_events",
+      "technique": "T0872",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 98,
+        "semantic": 7
+      }
+    },
+    {
+      "scenario": "T0877__io_image__s7comm_full_read",
+      "technique": "T0877",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 16,
+        "heuristic": 0,
+        "semantic": 299
+      }
+    },
+    {
+      "scenario": "T0877__io_image__enip_assembly_read",
+      "technique": "T0877",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0877__io_image__modbus_full_scan",
+      "technique": "T0877",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 20,
+        "heuristic": 91,
+        "semantic": 249
+      }
+    },
+    {
+      "scenario": "T0880__loss_safety__modbus_sis_disable",
+      "technique": "T0880",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 9,
+        "heuristic": 14,
+        "semantic": 217
+      }
+    },
+    {
+      "scenario": "T0880__loss_safety__s7comm_failsafe_zero",
+      "technique": "T0880",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 185
+      }
+    },
+    {
+      "scenario": "T0884__connection_proxy__opcua_relay_session",
+      "technique": "T0884",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__commonly_used_port__modbus_c2_502",
+      "technique": "T0885",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 254,
+        "semantic": 106
+      }
+    },
+    {
+      "scenario": "T0885__commonly_used_port__enip_c2_44818",
+      "technique": "T0885",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__opcua_session_pivot",
+      "technique": "T0886",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__s7comm_lateral_pivot",
+      "technique": "T0886",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 200
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__s7comm_upload_dl",
+      "technique": "T0889",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 6,
+        "heuristic": 0,
+        "semantic": 249
+      }
+    },
+    {
+      "scenario": "T0890__priv_esc__opcua_privilege_escalate",
+      "technique": "T0890",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__s7comm_factory_pin",
+      "technique": "T0891",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 202
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__opcua_embedded_password",
+      "technique": "T0891",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0892__change_credential__modbus_register_write",
+      "technique": "T0892",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 9,
+        "heuristic": 0,
+        "semantic": 141
+      }
+    },
+    {
+      "scenario": "T0892__change_credential__opcua_password_change",
+      "technique": "T0892",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0895__autorun_image__s7comm_sdb0_download",
+      "technique": "T0895",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 127
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__bacnet_who_is",
+      "technique": "T0840",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__bacnet_read_device",
+      "technique": "T0888",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__bacnet_who_has",
+      "technique": "T0861",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process__bacnet_read",
+      "technique": "T0801",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__bacnet_subscribe",
+      "technique": "T0802",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0882__theft_operational_info__bacnet_file_read",
+      "technique": "T0882",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__bacnet_write",
+      "technique": "T0855",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__bacnet_write_multi",
+      "technique": "T0836",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__bacnet_reinit",
+      "technique": "T0816",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0813__dos__bacnet_comm_disable",
+      "technique": "T0813",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__bacnet_write_file",
+      "technique": "T0843",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerade__bacnet_fake_iam",
+      "technique": "T0849",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__c2_protocol__bacnet_private_transfer",
+      "technique": "T0869",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__bacnet_create_object",
+      "technique": "T0889",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__bacnet_delete_object",
+      "technique": "T0809",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__mqtt_connect",
+      "technique": "T0822",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 54,
+        "semantic": 39
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__mqtt_creds",
+      "technique": "T0859",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 54,
+        "semantic": 39
+      }
+    },
+    {
+      "scenario": "T0831__manipulation_control__mqtt_setpoint",
+      "technique": "T0831",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__mqtt_firmware",
+      "technique": "T0843",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__mqtt_config",
+      "technique": "T0836",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__mqtt_wildcard",
+      "technique": "T0802",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0826__loss_availability__mqtt_disconnect",
+      "technique": "T0826",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 45,
+        "semantic": 33
+      }
+    },
+    {
+      "scenario": "T0812__default_creds__mqtt_anonymous",
+      "technique": "T0812",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 72,
+        "semantic": 51
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__mqtt_publish",
+      "technique": "T0855",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process__mqtt_subscribe",
+      "technique": "T0801",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__c2_protocol__mqtt_connect",
+      "technique": "T0869",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 45,
+        "semantic": 33
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__mqtt_subscribe_commands",
+      "technique": "T0840",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0838__modify_alarm__mqtt_suppress",
+      "technique": "T0838",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__mqtt_config",
+      "technique": "T0889",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__mqtt_unsubscribe",
+      "technique": "T0815",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__mqtt_disconnect",
+      "technique": "T0813",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__dos__mqtt_flood",
+      "technique": "T0814",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 240,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__mqtt_will",
+      "technique": "T0856",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 36,
+        "semantic": 27
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__iec61850_goose_trip",
+      "technique": "T0855",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__iec61850_goose_meas",
+      "technique": "T0856",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__iec61850_goose_replay",
+      "technique": "T0813",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__iec61850_goose_relay",
+      "technique": "T0830",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0826__loss_of_availability__iec61850_goose",
+      "technique": "T0826",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0831__manip_control__iec61850_goose_cb",
+      "technique": "T0831",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0832__manip_view__iec61850_goose_status",
+      "technique": "T0832",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppress__iec61850_goose",
+      "technique": "T0878",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__profinet_dcp_reset",
+      "technique": "T0816",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__profinet_set_ip",
+      "technique": "T0855",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0832__manip_view__dnp3_spoof_response",
+      "technique": "T0832",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 88,
+        "semantic": 77
+      }
+    },
+    {
+      "scenario": "T0832__manip_view__iec104_meas_inject",
+      "technique": "T0832",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 94,
+        "semantic": 41
+      }
+    },
+    {
+      "scenario": "T0832__manip_view__mqtt_false_telemetry",
+      "technique": "T0832",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__modbus_device_scan",
+      "technique": "T0840",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 67,
+        "semantic": 56
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__dnp3_link_layer",
+      "technique": "T0840",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 70,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__s7comm_szl",
+      "technique": "T0840",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 65
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__opcua_browse",
+      "technique": "T0840",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__iec104_interrogation",
+      "technique": "T0840",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 49,
+        "semantic": 21
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppress__modbus_coil_write",
+      "technique": "T0878",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 45,
+        "semantic": 46
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppress__opcua_node_write",
+      "technique": "T0878",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppress__dnp3_disable_unsolicited",
+      "technique": "T0878",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 55,
+        "semantic": 20
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppress__s7comm_write_alarm",
+      "technique": "T0878",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 97
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__opcua_session",
+      "technique": "T0848",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__s7comm_plc_access",
+      "technique": "T0848",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 125
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__enip_session",
+      "technique": "T0848",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__s7comm_szl",
+      "technique": "T0868",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 0,
+        "semantic": 50
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__opcua_server_state",
+      "technique": "T0868",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__modbus_exception",
+      "technique": "T0868",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 35,
+        "semantic": 56
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__dnp3_internal_ind",
+      "technique": "T0868",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 35,
+        "semantic": 24
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__modbus_bulk_read",
+      "technique": "T0882",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 60,
+        "semantic": 112
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__dnp3_class_read",
+      "technique": "T0882",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 52,
+        "semantic": 73
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__iec104_interrogation",
+      "technique": "T0882",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 59,
+        "semantic": 26
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__enip_assembly_read",
+      "technique": "T0882",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0836__modify_param__dnp3_direct_operate",
+      "technique": "T0836",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 50,
+        "semantic": 60
+      }
+    },
+    {
+      "scenario": "T0836__modify_param__iec104_setpoint",
+      "technique": "T0836",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 73,
+        "semantic": 47
+      }
+    },
+    {
+      "scenario": "T0836__modify_param__opcua_process_write",
+      "technique": "T0836",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__opcua_write",
+      "technique": "T0855",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__enip_write_tag",
+      "technique": "T0855",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__modbus_coil",
+      "technique": "T0856",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 14,
+        "heuristic": 46,
+        "semantic": 60
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__s7comm_db",
+      "technique": "T0856",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 97
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__enip_write_tag",
+      "technique": "T0856",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__modbus_device_id",
+      "technique": "T0888",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 45,
+        "semantic": 33
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__iec104_capability",
+      "technique": "T0888",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 40,
+        "semantic": 15
+      }
+    },
+    {
+      "scenario": "T0826__loss_of_availability__opcua_session_flood",
+      "technique": "T0826",
+      "proto": "opcua",
+      "pcap": false,
+      "tier_hits": {},
+      "tier_alerts": {}
+    },
+    {
+      "scenario": "T0826__loss_of_availability__enip_session_exhaust",
+      "technique": "T0826",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 30,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0877__io_image__dnp3_analog_read",
+      "technique": "T0877",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 10,
+        "heuristic": 60,
+        "semantic": 80
+      }
+    },
+    {
+      "scenario": "T0877__io_image__iec104_full_scan",
+      "technique": "T0877",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 59,
+        "semantic": 26
+      }
+    },
+    {
+      "scenario": "T0877__io_image__opcua_bulk_read",
+      "technique": "T0877",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__iec104",
+      "technique": "T0832",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 74,
+        "semantic": 31
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__s7comm_db",
+      "technique": "T0832",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 97
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__enip_tag",
+      "technique": "T0832",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__bacnet_i_am",
+      "technique": "T0856",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__modbus_write",
+      "technique": "T0856",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 52,
+        "semantic": 23
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__s7comm_write",
+      "technique": "T0856",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 82
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__enip_write",
+      "technique": "T0856",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__dnp3_link",
+      "technique": "T0888",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 84,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__iec104_interrogation",
+      "technique": "T0888",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 29,
+        "semantic": 16
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__mqtt_sys",
+      "technique": "T0888",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 9,
+        "semantic": 9
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__profinet_dcp",
+      "technique": "T0888",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0888__remote_sys_info__iec61850_probe",
+      "technique": "T0888",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__dnp3_address_scan",
+      "technique": "T0840",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 184,
+        "semantic": 45
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__iec104_test",
+      "technique": "T0840",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 31,
+        "semantic": 9
+      }
+    },
+    {
+      "scenario": "T0840__network_enum__iec61850_goose",
+      "technique": "T0840",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__modbus_response_tamper",
+      "technique": "T0830",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 11,
+        "heuristic": 35,
+        "semantic": 89
+      }
+    },
+    {
+      "scenario": "T0830__aitm__enip_tag_intercept",
+      "technique": "T0830",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__iec104_inject",
+      "technique": "T0830",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 77,
+        "semantic": 28
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__enip_session_flood",
+      "technique": "T0813",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 45,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__profinet_dcp_flood",
+      "technique": "T0813",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__opcua_sub_flood",
+      "technique": "T0813",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 60,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_view__opcua_delete_sub",
+      "technique": "T0814",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_view__s7comm_read_block",
+      "technique": "T0814",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 24,
+        "heuristic": 0,
+        "semantic": 591
+      }
+    },
+    {
+      "scenario": "T0826__loss_of_availability__opcua_session",
+      "technique": "T0826",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 60,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__dnp3_setpoint",
+      "technique": "T0836",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 18,
+        "semantic": 27
+      }
+    },
+    {
+      "scenario": "T0836__modify_parameter__iec61850_goose",
+      "technique": "T0836",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__dnp3_deadband",
+      "technique": "T0838",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 26,
+        "semantic": 6
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__s7comm_write",
+      "technique": "T0838",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 8,
+        "heuristic": 0,
+        "semantic": 97
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__enip_stop",
+      "technique": "T0855",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 11,
+        "semantic": 7
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__opcua_write_safety",
+      "technique": "T0855",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0855__unauth_command__profinet_dcp_reset",
+      "technique": "T0855",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__iec61850_goose",
+      "technique": "T0849",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__mqtt",
+      "technique": "T0849",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 9,
+        "semantic": 9
+      }
+    },
+    {
+      "scenario": "T0856__spoof_reporting__profinet_dcp",
+      "technique": "T0856",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__dnp3_flood",
+      "technique": "T0813",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 40,
+        "heuristic": 285,
+        "semantic": 590
+      }
+    },
+    {
+      "scenario": "T0813__denial_of_control__iec104_startdt_flood",
+      "technique": "T0813",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": true,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 231,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0826__loss_of_availability__bacnet_flood",
+      "technique": "T0826",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0826__loss_of_availability__profinet_dcp_flood",
+      "technique": "T0826",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__bacnet_write",
+      "technique": "T0832",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__iec61850_goose",
+      "technique": "T0882",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__mqtt",
+      "technique": "T0882",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 9,
+        "semantic": 9
+      }
+    },
+    {
+      "scenario": "T0882__theft_op_info__profinet_dcp",
+      "technique": "T0882",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0877__io_module_discovery__bacnet",
+      "technique": "T0877",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0877__io_module_discovery__iec61850",
+      "technique": "T0877",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0877__io_module_discovery__mqtt",
+      "technique": "T0877",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": true,
+        "semantic": true
+      },
+      "tier_alerts": {
+        "lab": 12,
+        "heuristic": 9,
+        "semantic": 9
+      }
+    },
+    {
+      "scenario": "T0877__io_module_discovery__profinet_dcp",
+      "technique": "T0877",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppression__bacnet",
+      "technique": "T0878",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppression__enip",
+      "technique": "T0878",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0878__alarm_suppression__mqtt",
+      "technique": "T0878",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0831__manip_control__bacnet_write",
+      "technique": "T0831",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0831__manip_control__enip",
+      "technique": "T0831",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": true,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 15,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0831__manip_control__profinet_dcp",
+      "technique": "T0831",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0831__manip_control__s7comm",
+      "technique": "T0831",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__bacnet",
+      "technique": "T0848",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__iec61850",
+      "technique": "T0848",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__mqtt",
+      "technique": "T0848",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0848__rogue_master__profinet_dcp",
+      "technique": "T0848",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__bacnet",
+      "technique": "T0830",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__mqtt",
+      "technique": "T0830",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__s7comm",
+      "technique": "T0830",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__bacnet",
+      "technique": "T0803",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__iec104",
+      "technique": "T0803",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__iec61850",
+      "technique": "T0803",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__s7comm",
+      "technique": "T0803",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__enip",
+      "technique": "T0804",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__iec61850",
+      "technique": "T0804",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__std_app_protocol__dnp3",
+      "technique": "T0869",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__std_app_protocol__iec104",
+      "technique": "T0869",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__std_app_protocol__iec61850",
+      "technique": "T0869",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__std_app_protocol__s7comm",
+      "technique": "T0869",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_view__bacnet",
+      "technique": "T0814",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_view__enip",
+      "technique": "T0814",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0883__internet_accessible__bacnet",
+      "technique": "T0883",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0883__internet_accessible__iec104",
+      "technique": "T0883",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0883__internet_accessible__s7comm",
+      "technique": "T0883",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_info__bacnet",
+      "technique": "T0868",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_info__iec61850",
+      "technique": "T0868",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_info__mqtt",
+      "technique": "T0868",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__modbus_flood",
+      "technique": "T0829",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__dnp3_disable_unsolicited",
+      "technique": "T0829",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__iec104_stopdt",
+      "technique": "T0829",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__opcua_delete_subscriptions",
+      "technique": "T0829",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__s7comm_read_flood",
+      "technique": "T0829",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__bacnet",
+      "technique": "T0827",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__dnp3",
+      "technique": "T0827",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__enip",
+      "technique": "T0827",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__dnp3_cold_restart",
+      "technique": "T0881",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__iec104_stopdt",
+      "technique": "T0881",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__bacnet_reinitialize",
+      "technique": "T0881",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__opcua_close_sessions",
+      "technique": "T0881",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__modbus_zero_registers",
+      "technique": "T0809",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__dnp3_clear_events",
+      "technique": "T0809",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__enip_reset",
+      "technique": "T0809",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__dnp3_file_transfer",
+      "technique": "T0843",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__enip_firmware",
+      "technique": "T0843",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__opcua_method_call",
+      "technique": "T0843",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__dnp3_direct_operate",
+      "technique": "T0835",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__enip_assembly",
+      "technique": "T0835",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__iec104_setpoint",
+      "technique": "T0835",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__dnp3_class_read",
+      "technique": "T0861",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__enip_tag_enum",
+      "technique": "T0861",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__iec104_interrogation",
+      "technique": "T0861",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__dnp3",
+      "technique": "T0802",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__enip",
+      "technique": "T0802",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__iec104",
+      "technique": "T0802",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__dnp3",
+      "technique": "T0816",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__iec104",
+      "technique": "T0816",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__modbus",
+      "technique": "T0816",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__device_restart__mqtt",
+      "technique": "T0816",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__iec61850",
+      "technique": "T0815",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__profinet_dcp",
+      "technique": "T0815",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process_state__dnp3",
+      "technique": "T0801",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process_state__enip",
+      "technique": "T0801",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process_state__s7comm",
+      "technique": "T0801",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0845__program_upload__enip",
+      "technique": "T0845",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0845__program_upload__opcua",
+      "technique": "T0845",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0845__program_upload__dnp3",
+      "technique": "T0845",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_controller_tasking__enip",
+      "technique": "T0821",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_controller_tasking__opcua",
+      "technique": "T0821",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_controller_tasking__dnp3",
+      "technique": "T0821",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__dnp3",
+      "technique": "T0806",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__enip",
+      "technique": "T0806",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__s7comm",
+      "technique": "T0806",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__bacnet",
+      "technique": "T0838",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0838__alarm_settings__enip",
+      "technique": "T0838",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__dnp3",
+      "technique": "T0849",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__enip",
+      "technique": "T0849",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerading__s7comm",
+      "technique": "T0849",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__remote_sys_discovery__modbus",
+      "technique": "T0846",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__remote_sys_discovery__enip",
+      "technique": "T0846",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__remote_sys_discovery__opcua",
+      "technique": "T0846",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__s7comm",
+      "technique": "T0889",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__enip",
+      "technique": "T0889",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__opcua",
+      "technique": "T0889",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__enip",
+      "technique": "T0839",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__dnp3",
+      "technique": "T0839",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__iec104",
+      "technique": "T0839",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__network_scanning__multi",
+      "technique": "T0846",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__s7comm_outputs",
+      "technique": "T0880",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_program_state__s7comm",
+      "technique": "T0858",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__service_scan__mqtt_ping",
+      "technique": "T0846",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__network_scan__bacnet_sweep",
+      "technique": "T0846",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__network_scan__iec61850_goose",
+      "technique": "T0846",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0846__network_scan__profinet_dcp",
+      "technique": "T0846",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__modbus_sis",
+      "technique": "T0880",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__dnp3_disable_protection",
+      "technique": "T0880",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__enip_safety_write",
+      "technique": "T0880",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__iec104_protection_block",
+      "technique": "T0880",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_program_state__enip",
+      "technique": "T0858",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_program_state__iec104",
+      "technique": "T0858",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_program_state__opcua",
+      "technique": "T0858",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_op_mode__bacnet",
+      "technique": "T0858",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_op_mode__iec61850",
+      "technique": "T0858",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_op_mode__modbus",
+      "technique": "T0858",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_op_mode__mqtt",
+      "technique": "T0858",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0858__change_op_mode__profinet_dcp",
+      "technique": "T0858",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__bacnet",
+      "technique": "T0829",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__enip",
+      "technique": "T0829",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__iec61850",
+      "technique": "T0829",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__mqtt",
+      "technique": "T0829",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0829__loss_of_view__profinet_dcp",
+      "technique": "T0829",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__opcua",
+      "technique": "T0880",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__iec61850",
+      "technique": "T0880",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__bacnet",
+      "technique": "T0880",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0880__loss_of_safety__profinet_dcp",
+      "technique": "T0880",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__dnp3",
+      "technique": "T0889",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__iec104",
+      "technique": "T0889",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__iec61850",
+      "technique": "T0889",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__modbus",
+      "technique": "T0889",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0889__modify_program__profinet_dcp",
+      "technique": "T0889",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__dnp3",
+      "technique": "T0800",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__iec104",
+      "technique": "T0800",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__modbus",
+      "technique": "T0800",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__mqtt",
+      "technique": "T0800",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0892__change_credential__dnp3",
+      "technique": "T0892",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0892__change_credential__enip",
+      "technique": "T0892",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__bacnet",
+      "technique": "T0891",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__dnp3",
+      "technique": "T0891",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__enip",
+      "technique": "T0891",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__iec104",
+      "technique": "T0891",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__enip",
+      "technique": "T0828",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__s7comm",
+      "technique": "T0828",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__bacnet",
+      "technique": "T0828",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__mqtt",
+      "technique": "T0828",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__enip",
+      "technique": "T0859",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__s7comm",
+      "technique": "T0859",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__iec104",
+      "technique": "T0859",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__enip",
+      "technique": "T0822",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__s7comm",
+      "technique": "T0822",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__iec61850",
+      "technique": "T0861",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__mqtt",
+      "technique": "T0861",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__profinet",
+      "technique": "T0861",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0861__point_tag_id__s7comm",
+      "technique": "T0861",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__iec61850",
+      "technique": "T0802",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__opcua",
+      "technique": "T0802",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__profinet",
+      "technique": "T0802",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0802__automated_collection__s7comm",
+      "technique": "T0802",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__iec61850",
+      "technique": "T0881",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__modbus",
+      "technique": "T0881",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__mqtt",
+      "technique": "T0881",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0881__service_stop__profinet",
+      "technique": "T0881",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__iec61850",
+      "technique": "T0827",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__mqtt",
+      "technique": "T0827",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__opcua",
+      "technique": "T0827",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0827__loss_of_control__profinet",
+      "technique": "T0827",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__iec104",
+      "technique": "T0843",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__modbus",
+      "technique": "T0843",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0843__program_download__profinet",
+      "technique": "T0843",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__bacnet",
+      "technique": "T0800",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__profinet",
+      "technique": "T0800",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__dnp3",
+      "technique": "T0811",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__enip",
+      "technique": "T0811",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__iec104",
+      "technique": "T0811",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__modbus",
+      "technique": "T0811",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__bacnet",
+      "technique": "T0819",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__dnp3",
+      "technique": "T0819",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__iec104",
+      "technique": "T0819",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__dnp3",
+      "technique": "T0885",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__iec104",
+      "technique": "T0885",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__iec61850",
+      "technique": "T0885",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__s7comm",
+      "technique": "T0885",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__bacnet",
+      "technique": "T0859",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__dnp3",
+      "technique": "T0859",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__iec61850",
+      "technique": "T0859",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__iec104",
+      "technique": "T0809",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__opcua",
+      "technique": "T0809",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0809__data_destruction__profinet",
+      "technique": "T0809",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__bacnet",
+      "technique": "T0835",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__iec61850",
+      "technique": "T0835",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__mqtt",
+      "technique": "T0835",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__dnp3",
+      "technique": "T0828",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__iec61850",
+      "technique": "T0828",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__opcua",
+      "technique": "T0828",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0828__loss_productivity__profinet",
+      "technique": "T0828",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__iec61850",
+      "technique": "T0891",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__modbus",
+      "technique": "T0891",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__mqtt",
+      "technique": "T0891",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0891__hardcoded_creds__profinet",
+      "technique": "T0891",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0892__change_credential__bacnet",
+      "technique": "T0892",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0892__change_credential__mqtt",
+      "technique": "T0892",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__bacnet",
+      "technique": "T0885",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__mqtt",
+      "technique": "T0885",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__opcua",
+      "technique": "T0885",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0885__common_port__profinet",
+      "technique": "T0885",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__iec61850",
+      "technique": "T0819",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__modbus",
+      "technique": "T0819",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__mqtt",
+      "technique": "T0819",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0819__exploit_public__profinet",
+      "technique": "T0819",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__bacnet",
+      "technique": "T0811",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__iec61850",
+      "technique": "T0811",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__mqtt",
+      "technique": "T0811",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0811__data_repos__profinet",
+      "technique": "T0811",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__mqtt",
+      "technique": "T0803",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__mqtt",
+      "technique": "T0804",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__bacnet",
+      "technique": "T0806",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__iec104",
+      "technique": "T0806",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__iec61850",
+      "technique": "T0806",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__mqtt",
+      "technique": "T0806",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0806__brute_force_io__opcua",
+      "technique": "T0806",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__iec104",
+      "technique": "T0821",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__modbus",
+      "technique": "T0821",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__mqtt",
+      "technique": "T0821",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__bacnet",
+      "technique": "T0822",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__dnp3",
+      "technique": "T0822",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__iec104",
+      "technique": "T0822",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0822__external_remote__modbus",
+      "technique": "T0822",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__mqtt",
+      "technique": "T0839",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__opcua",
+      "technique": "T0839",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__bacnet",
+      "technique": "T0839",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0845__program_upload__bacnet",
+      "technique": "T0845",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0845__program_upload__modbus",
+      "technique": "T0845",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__mqtt",
+      "technique": "T0857",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__opcua",
+      "technique": "T0857",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__bacnet",
+      "technique": "T0857",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__dnp3",
+      "technique": "T0857",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__modbus",
+      "technique": "T0866",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__iec104",
+      "technique": "T0866",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__iec61850",
+      "technique": "T0866",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__mqtt",
+      "technique": "T0866",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__opcua",
+      "technique": "T0866",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__bacnet",
+      "technique": "T0866",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__profinet",
+      "technique": "T0866",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0867__lateral_tool__bacnet",
+      "technique": "T0867",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0867__lateral_tool__dnp3",
+      "technique": "T0867",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0867__lateral_tool__mqtt",
+      "technique": "T0867",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0867__lateral_tool__opcua",
+      "technique": "T0867",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__bacnet",
+      "technique": "T0886",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__dnp3",
+      "technique": "T0886",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__enip",
+      "technique": "T0886",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__iec104",
+      "technique": "T0886",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__iec61850",
+      "technique": "T0886",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__modbus",
+      "technique": "T0886",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__mqtt",
+      "technique": "T0886",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0886__remote_services__profinet",
+      "technique": "T0886",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__iec104",
+      "technique": "T0857",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0857__system_firmware__profinet",
+      "technique": "T0857",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0839__module_firmware__profinet",
+      "technique": "T0839",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0866__exploit_remote__dnp3",
+      "technique": "T0866",
+      "proto": "dnp3",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0801__monitor_process__iec61850",
+      "technique": "T0801",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_service__iec61850",
+      "technique": "T0814",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__denial_of_service__profinet",
+      "technique": "T0814",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__bacnet",
+      "technique": "T0815",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__enip",
+      "technique": "T0815",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0835__manipulate_io__opcua",
+      "technique": "T0835",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__iec104",
+      "technique": "T0868",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_op_mode__profinet",
+      "technique": "T0868",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0830__aitm__profinet",
+      "technique": "T0830",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0869__std_app_protocol__profinet",
+      "technique": "T0869",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__modbus",
+      "technique": "T0859",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0883__internet_accessible__mqtt",
+      "technique": "T0883",
+      "proto": "mqtt",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0800__fw_update_mode__opcua",
+      "technique": "T0800",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__dos__iec61850",
+      "technique": "T0814",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0814__dos__profinet",
+      "technique": "T0814",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0816__restart_shutdown__opcua",
+      "technique": "T0816",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0849__masquerade__opcua",
+      "technique": "T0849",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0859__valid_accounts__profinet",
+      "technique": "T0859",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_mode__iec104",
+      "technique": "T0868",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0868__detect_mode__profinet",
+      "technique": "T0868",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__enip",
+      "technique": "T0803",
+      "proto": "enip",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__opcua",
+      "technique": "T0803",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0803__block_command__profinet",
+      "technique": "T0803",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__bacnet",
+      "technique": "T0804",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__iec104",
+      "technique": "T0804",
+      "proto": "iec104",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__opcua",
+      "technique": "T0804",
+      "proto": "opcua",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__profinet",
+      "technique": "T0804",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0804__block_reporting__s7comm",
+      "technique": "T0804",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__modbus_flood",
+      "technique": "T0815",
+      "proto": "modbus",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0815__denial_of_view__s7comm_flood",
+      "technique": "T0815",
+      "proto": "s7comm",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__bacnet",
+      "technique": "T0821",
+      "proto": "bacnet",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__iec61850",
+      "technique": "T0821",
+      "proto": "iec61850",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0821__modify_tasking__profinet",
+      "technique": "T0821",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    },
+    {
+      "scenario": "T0832__manipulation_of_view__profinet",
+      "technique": "T0832",
+      "proto": "profinet_dcp",
+      "pcap": true,
+      "tier_hits": {
+        "lab": false,
+        "heuristic": false,
+        "semantic": false
+      },
+      "tier_alerts": {
+        "lab": 0,
+        "heuristic": 0,
+        "semantic": 0
+      }
+    }
+  ],
+  "per_tier": {
+    "lab": {
+      "pcaps_tested": 535,
+      "pcaps_hit": 161,
+      "total_alerts": 3330
+    },
+    "heuristic": {
+      "pcaps_tested": 535,
+      "pcaps_hit": 98,
+      "total_alerts": 12484
+    },
+    "semantic": {
+      "pcaps_tested": 535,
+      "pcaps_hit": 137,
+      "total_alerts": 25271
+    }
+  },
+  "per_proto": {
+    "enip": {
+      "scenarios": 57,
+      "pcaps_ok": 57,
+      "lab_hit": 28,
+      "heuristic_hit": 5,
+      "semantic_hit": 5
+    },
+    "profinet_dcp": {
+      "scenarios": 47,
+      "pcaps_ok": 47,
+      "lab_hit": 0,
+      "heuristic_hit": 0,
+      "semantic_hit": 0
+    },
+    "opcua": {
+      "scenarios": 59,
+      "pcaps_ok": 59,
+      "lab_hit": 33,
+      "heuristic_hit": 4,
+      "semantic_hit": 4
+    },
+    "s7comm": {
+      "scenarios": 59,
+      "pcaps_ok": 59,
+      "lab_hit": 39,
+      "heuristic_hit": 1,
+      "semantic_hit": 39
+    },
+    "modbus": {
+      "scenarios": 56,
+      "pcaps_ok": 56,
+      "lab_hit": 35,
+      "heuristic_hit": 30,
+      "semantic_hit": 35
+    },
+    "dnp3": {
+      "scenarios": 57,
+      "pcaps_ok": 57,
+      "lab_hit": 6,
+      "heuristic_hit": 26,
+      "semantic_hit": 24
+    },
+    "iec104": {
+      "scenarios": 52,
+      "pcaps_ok": 52,
+      "lab_hit": 0,
+      "heuristic_hit": 22,
+      "semantic_hit": 20
+    },
+    "bacnet": {
+      "scenarios": 54,
+      "pcaps_ok": 54,
+      "lab_hit": 0,
+      "heuristic_hit": 0,
+      "semantic_hit": 0
+    },
+    "mqtt": {
+      "scenarios": 52,
+      "pcaps_ok": 52,
+      "lab_hit": 20,
+      "heuristic_hit": 10,
+      "semantic_hit": 10
+    },
+    "iec61850": {
+      "scenarios": 43,
+      "pcaps_ok": 43,
+      "lab_hit": 0,
+      "heuristic_hit": 0,
+      "semantic_hit": 0
+    }
+  },
+  "totals": {
+    "scenarios_considered": 536,
+    "pcaps_generated": 535
+  },
+  "metadata": {
+    "dry_run": false,
+    "filters": {
+      "technique": null,
+      "protocol": null,
+      "limit": null
+    },
+    "elapsed_sec": 1125.4
+  }
+}

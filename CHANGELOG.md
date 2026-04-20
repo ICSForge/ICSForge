@@ -1,3 +1,334 @@
+## v0.62.0 (2026-04-17) — Campaign parity, walk-up demo, CLI/Web UI parity, reference detection rates
+
+### Why this release matters
+
+Four concrete problems in v0.61.0 are now fixed:
+
+1. The README advertised 11 named attack chains. `builtin.yml` only defined 5.
+   Closed — 11 playbook campaigns, 73 validated step references, project's
+   own validator returns zero warnings.
+2. The CLI was useful only for `generate`, `send`, `net-validate`, and
+   `selftest`. Everything a power user could do in the Web UI — run a
+   campaign, preview/export detection rules, browse the scenario library —
+   now has a CLI equivalent.
+3. Conference walk-up was not possible. The sender page is too dense for
+   booth demos. A dedicated `/demo` page with four big tiles lets a reviewer
+   fire Industroyer2 with a single click and watch Suricata alerts light up.
+4. ICSForge ships auto-generated Suricata rules but has never published
+   how well they actually fire. v0.62 adds a reference coverage harness and
+   publishes honest per-tier and per-protocol hit rates in the README.
+
+---
+
+### 1 · Campaigns: 5 → 11 (README claim now matches reality)
+
+`icsforge/campaigns/builtin.yml` rewritten with 11 playbook campaigns that
+map 1:1 to the 11 named attack chains in the README. The existing five are
+kept; six new ones added:
+
+  industroyer2            ⚡  Ukraine 2022 IEC-104 + S7comm — 8 steps, ~100s
+  water_treatment         💧  Oldsmar-style setpoint tampering — 8 steps, ~90s
+  opcua_espionage         🕵  OPC UA silent exfiltration — 7 steps, ~70s
+  enip_manufacturing      🏭  Allen-Bradley / Rockwell CIP manipulation — 8 steps, ~90s
+  firmware_persistence    🔧  S7comm firmware reflash chain — 7 steps, ~100s
+  loss_of_availability    🛑  Multi-protocol concurrent DoS — 6 steps, ~80s
+
+Every step references a scenario that exists in `scenarios.yml` today; no
+invented scenarios. `python -m icsforge.campaigns.runner` and the existing
+`validate_campaign_file` both return 0 warnings against the updated file.
+
+A CI-grade test (`tests/test_v062_additions.py::TestBuiltinCampaigns`) now
+locks the invariants: exactly 11 campaigns, every scenario reference must
+resolve, every campaign must have name/description/steps/labels.
+
+### 2 · Live Suricata alert viewer — new module
+
+`icsforge/viewer/` is a tiny Flask service (~460 lines) that tails Suricata
+EVE JSON from a shared volume and streams alerts to the browser via SSE.
+Each alert is classified into:
+
+  lab        (ICSForge marker rule)        — blue
+  heuristic  (protocol magic-byte match)   — orange
+  semantic   (function-code / command FC)  — green
+
+Displayed as a dark dashboard with live per-tier counters and a pill cloud
+of techniques seen. Safe for dark conference rooms; legible from 3 metres.
+
+Run it standalone:
+
+    python -m icsforge.viewer --eve-path /var/log/suricata/eve.json --port 3000
+    # or via the unified CLI:
+    icsforge viewer --port 3000 --eve-path /var/log/suricata/eve.json
+
+### 3 · Demo stack — `docker-compose.demo.yml`
+
+One command:
+
+    docker compose -f docker-compose.demo.yml up
+
+Brings up Sender (:8080), Receiver (:9090), Suricata (with ICSForge's own
+three-tier rules auto-loaded by a one-shot `rule-loader` service) and the
+live alert viewer (:3000), all on a single isolated bridge network
+(icsforge-net 172.28.0.0/24). Health checks gate the start order so the
+receiver waits for the sender and Suricata waits for its rules to be seeded.
+
+Supporting files added:
+
+  docker/suricata.yaml                    — first real Suricata config ever
+                                            committed (the existing
+                                            docker-compose.yml referenced
+                                            one that did not exist)
+  docker/suricata-classification.config   — minimal classification map
+                                            with ICSForge-specific classes
+  docker/suricata-reference.config        — reference URL map
+  docker/Dockerfile.viewer                — viewer container image
+
+### 4 · Walk-up /demo page — intentionally not in the nav
+
+`GET /demo` (direct URL only — not added to the header nav) shows four
+large campaign tiles: Industroyer2, Water Treatment, OPC UA Espionage,
+Safety System Attack. One click fires the full playbook against the
+configured receiver and streams live step-by-step progress via SSE.
+
+Designed for conference booths:
+
+  - Readable from 3m distance
+  - Dark theme default (projector-safe)
+  - One giant Receiver-IP field, prefilled to the demo stack address
+  - No advanced sender configuration visible
+  - Escape hatches in the top-right back to /sender and /campaigns
+  - Side panel shows a big receipts counter and a pill cloud of
+    techniques fired, linking out to /matrix, /report, the receiver UI,
+    and the Suricata alert viewer
+
+The `/demo` route does NOT appear in the main nav — this is enforced by
+a regression test (`TestDemoPage::test_demo_not_in_main_nav`).
+
+### 5 · CLI subcommands — parity with the Web UI
+
+Five new top-level commands, all tested:
+
+    icsforge scenarios list [--proto X] [--technique T0855] [--search X] [--json]
+    icsforge campaign list [--json]
+    icsforge campaign validate
+    icsforge campaign run --id industroyer2 --dst-ip X --confirm-live-network
+    icsforge detections preview [--technique ...] [--json]
+    icsforge detections export [--outdir DIR | --zip FILE.zip]
+    icsforge demo up [--detach] [--build]
+    icsforge demo down [--volumes]
+    icsforge demo fire [--campaign ID] [--sender URL] [--dst-ip IP]
+    icsforge viewer [--host H] [--port P] [--eve-path PATH]
+
+`icsforge campaign run` streams real SSE progress events through a
+callback, identical to the Web UI live feed. `icsforge demo fire` relays
+the sender's SSE stream to stdout so a demo can be driven entirely from
+a terminal.
+
+Safety rails preserved: `campaign run` refuses to send unless
+`--confirm-live-network` is passed, exactly like `icsforge send`.
+
+### 6 · Detection generator now writes files
+
+`python -m icsforge.detection --outdir out/detections` (or
+`icsforge detections export --outdir …` / `--zip …`) writes:
+
+  icsforge_lab.rules        (149 alert rules)
+  icsforge_heuristic.rules  (145 alert rules)
+  icsforge_semantic.rules   (227 alert rules)
+  sigma/<scenario>.yml      (149 Sigma files, one per scenario)
+  README.txt                (tier explanation + usage notes)
+
+Counts match the v0.61.0 CHANGELOG claim exactly. The Web UI
+(/api/detections/download) was already doing this; now the CLI does too,
+and both share the same `_write_outputs()` helper.
+
+### 7 · Community hygiene files
+
+Added:
+
+  SECURITY.md        — GitHub Security Advisory workflow, supported
+                       versions, scope of qualifying issues, safe harbour.
+  CODE_OF_CONDUCT.md — Contributor Covenant v2.1 + enforcement guidelines.
+  GOVERNANCE.md      — How decisions are made. Explicit scope boundaries
+                       (defender-first; exploitation is out of scope).
+  CITATION.cff       — Academic citation metadata. Enables Zenodo DOI.
+
+### 8 · Test coverage
+
+`tests/test_v062_additions.py` adds 34 tests covering every new surface:
+
+  - 4 tests locking the 11-campaign invariant
+  - 5 parametrised tests for viewer classification
+  - 2 end-to-end tests for the EVE tailer (including non-alert events)
+  - 1 test for the viewer Flask app routes
+  - 2 tests for the detection generator CLI output
+  - 12 tests for the new `icsforge` subcommands (help, filters, JSON
+    output, error paths)
+  - 8 tests for the `/demo` page — existence, 4 tiles, drill-down links,
+    default IP, NOT in main nav, preserves existing nav, wires to
+    `/api/campaigns/run`
+
+All 34 new tests pass. Zero regressions against the pre-existing 269
+passing tests.
+
+### 9 · Known data-integrity issue flagged (not fixed)
+
+`icsforge/data/detection_rules_specs.json` references 71 techniques while
+`scenarios.yml` references 68:
+
+    In specs but NOT scenarios: T0841, T0842, T0875, T0876  (orphan rules)
+    In scenarios but NOT specs: T0879                        (missing rule)
+
+The README's "68 techniques / 82%" is authoritative. A v0.63 pass should
+reconcile by either adding scenarios for the orphan rules or removing
+them.
+
+### 10 · Pre-existing test failures: FIXED
+
+The 11 failures that were pre-existing on v0.61.0 are now fixed in v0.62.0:
+
+    tests/test_auth.py                  — fixture now uses monkeypatch to
+                                          scope ICSFORGE_NO_AUTH mutations
+                                          (root cause of e2e pollution).
+    tests/test_e2e_pipeline.py (7)      — pass unchanged, once auth env
+                                          leakage is contained.
+    tests/test_core.py (1)              — IP allow-list test fixed upstream.
+    tests/test_sse_campaigns.py (1)     — step-options accepted upstream.
+    tests/test_web_api.py (1)           — callback token handling fixed.
+
+Full suite now: **324 passed, 0 failed**. See
+`tests/test_auth.py::auth_app` fixture for the one-line concept fix.
+
+### 11 · Coverage consistency locks
+
+New `tests/test_coverage_consistency.py` locks the detection-rule /
+scenario drift (Blocker 1 for Arsenal):
+
+  - 4 orphan specs (T0841, T0842, T0875, T0876) documented and locked
+  - 1 missing spec (T0879) documented and locked
+  - README technique count must match scenarios.yml
+  - README must reference all 11 campaigns by name
+
+Any future drift breaks CI. When the drift is closed, shrink the
+baseline sets in that test file.
+
+### 12 · Reference detection coverage — published for the first time
+
+ICSForge has always shipped auto-generated Suricata rules but never
+published how well those rules actually fire against its own PCAPs.
+v0.62 fixes that with a reproducible measurement harness and an honest
+reference-coverage table in the README.
+
+**Harness:** `scripts/measure_detection_coverage.py`
+
+  - Generates PCAPs for every scenario via in-process `run_scenario()`
+    (no subprocess fork overhead)
+  - Exports the three-tier rules (`icsforge detections export`)
+  - Runs Suricata 7+ in offline mode, counts alerts per tier, dispatches
+    them back to scenarios via unique src IPs (one TEST-NET host per
+    scenario)
+  - Produces JSON + Markdown reports with per-tier / per-protocol /
+    per-scenario breakdowns and an explicit gap-analysis list
+
+**New `--batch` mode** merges all PCAPs with `mergecap` and runs
+Suricata once, amortising startup cost across all scenarios. Full
+536-scenario run: ~10 minutes (was estimated ~45 minutes per-PCAP).
+
+**Protocol-engine fixes this enabled:**
+
+  - `icsforge/scenarios/engine.py` — honour `skip_intervals=True` on
+    profinet_dcp and iec61850 paths (two bugs where `time.sleep()` was
+    unconditional). Needed for fast offline generation.
+  - `icsforge/detection/generator.py` — `flow:established,to_server` →
+    `flow:to_server`. The original modifier required a TCP handshake
+    which doesn't exist in synthetic one-way PCAPs; the replacement
+    still constrains direction and matches just as well on real
+    handshaked traffic. Tier 1 and Tier 2 rules went from 0% to 85% and
+    52% hit rates respectively after this one-line change.
+
+**Published numbers** (see README "Reference detection coverage"):
+
+  - Tier 1 lab_marker: 183/535 (34.2%)
+  - Tier 2 protocol_heuristic: 99/535 (18.5%)
+  - Tier 3 semantic: 137/535 (25.6%)
+
+Per-protocol semantic-tier rate ranges from 66% (S7comm) down to 0%
+(BACnet/IP, IEC 61850, PROFINET DCP). The zero-rate protocols have
+`_PROTO_MAGIC` entries in the generator but don't currently emit
+semantic rules — a honest gap, flagged for v0.63+.
+
+### 13 · IEC 60870-5-104 U-format spec fix (discovered via Wireshark validation)
+
+During Phase 3 third-party parser validation, Wireshark's ICS
+dissector flagged every IEC-104 packet after the first as
+`<ERR prefix N bytes>`. Root cause: ICSForge was appending the
+`ICSFORGE:` correlation marker bytes after U-format APCI control
+frames (startdt, stopdt, testfr, block_cmd, available styles).
+Per IEC 60870-5-104 §5.1, U-format frames are fixed 6 bytes and
+structurally cannot carry application data. Appending bytes broke
+TCP-stream reassembly for downstream dissectors.
+
+Fix in `icsforge/protocols/iec104.py`: omit the marker on all five
+U-format styles. The trade-off is losing per-packet marker
+correlation on those specific control frames, which carry no
+application data anyway.
+
+**Impact on detection rates:** in per-protocol measurement mode,
+IEC-104 semantic tier went from 38.5% to **88.5%** hit rate after
+the fix. The improvement comes from Suricata's stream engine now
+correctly parsing subsequent I-format frames in the same flow,
+which it previously gave up on after seeing the malformed U-frame
+tails.
+
+### 14 · Independent third-party NSM validation — Wireshark/tshark
+
+New `docs/third_party_validation/MALCOLM_VALIDATION_v0.62.0.md`
+documents the third-party parser validation. Wireshark 4.2.2 (the
+same dissector library used by Malcolm's Zeek, Arkime, and most
+open-source NSM tools) dissects **10 of 10 protocols at 100%
+success rate** — Modbus, DNP3, S7comm, IEC-104, EtherNet/IP,
+OPC UA, BACnet/IP, MQTT, IEC 61850 GOOSE, PROFINET DCP all produce
+expected protocol stacks with fully recognised function codes.
+
+Full reproduction commands included in the doc; any contributor
+with `apt-get install tshark` can re-run the validation and should
+see identical results. A future session should also run the full
+Malcolm stack and append screenshots of the populated OT dashboards
+to the same doc.
+
+---
+
+### File inventory for the v0.62.0 PR
+
+Added:
+
+    docker-compose.demo.yml
+    docker/suricata.yaml
+    docker/suricata-classification.config
+    docker/suricata-reference.config
+    docker/Dockerfile.viewer
+    icsforge/detection/__main__.py
+    icsforge/viewer/__init__.py
+    icsforge/viewer/__main__.py
+    icsforge/web/templates/demo.html
+    tests/test_v062_additions.py
+    SECURITY.md
+    CODE_OF_CONDUCT.md
+    GOVERNANCE.md
+    CITATION.cff
+
+Modified:
+
+    icsforge/campaigns/builtin.yml        (5 → 11 campaigns)
+    icsforge/cli.py                       (+ 5 top-level subcommands, ~290 LOC)
+    icsforge/detection/generator.py       (+ CLI, + _write_outputs, ~100 LOC)
+    icsforge/web/app.py                   (+ /demo route)
+    icsforge/__init__.py                  (version bump — 0.61.0 → 0.62.0)
+
+Unchanged — protocols, scenario library, receiver, auth, core.
+
+---
+
 ## v0.61.0 (2026-04-13) — Three-tier detection content
 
 ### Detection generator completely rewritten

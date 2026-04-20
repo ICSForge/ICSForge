@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!--
+  Walk-up demo page.
+  Not linked from the main navigation (see base.html) — direct URL only.
+
+  Design goals:
+    - Readable from 3m distance in a dark conference room
+    - Four tiles, one click each, nothing more to configure in the happy path
+    - Destination IP is one giant field, prefilled for the demo stack
+    - Live step progress is the centre of the screen, not a sidebar
+    - A receipts-lit counter lights up when the receiver confirms delivery
+    - A "full controls" escape hatch back to /campaigns for deeper drill-down
+-->
+
+<style>
+  /* Scoped demo styles — do not leak into /sender or /campaigns */
+  .demo-wrap { max-width: 1220px; margin: 0 auto; padding: 6px 12px 80px; }
+  .demo-hero {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 14px 2px 18px; border-bottom: 1px solid var(--border);
+    margin-bottom: 22px;
+  }
+  .demo-hero h1 {
+    margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.2px;
+  }
+  .demo-hero p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .demo-hero .hero-right { display: flex; gap: 10px; align-items: center; }
+
+  .demo-target {
+    display: flex; gap: 14px; align-items: center;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;
+  }
+  .demo-target label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); margin-right: 4px; white-space: nowrap;
+  }
+  .demo-target input {
+    flex: 1; font-size: 18px; font-family: "SF Mono", Menlo, monospace;
+    background: var(--panel3); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 10px 14px; color: var(--text);
+    min-width: 240px;
+  }
+  .demo-target input:focus { outline: 2px solid rgba(240,165,0,0.4); border-color: rgba(240,165,0,0.5); }
+  .demo-target .hint { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .demo-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px; margin-bottom: 28px;
+  }
+  .demo-tile {
+    cursor: pointer; text-align: left;
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 20px; transition: transform .12s ease, border-color .12s ease;
+    display: flex; flex-direction: column; gap: 10px; min-height: 180px;
+  }
+  .demo-tile:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: rgba(240,165,0,0.45);
+    box-shadow: 0 10px 28px -12px rgba(0,0,0,0.5);
+  }
+  .demo-tile:disabled { opacity: .45; cursor: not-allowed; }
+  .demo-tile .icon { font-size: 34px; line-height: 1; }
+  .demo-tile .t-title { font-size: 17px; font-weight: 600; color: var(--text); }
+  .demo-tile .t-desc  { font-size: 13px; color: var(--muted); line-height: 1.45; flex: 1; }
+  .demo-tile .t-meta  { display: flex; gap: 10px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .demo-tile .t-meta .steps { padding: 2px 8px; background: var(--panel3); border-radius: 10px; }
+
+  .demo-tile.running {
+    border-color: rgba(94,255,155,0.45);
+    box-shadow: 0 0 24px -8px rgba(94,255,155,0.35);
+  }
+  .demo-tile.running .t-title::after {
+    content: " ▶"; color: #5eff9b;
+  }
+
+  .demo-panel {
+    display: grid; grid-template-columns: 1fr 340px; gap: 18px;
+  }
+  @media (max-width: 900px) { .demo-panel { grid-template-columns: 1fr; } }
+
+  .demo-progress, .demo-receipts {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+  }
+  .demo-progress h3, .demo-receipts h3 {
+    margin: 0 0 12px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 1.2px; color: var(--muted); font-weight: 600;
+  }
+  #steps { display: flex; flex-direction: column; gap: 6px; min-height: 260px; max-height: 380px; overflow-y: auto; }
+  .step-row {
+    display: grid; grid-template-columns: 34px 1fr auto; gap: 10px;
+    padding: 8px 12px; border-radius: 6px; font-size: 13px;
+    background: var(--panel3); border: 1px solid var(--border);
+    animation: slide .22s ease;
+  }
+  .step-row .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--border); color: var(--muted); font-size: 11px;
+  }
+  .step-row.ok    .badge { background: #5eff9b; color: #071; }
+  .step-row.err   .badge { background: #ff6b7a; color: #400; }
+  .step-row.wait  .badge { background: var(--border2); color: var(--muted); }
+  .step-row.run   .badge { background: #ffb347; color: #522; animation: pulse 1s infinite alternate; }
+  .step-row .label { color: var(--text); }
+  .step-row .meta  { color: var(--muted); font-size: 11px; }
+
+  .demo-receipts .big-num {
+    font-size: 42px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+    color: #5eff9b;
+  }
+  .demo-receipts .big-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .demo-receipts .tech-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 14px; max-height: 140px; overflow-y: auto; }
+  .demo-receipts .pill {
+    font-family: "SF Mono", Menlo, monospace; font-size: 11px;
+    padding: 3px 8px; border-radius: 12px; background: var(--panel3);
+    border: 1px solid var(--border); color: var(--text);
+  }
+  .demo-receipts .links {
+    margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 6px; font-size: 12px;
+  }
+  .demo-receipts .links a { color: var(--muted); text-decoration: none; }
+  .demo-receipts .links a:hover { color: var(--text); }
+
+  @keyframes slide { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+</style>
+
+<div class="demo-wrap">
+
+  <div class="demo-hero">
+    <div>
+      <h1>Pick one. Watch detections fire.</h1>
+      <p>Four curated OT attack playbooks · 547 scenarios · 10 protocols · three-tier detection content</p>
+    </div>
+    <div class="hero-right">
+      <a class="btn" href="/campaigns" style="font-size:12px;opacity:0.8">All 11 campaigns →</a>
+      <a class="btn" href="/sender" style="font-size:12px;opacity:0.8">Advanced sender →</a>
+    </div>
+  </div>
+
+  <div class="demo-target">
+    <label for="dst_ip">Receiver IP</label>
+    <input id="dst_ip" value="172.28.0.20" placeholder="127.0.0.1" autocomplete="off">
+    <span class="hint">default: demo stack receiver</span>
+  </div>
+
+  <div class="demo-grid" id="tiles">
+    {% for t in tiles %}
+    <button class="demo-tile" data-id="{{ t.id }}" onclick="launchDemo('{{ t.id }}')">
+      <span class="icon">{{ t.icon }}</span>
+      <span class="t-title">{{ t.name }}</span>
+      <span class="t-desc">{{ t.description | trim }}</span>
+      <span class="t-meta">
+        <span class="steps">{{ t.steps | length }} steps</span>
+        <span>{{ t.estimated_duration or "~60s" }}</span>
+      </span>
+    </button>
+    {% endfor %}
+    {% if not tiles %}
+    <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--muted)">
+      No demo campaigns available — check <code>icsforge/campaigns/builtin.yml</code>.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="demo-panel">
+    <div class="demo-progress">
+      <h3>Live progress</h3>
+      <div id="steps">
+        <div class="step-row wait">
+          <span class="badge">·</span>
+          <span class="label">Pick a tile above to start.</span>
+          <span class="meta">ready</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="demo-receipts">
+      <h3>Receipts</h3>
+      <div class="big-num" id="receipt-count">0</div>
+      <div class="big-label">delivered and confirmed</div>
+
+      <h3 style="margin-top:18px">Techniques fired</h3>
+      <div class="tech-pills" id="tech-pills"></div>
+
+      <div class="links">
+        <a href="/matrix">ATT&amp;CK coverage overlay →</a>
+        <a href="/report">Coverage report →</a>
+        <a href="http://localhost:9090" target="_blank" rel="noopener">Receiver UI ↗</a>
+        <a href="http://localhost:3000" target="_blank" rel="noopener">Suricata alert feed ↗</a>
+      </div>
+    </aside>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  const stepsEl = document.getElementById("steps");
+  const dstEl = document.getElementById("dst_ip");
+  const receiptCountEl = document.getElementById("receipt-count");
+  const techPillsEl = document.getElementById("tech-pills");
+  const tiles = Array.from(document.querySelectorAll(".demo-tile"));
+
+  let receiptsSeen = 0;
+  const techSet = new Set();
+  let receiptsPoller = null;
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  function clearSteps() {
+    stepsEl.innerHTML = "";
+  }
+  function addStep(stepNo, total, label, state, meta) {
+    // state ∈ wait | run | ok | err
+    const row = document.createElement("div");
+    row.className = "step-row " + state;
+    row.dataset.stepNo = stepNo;
+    row.innerHTML = `
+      <span class="badge">${state === "ok" ? "✓" : state === "err" ? "✗" : stepNo || "·"}</span>
+      <span class="label">${label}</span>
+      <span class="meta">${meta || ""}</span>
+    `;
+    stepsEl.appendChild(row);
+    stepsEl.scrollTop = stepsEl.scrollHeight;
+    return row;
+  }
+  function markStep(stepNo, state, meta) {
+    const row = stepsEl.querySelector(`[data-step-no="${stepNo}"]`);
+    if (!row) return;
+    row.className = "step-row " + state;
+    const badge = row.querySelector(".badge");
+    if (badge) badge.textContent = state === "ok" ? "✓" : state === "err" ? "✗" : stepNo;
+    const metaEl = row.querySelector(".meta");
+    if (metaEl && meta) metaEl.textContent = meta;
+  }
+  function setTilesRunning(runningId) {
+    tiles.forEach(t => {
+      t.classList.toggle("running", t.dataset.id === runningId);
+      t.disabled = Boolean(runningId);
+    });
+  }
+  function renderTechPills() {
+    techPillsEl.innerHTML = Array.from(techSet).sort()
+      .map(t => `<span class="pill">${t}</span>`).join("");
+  }
+
+  // ── Receipt poller ─────────────────────────────────────────────────
+  async function pollReceipts() {
+    try {
+      const r = await fetch("/api/receiver/live?limit=200");
+      if (!r.ok) return;
+      const d = await r.json();
+      const items = d.items || d.receipts || [];
+      if (items.length > receiptsSeen) {
+        receiptsSeen = items.length;
+        receiptCountEl.textContent = receiptsSeen;
+        for (const rec of items) {
+          const t = rec.technique || (rec.icsforge && rec.icsforge.technique);
+          if (t) techSet.add(t);
+        }
+        renderTechPills();
+      }
+    } catch (_) { /* viewer is optional */ }
+  }
+  function startReceiptsPolling() {
+    if (receiptsPoller) clearInterval(receiptsPoller);
+    receiptsPoller = setInterval(pollReceipts, 1500);
+  }
+  function stopReceiptsPolling() {
+    if (receiptsPoller) { clearInterval(receiptsPoller); receiptsPoller = null; }
+  }
+
+  // ── Fire a campaign via /api/campaigns/run (SSE stream) ───────────
+  window.launchDemo = async function(campaignId) {
+    const dst = dstEl.value.trim();
+    if (!dst) { dstEl.focus(); return; }
+
+    setTilesRunning(campaignId);
+    clearSteps();
+    receiptsSeen = 0;
+    receiptCountEl.textContent = "0";
+    techSet.clear();
+    renderTechPills();
+    startReceiptsPolling();
+
+    // Reset server-side live receipts so this run's counter is clean
+    try {
+      await fetch("/api/receiver/live/clear", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content || "",
+        },
+      });
+    } catch (_) {}
+
+    const body = JSON.stringify({
+      campaign_id: campaignId,
+      dst_ip: dst,
+      timeout: 2.0,
+    });
+
+    let resp;
+    try {
+      resp = await fetch("/api/campaigns/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content || "",
+        },
+        body,
+      });
+    } catch (e) {
+      addStep(null, null, "Cannot reach sender: " + e.message, "err");
+      setTilesRunning(null);
+      stopReceiptsPolling();
+      return;
+    }
+
+    if (!resp.ok) {
+      let msg = "HTTP " + resp.status;
+      try {
+        const err = await resp.json();
+        if (err && err.error) msg = err.error;
+      } catch (_) {}
+      addStep(null, null, msg, "err");
+      setTilesRunning(null);
+      stopReceiptsPolling();
+      return;
+    }
+
+    // SSE relay — read the streamed body line-by-line
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          // Parse a single SSE event block
+          let eventType = "message"; let data = "";
+          for (const ln of raw.split("\n")) {
+            if (ln.startsWith("event:")) eventType = ln.slice(6).trim();
+            else if (ln.startsWith("data:")) data += ln.slice(5).trim();
+          }
+          if (!data) continue;
+          let ev; try { ev = JSON.parse(data); } catch (_) { continue; }
+          handleEvent(ev);
+        }
+      }
+    } catch (e) {
+      addStep(null, null, "Stream error: " + e.message, "err");
+    }
+    setTilesRunning(null);
+    // Keep polling receipts briefly — some will arrive post-completion
+    setTimeout(stopReceiptsPolling, 3500);
+  };
+
+  function handleEvent(ev) {
+    const kind = ev.event || "";
+    if (kind === "campaign_start") {
+      const total = ev.total_steps || 0;
+      addStep(null, total, `Starting campaign · ${total} steps`, "run");
+    } else if (kind === "step_start") {
+      addStep(ev.step, ev.total, ev.label || ev.scenario, "run", "firing");
+    } else if (kind === "step_ok") {
+      markStep(ev.step, "ok", `sent ${ev.sent || 0}`);
+    } else if (kind === "step_error") {
+      markStep(ev.step, "err", ev.error || "error");
+    } else if (kind === "delay") {
+      // Implicit — omit from UI to reduce noise
+    } else if (kind === "campaign_complete") {
+      addStep(null, null, `Complete · ${ev.steps_ok || 0} ok, ${ev.steps_err || 0} errors`, "ok");
+    } else if (kind === "campaign_aborted") {
+      addStep(null, null, `Aborted at step ${ev.at_step}`, "err");
+    }
+  }
+
+  // Initial receipts poll in case receiver already has history
+  pollReceipts();
+})();
+</script>
+
+{% endblock %}

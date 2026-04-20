@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+title: "ICSForge: OT/ICS Cybersecurity Coverage Validation Platform"
+message: >
+  If you use this software, please cite it using these metadata.
+type: software
+authors:
+  - name: Can Kurnaz
+    website: "https://www.icsforge.nl"
+repository-code: "https://github.com/ICSForge/ICSForge"
+url: "https://www.icsforge.nl"
+license: GPL-3.0-or-later
+version: 0.62.0
+date-released: "2026-04-17"
+keywords:
+  - ics
+  - ot
+  - scada
+  - cybersecurity
+  - mitre-attack
+  - detection-engineering
+  - defender-first
+  - coverage-validation
+  - modbus
+  - dnp3
+  - s7comm
+  - iec-104
+  - opcua
+  - ethernet-ip
+  - bacnet
+  - mqtt
+  - profinet
+  - iec-61850-goose
+abstract: >
+  ICSForge is an open-source OT/ICS security coverage validation platform
+  that generates realistic industrial protocol traffic and PCAPs aligned
+  with MITRE ATT&CK for ICS v18. It provides three-tier detection content
+  (lab marker, protocol heuristic, and function-code semantic rules) for
+  Suricata and Sigma, a sender-receiver architecture with end-to-end
+  correlation markers, and 11 named attack-chain playbooks modelling
+  real-world OT incidents including Industroyer2, Stuxnet, Triton, and
+  Oldsmar-style water-treatment tampering. ICSForge is defender-first,
+  safe-by-design (destination-IP allow-listing, no process impact on real
+  devices), and honest about limitations — explicit technique-support
+  metadata documents which ATT&CK for ICS techniques are not
+  network-observable and cannot be simulated.

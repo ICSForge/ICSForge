@@ -1,0 +1,181 @@
+# ICSForge — Suricata config for the demo stack
+#
+# Minimal, readable config optimised for:
+#   1. af-packet interface capture on the icsforge-net bridge
+#   2. EVE JSON output consumable by the alert viewer
+#   3. Loading ICSForge's own three-tier rule files
+#   4. Low noise on the handful of protocols the demo uses
+#
+# This is NOT a production config. Do not use this on a real OT sensor.
+# For production deployments, start from /etc/suricata/suricata.yaml shipped
+# with your Suricata package and carefully port relevant sections.
+
+%YAML 1.1
+---
+
+vars:
+  address-groups:
+    HOME_NET: "[172.28.0.0/24,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+    OT_NET: "[172.28.0.0/24]"
+    SCADA_NET: "$OT_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+    MODBUS_PORTS: "502"
+    DNP3_PORTS: "20000"
+    S7_PORTS: "102"
+    IEC104_PORTS: "2404"
+    OPCUA_PORTS: "4840"
+    ENIP_PORTS: "44818"
+    BACNET_PORTS: "47808"
+    MQTT_PORTS: "1883"
+
+default-log-dir: /var/log/suricata/
+
+stats:
+  enabled: yes
+  interval: 30
+
+outputs:
+  # EVE JSON — the alert-viewer reads this file via shared volume
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      rotate-interval: day
+      types:
+        - alert:
+            tagged-packets: no
+            metadata: yes
+            http: no
+            tls: no
+            ssh: no
+            smtp: no
+            flow: yes
+            xff:
+              enabled: no
+        - http:
+            extended: no
+        - dns:
+            query: no
+            answer: no
+        - flow
+        - stats:
+            totals: yes
+            threads: no
+            deltas: no
+
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  - stats:
+      enabled: yes
+      filename: stats.log
+      totals: yes
+      threads: no
+
+logging:
+  default-log-level: info
+  outputs:
+    - console:
+        enabled: yes
+    - file:
+        enabled: yes
+        level: info
+        filename: /var/log/suricata/suricata.log
+
+# ── Capture ───────────────────────────────────────────────────────────────
+af-packet:
+  - interface: eth0
+    threads: auto
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    tpacket-v3: yes
+    ring-size: 2048
+    block-size: 32768
+    buffer-size: 64535
+    disable-promisc: no
+    checksum-checks: auto
+    bpf-filter: "not port 8080 and not port 9090 and not port 3000"
+
+pcap:
+  - interface: eth0
+
+# ── App-layer ─────────────────────────────────────────────────────────────
+# Enable the ICS parsers Suricata ships with. Others are matched by our
+# own rules via content / hex byte matching, which is the whole point of
+# ICSForge's semantic tier.
+app-layer:
+  protocols:
+    modbus:
+      enabled: yes
+      detection-ports:
+        dp: "$MODBUS_PORTS"
+      stream-depth: 0
+    dnp3:
+      enabled: yes
+      detection-ports:
+        dp: "$DNP3_PORTS"
+      memcap: 16mb
+    enip:
+      enabled: yes
+      detection-ports:
+        dp: "$ENIP_PORTS"
+    http:
+      enabled: no
+    tls:
+      enabled: no
+    ssh:
+      enabled: no
+    smtp:
+      enabled: no
+    dns:
+      tcp:
+        enabled: no
+      udp:
+        enabled: no
+
+# ── Rules ─────────────────────────────────────────────────────────────────
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - icsforge_lab.rules
+  - icsforge_heuristic.rules
+  - icsforge_semantic.rules
+
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config
+
+# ── Threading / perf (demo-sized) ─────────────────────────────────────────
+threading:
+  set-cpu-affinity: no
+  detect-thread-ratio: 1.0
+
+flow:
+  memcap: 64mb
+  hash-size: 65536
+  prealloc: 1000
+  emergency-recovery: 30
+
+stream:
+  memcap: 64mb
+  checksum-validation: yes
+  inline: auto
+  reassembly:
+    memcap: 128mb
+    depth: 1mb
+    toserver-chunk-size: 2560
+    toclient-chunk-size: 2560
+
+host-mode: auto
+runmode: autofp
+
+# ── Action order (demo: log, don't block) ─────────────────────────────────
+action-order:
+  - pass
+  - drop
+  - reject
+  - alert

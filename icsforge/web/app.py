@@ -303,6 +303,42 @@ def campaigns():
     )
 
 
+# ── Walk-up demo mode (intentionally not linked in the main nav) ─────────
+# Direct URL only: http://<sender>/demo
+# Conference-booth view with four large campaign tiles and receipt preview.
+# Designed for readability from 3m distance and dark-room projectors.
+@web.route("/demo")
+def demo():
+    try:
+        doc = yaml.safe_load(Path(_CAMPAIGNS_BUILTIN).read_text(encoding="utf-8")) or {}
+        camps = doc.get("campaigns") or {}
+    except Exception:
+        camps = {}
+
+    # Curated four-tile shortlist for the walk-up experience. The order is
+    # deliberate — visually striking first, then depth & safety demos.
+    DEMO_TILE_ORDER = [
+        "industroyer2",
+        "water_treatment",
+        "opcua_espionage",
+        "safety_system_attack",
+    ]
+    tiles = []
+    for cid in DEMO_TILE_ORDER:
+        if cid in camps:
+            tiles.append({"id": cid, **camps[cid]})
+
+    return render_template(
+        "demo.html",
+        title="ICSForge — Walk-up Demo",
+        subtitle="Four-click OT detection coverage demo",
+        env_label="DEMO",
+        version=__version__,
+        tiles=tiles,
+        all_campaigns=camps,
+    )
+
+
 
 @web.route("/report")
 def report():

@@ -226,16 +226,38 @@ class TestLiveCallbackConfig:
         assert data["callback_token_set"] is True
 
     def test_receiver_callback_rejects_bad_token(self, app, client):
+        import hashlib
+        import hmac
+        import json as _json
+
         import icsforge.web.helpers as web_helpers
 
         web_helpers._callback_token = "expected-token"
         try:
+            # Case 1: no token at all → 401
             resp = client.post("/api/receiver/callback", json={"marker_found": True})
             assert resp.status_code == 401
+
+            # Case 2: correct token but missing HMAC → 401 (v0.60.1 makes HMAC mandatory)
             resp = client.post(
                 "/api/receiver/callback",
                 json={"marker_found": True, "run_id": "x"},
                 headers={"X-ICSForge-Callback-Token": "expected-token"},
+            )
+            assert resp.status_code == 401
+            assert b"HMAC" in resp.data
+
+            # Case 3: correct token + correct HMAC → 200
+            body = _json.dumps({"marker_found": True, "run_id": "x"}).encode()
+            sig = hmac.new(b"expected-token", body, hashlib.sha256).hexdigest()
+            resp = client.post(
+                "/api/receiver/callback",
+                data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-ICSForge-Callback-Token": "expected-token",
+                    "X-ICSForge-HMAC": sig,
+                },
             )
             assert resp.status_code == 200
             assert resp.get_json()["stored"] is True

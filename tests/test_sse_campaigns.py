@@ -245,11 +245,17 @@ class TestEveTapAPI:
 
 class TestStepOptions:
     def test_api_send_accepts_step_options_field(self, client):
-        """Verify /api/send accepts step_options without erroring on input validation."""
-        # We don't send to a real IP; just verify the field is accepted
+        """Verify /api/send accepts step_options without erroring on input validation.
+
+        Target a port on loopback that nothing listens on so the TCP SYN is
+        refused immediately instead of the connection hanging on a TEST-NET
+        route that the kernel doesn't resolve. We care about the request
+        being *accepted* (not 422/400), not about traffic actually landing.
+        """
         resp = client.post("/api/send", json={
             "name": "T0855__unauth_command__modbus",
-            "dst_ip": "198.51.100.1",
+            "dst_ip": "127.0.0.1",
+            "timeout": 0.5,
             "step_options": {"modbus": {"address": 100, "quantity": 5}},
         })
         # Will fail with network error (not 422/400 from input validation)

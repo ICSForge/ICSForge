@@ -131,7 +131,16 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
     rnd     = random.Random(kwargs.get("seed"))
     # Monotonic PDU reference from engine; None → random per packet
     pdu_ref = (int(kwargs.get("s7_pdu_ref")) & 0xFFFF) if kwargs.get("s7_pdu_ref") is not None else rnd.randint(1, 0xFFFF)
-    mb      = marker_bytes(marker)
+    # S7comm: marker is OMITTED (set to empty bytes) for spec compliance.
+    # S7's Parameter length and Data length header fields declare the exact
+    # size of the payload. Appending a correlation marker after the declared
+    # lengths causes Wireshark/Zeek/Malcolm dissectors to flag the packet as
+    # malformed (surplus data past the declared end). Run correlation
+    # remains available via the JSONL events file (run_id, technique, step).
+    # Marker ignored; kept as a named var so the many `+ mb` appends
+    # throughout this file remain harmless no-ops.
+    mb      = b""
+    _ignored_marker_bytes = marker_bytes(marker)  # noqa: F841 — preserved for future inline-marker work
 
     if style == "setup":
         # Communications Setup (negotiate PDU size)

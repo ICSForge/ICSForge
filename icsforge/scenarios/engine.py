@@ -143,7 +143,7 @@ def run_scenario(
                             payload=payload,
                         )
                         packets.append(pkt)
-                        if interval:
+                        if interval and not skip_intervals:
                             time.sleep(interval)
                 elif proto == "iec61850":
                     for _ in range(count):
@@ -152,7 +152,7 @@ def run_scenario(
                         # (GOOSE: EtherType 0x88B8, GOOSE multicast DST)
                         pkt = iec61850.build_payload(marker, style=style, **options)
                         packets.append(pkt)
-                        if interval:
+                        if interval and not skip_intervals:
                             time.sleep(interval)
                 else:
                     pb = PROTO_PAYLOADS.get(proto)
