@@ -3,10 +3,6 @@
 import random
 import struct
 
-from icsforge.core import MARKER
-
-from .common import ether_frame
-
 # DCP Service IDs
 # DCP Service IDs per PROFINET spec IEC 61158-6-10
 # Note: Hello and Set both use ServiceID=0x04 — they are distinguished
@@ -70,20 +66,6 @@ def _dcp_block(option: int, suboption: int, data: bytes) -> bytes:
     return block_info
 
 
-def build(src_mac: str | None = None, dst_mac: str | None = None):
-    """Legacy interface: build basic DCP identify request."""
-    # Use Siemens/Phoenix Contact OUI — no locally-administered bit
-    if src_mac is None:
-        _smac_bytes = _src_mac_from_ip("10.0.0.1", proto="profinet_dcp")
-        src_mac = ":".join(f"{b:02x}" for b in _smac_bytes)
-    dst_mac = dst_mac or "01:0e:cf:00:00:00"
-    xid     = random.randint(0, 0xFFFFFFFF)
-    dcp     = _dcp_pdu(FRAME_ID["dcp_identify_multicast"], SVC_ID["identify"],
-                       SVC_TYPE["request"], xid, b"")
-    payload = dcp + MARKER
-    return ether_frame(src_mac, dst_mac, 0x8892, payload)
-
-
 def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes:
     """
     Build PROFINET DCP payload (without Ethernet wrapper).
@@ -101,7 +83,7 @@ def build_payload(run_marker: bytes, style: str = "identify", **kwargs) -> bytes
     xid = random.randint(0, 0xFFFFFFFF)
     # Accept both bytes (from build_marker) and str (from marker_bytes/tests)
     if isinstance(run_marker, str):
-        from .common import marker_bytes, _src_mac_from_ip
+        from .common import marker_bytes
         mb = marker_bytes(run_marker)
     else:
         mb = run_marker

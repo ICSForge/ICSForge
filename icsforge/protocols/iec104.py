@@ -4,7 +4,6 @@ import random
 import struct
 import time as _time_mod
 
-
 # IEC-104 ASDU Type IDs
 TYPE = {
     # Monitoring direction (process information)

@@ -1,0 +1,1077 @@
+{
+  "T0840": {
+    "allow_classes": [
+      "discover",
+      "identify",
+      "list",
+      "probe",
+      "read",
+      "session"
+    ],
+    "forbid_classes": [
+      "flood",
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Network Connection Enumeration \u2014 connection-state probes"
+  },
+  "T0842": {
+    "allow_classes": [
+      "identify",
+      "read",
+      "session"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Network Sniffing \u2014 passive only"
+  },
+  "T0846": {
+    "allow_classes": [
+      "discover",
+      "identify",
+      "list",
+      "probe",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Remote System Discovery \u2014 port scan / broadcast / multicast"
+  },
+  "T0861": {
+    "allow_classes": [
+      "browse",
+      "discover",
+      "identify",
+      "list",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Point & Tag Identification \u2014 tag/point read"
+  },
+  "T0868": {
+    "allow_classes": [
+      "discover",
+      "identify",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Detect Operating Mode \u2014 read mode state"
+  },
+  "T0888": {
+    "allow_classes": [
+      "block",
+      "read",
+      "identify",
+      "discover",
+      "list"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Remote System Information Discovery \u2014 read system info"
+  },
+  "T0887": {
+    "allow_classes": [
+      "identify",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "write"
+    ],
+    "desc": "Wireless Sniffing \u2014 RF/wireless capture (low confidence at packet level)"
+  },
+  "T0801": {
+    "allow_classes": [
+      "identify",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Monitor Process State \u2014 read process values"
+  },
+  "T0802": {
+    "allow_classes": [
+      "discover",
+      "identify",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Automated Collection \u2014 automated read"
+  },
+  "T0811": {
+    "allow_classes": [
+      "browse",
+      "identify",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "restart",
+      "write"
+    ],
+    "desc": "Data from Information Repositories"
+  },
+  "T0830": {
+    "allow_classes": [
+      "identify",
+      "read",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Adversary-in-the-Middle"
+  },
+  "T0845": {
+    "allow_classes": [
+      "identify",
+      "read",
+      "upload"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "write"
+    ],
+    "desc": "Program Upload \u2014 read program from PLC"
+  },
+  "T0852": {
+    "allow_classes": [],
+    "forbid_classes": [],
+    "desc": "Screen Capture \u2014 host-only, no packet-level evidence"
+  },
+  "T0877": {
+    "allow_classes": [
+      "browse",
+      "identify",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "write"
+    ],
+    "desc": "I/O Image \u2014 read I/O memory"
+  },
+  "T0882": {
+    "allow_classes": [
+      "browse",
+      "identify",
+      "list",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "write"
+    ],
+    "desc": "Theft of Operational Information"
+  },
+  "T0893": {
+    "allow_classes": [
+      "browse",
+      "identify",
+      "read",
+      "upload"
+    ],
+    "forbid_classes": [
+      "mode_change",
+      "operate",
+      "write"
+    ],
+    "desc": "Data from Local System \u2014 host file read"
+  },
+  "T0807": {
+    "allow_classes": [
+      "auth",
+      "operate",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Command-Line Interface \u2014 remote shell/CLI"
+  },
+  "T0823": {
+    "allow_classes": [
+      "auth",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "GUI \u2014 host-only; HMI tag write is contextual evidence only"
+  },
+  "T0834": {
+    "allow_classes": [
+      "method",
+      "operate",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Native API \u2014 protocol-native call/method"
+  },
+  "T0853": {
+    "allow_classes": [
+      "method",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Scripting \u2014 remote script/method execution"
+  },
+  "T0858": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "block",
+      "restart",
+      "identify",
+      "operate"
+    ],
+    "forbid_classes": [],
+    "desc": "Change Operating Mode \u2014 toggle CPU/PLC mode",
+    "require_one_of": [
+      "mode_change",
+      "restart",
+      "write",
+      "operate"
+    ]
+  },
+  "T0863": {
+    "allow_classes": [
+      "method",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "User Execution \u2014 host-level; HMI tag write is contextual only"
+  },
+  "T0871": {
+    "allow_classes": [
+      "method",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Execution through API \u2014 vendor API call"
+  },
+  "T0895": {
+    "allow_classes": [
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Autorun Image \u2014 initial-access via autorun"
+  },
+  "T0821": {
+    "allow_classes": [
+      "config",
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Modify Controller Tasking"
+  },
+  "T0839": {
+    "allow_classes": [
+      "firmware",
+      "session",
+      "upload",
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Module Firmware (relocated \u2192 T1693.002 in v19)"
+  },
+  "T0857": {
+    "allow_classes": [
+      "firmware",
+      "session",
+      "upload",
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "System Firmware (relocated \u2192 T1693.001 in v19)"
+  },
+  "T0873": {
+    "allow_classes": [
+      "read",
+      "session",
+      "upload",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Project File Infection \u2014 Siemens project file (low-confidence at packet level)"
+  },
+  "T0889": {
+    "allow_classes": [
+      "write",
+      "config",
+      "upload",
+      "session"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Modify Program \u2014 change PLC program/blocks",
+    "require_one_of": [
+      "write",
+      "upload",
+      "config"
+    ]
+  },
+  "T0890": {
+    "allow_classes": [
+      "auth",
+      "flood",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Exploitation for Privilege Escalation"
+  },
+  "T0820": {
+    "allow_classes": [
+      "identify",
+      "mode_change",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Exploitation for Evasion"
+  },
+  "T0849": {
+    "allow_classes": [
+      "config",
+      "identify",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Masquerading"
+  },
+  "T0851": {
+    "allow_classes": [
+      "identify",
+      "read",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Rootkit (hard at packet level \u2014 low confidence)"
+  },
+  "T0856": {
+    "allow_classes": [
+      "session",
+      "spoof",
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Spoof Reporting Message (relocated \u2192 T1692.002)"
+  },
+  "T0872": {
+    "allow_classes": [
+      "mode_change",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Indicator Removal"
+  },
+  "T0812": {
+    "allow_classes": [
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "auth",
+      "identify",
+      "discover",
+      "read",
+      "probe",
+      "operate"
+    ],
+    "forbid_classes": [
+      "mode_change"
+    ],
+    "desc": "Default Credentials (relocated \u2192 T1694.001)"
+  },
+  "T0843": {
+    "allow_classes": [
+      "session",
+      "upload",
+      "write"
+    ],
+    "forbid_classes": [
+      "identify"
+    ],
+    "desc": "Program Download \u2014 push program to PLC",
+    "require_one_of": [
+      "write",
+      "upload"
+    ]
+  },
+  "T0859": {
+    "allow_classes": [
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "identify",
+      "discover",
+      "probe",
+      "operate",
+      "method",
+      "auth",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change"
+    ],
+    "desc": "Valid Accounts"
+  },
+  "T0866": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "malformed",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "auth",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Exploitation of Remote Services"
+  },
+  "T0867": {
+    "allow_classes": [
+      "session",
+      "upload",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Lateral Tool Transfer"
+  },
+  "T0886": {
+    "allow_classes": [
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "identify",
+      "discover",
+      "probe",
+      "operate",
+      "method",
+      "auth",
+      "read"
+    ],
+    "forbid_classes": [],
+    "desc": "Remote Services"
+  },
+  "T0891": {
+    "allow_classes": [
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "identify",
+      "discover",
+      "probe",
+      "operate",
+      "method",
+      "auth",
+      "read"
+    ],
+    "forbid_classes": [
+      "mode_change"
+    ],
+    "desc": "Hardcoded Credentials (relocated \u2192 T1694.002)"
+  },
+  "T0819": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "malformed",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Exploit Public-Facing Application"
+  },
+  "T0822": {
+    "allow_classes": [
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "identify",
+      "discover",
+      "probe",
+      "operate",
+      "method",
+      "auth",
+      "read"
+    ],
+    "forbid_classes": [],
+    "desc": "External Remote Services"
+  },
+  "T0848": {
+    "allow_classes": [
+      "identify",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Rogue Master"
+  },
+  "T0860": {
+    "allow_classes": [
+      "identify",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Wireless Compromise (low confidence \u2014 Ethernet packets cannot prove RF compromise)"
+  },
+  "T0862": {
+    "allow_classes": [
+      "firmware",
+      "identify",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Supply Chain Compromise (low confidence \u2014 packets alone cannot prove supply-chain)"
+  },
+  "T0864": {
+    "allow_classes": [
+      "identify",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Transient Cyber Asset"
+  },
+  "T0883": {
+    "allow_classes": [
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "identify",
+      "discover",
+      "probe",
+      "operate",
+      "method",
+      "auth",
+      "read"
+    ],
+    "forbid_classes": [],
+    "desc": "Internet Accessible Device"
+  },
+  "T0869": {
+    "allow_classes": [
+      "read",
+      "session",
+      "spoof",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Standard Application Layer Protocol (C2)"
+  },
+  "T0884": {
+    "allow_classes": [
+      "read",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Connection Proxy"
+  },
+  "T0885": {
+    "allow_classes": [
+      "read",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Commonly Used Port"
+  },
+  "T0800": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "method",
+      "probe",
+      "session",
+      "identify",
+      "read",
+      "discover",
+      "firmware",
+      "operate"
+    ],
+    "forbid_classes": [],
+    "desc": "Activate Firmware Update Mode",
+    "require_one_of": [
+      "firmware",
+      "mode_change",
+      "method",
+      "write"
+    ]
+  },
+  "T0803": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "flood",
+      "read",
+      "probe"
+    ],
+    "forbid_classes": [],
+    "desc": "Block Command Message (relocated \u2192 T1691.001)",
+    "require_one_of": [
+      "block",
+      "flood",
+      "write",
+      "spoof",
+      "mode_change"
+    ]
+  },
+  "T0804": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "config",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "flood",
+      "read",
+      "probe"
+    ],
+    "forbid_classes": [],
+    "desc": "Block Reporting Message (relocated \u2192 T1691.002)",
+    "require_one_of": [
+      "block",
+      "flood",
+      "write",
+      "spoof",
+      "mode_change"
+    ]
+  },
+  "T0805": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "config",
+      "session",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "flood",
+      "read",
+      "probe"
+    ],
+    "forbid_classes": [],
+    "desc": "Block Serial COM (relocated \u2192 T1695.001)",
+    "require_one_of": [
+      "block",
+      "flood",
+      "write"
+    ]
+  },
+  "T0809": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "delete",
+      "session",
+      "block",
+      "restart",
+      "identify",
+      "discover"
+    ],
+    "forbid_classes": [],
+    "desc": "Data Destruction",
+    "require_one_of": [
+      "delete",
+      "write",
+      "restart",
+      "mode_change"
+    ]
+  },
+  "T0814": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "malformed",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Denial of Service"
+  },
+  "T0815": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Denial of View \u2014 DoS variant"
+  },
+  "T0816": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "restart",
+      "read",
+      "identify",
+      "probe",
+      "operate"
+    ],
+    "forbid_classes": [],
+    "desc": "Device Restart/Shutdown",
+    "require_one_of": [
+      "mode_change",
+      "restart",
+      "write",
+      "operate"
+    ]
+  },
+  "T0878": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "config",
+      "session",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "read",
+      "probe"
+    ],
+    "forbid_classes": [],
+    "desc": "Alarm Suppression",
+    "require_one_of": [
+      "block",
+      "write",
+      "config"
+    ]
+  },
+  "T0881": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [
+      "identify"
+    ],
+    "desc": "Service Stop"
+  },
+  "T0806": {
+    "allow_classes": [
+      "flood",
+      "write"
+    ],
+    "forbid_classes": [
+      "identify"
+    ],
+    "desc": "Brute Force I/O \u2014 repetitive writes"
+  },
+  "T0831": {
+    "allow_classes": [
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Manipulation of Control"
+  },
+  "T0832": {
+    "allow_classes": [
+      "spoof",
+      "write"
+    ],
+    "forbid_classes": [
+      "identify"
+    ],
+    "desc": "Manipulation of View"
+  },
+  "T0835": {
+    "allow_classes": [
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Manipulate I/O Image"
+  },
+  "T0836": {
+    "allow_classes": [
+      "write",
+      "config"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Modify Parameter",
+    "require_one_of": [
+      "write",
+      "config"
+    ]
+  },
+  "T0838": {
+    "allow_classes": [
+      "write"
+    ],
+    "forbid_classes": [
+      "browse",
+      "identify",
+      "list"
+    ],
+    "desc": "Modify Alarm Settings"
+  },
+  "T0855": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "restart",
+      "identify",
+      "discover",
+      "operate"
+    ],
+    "forbid_classes": [],
+    "desc": "Unauthorized Command Message (relocated \u2192 T1692.001)",
+    "require_one_of": [
+      "write",
+      "operate",
+      "mode_change",
+      "restart"
+    ]
+  },
+  "T0892": {
+    "allow_classes": [
+      "auth",
+      "session",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Change Credential"
+  },
+  "T0813": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Denial of Control"
+  },
+  "T0826": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "malformed",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Loss of Availability"
+  },
+  "T0827": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "read",
+      "probe"
+    ],
+    "forbid_classes": [],
+    "desc": "Loss of Control"
+  },
+  "T0828": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Loss of Productivity and Revenue"
+  },
+  "T0829": {
+    "allow_classes": [
+      "mode_change",
+      "write",
+      "session",
+      "spoof",
+      "block",
+      "restart",
+      "identify",
+      "discover",
+      "probe",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Loss of View"
+  },
+  "T0837": {
+    "allow_classes": [
+      "mode_change",
+      "write"
+    ],
+    "forbid_classes": [],
+    "desc": "Loss of Protection"
+  },
+  "T0880": {
+    "allow_classes": [
+      "block",
+      "mode_change",
+      "write",
+      "read",
+      "flood"
+    ],
+    "forbid_classes": [],
+    "desc": "Loss of Safety"
+  }
+}

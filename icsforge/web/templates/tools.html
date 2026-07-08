@@ -87,7 +87,7 @@
 
     <div class="card">
       <h2>PCAP Replay</h2>
-      <div class="small">Replay a PCAP toward a destination IP (requires sudo/root for raw send on many systems).</div>
+      <div class="small">Replay a PCAP toward a destination IP (requires sudo/root for raw send on many systems). The Destination IP auto-fills from the PCAP — edit it to redirect the replay elsewhere.</div>
       <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#fbbf24">
         ⚠ Replay accepts any destination IP including addresses outside RFC 1918. Only replay PCAPs to devices you own and have explicit permission to test.
       </div>
@@ -95,7 +95,7 @@
       <div class="row">
         <div class="field">
           <label>PCAP path (server-side) or upload below</label>
-          <input id="r_pcap" placeholder="out/pcaps/example.pcap">
+          <input id="r_pcap" placeholder="out/pcaps/example.pcap" onchange="peekAndFillDst()">
         </div>
       </div>
       <div class="row" style="align-items:center;gap:10px;margin-bottom:4px">
@@ -106,14 +106,10 @@
         <button class="btn" onclick="uploadPcap()" style="white-space:nowrap;font-size:11px">Upload</button>
         <span id="r_upload_status" class="small muted"></span>
       </div>
-      <div class="row" style="display:none">
-        <div class="field" style="display:none">
-          <label>_</label>
-          <input id="_dummy_" placeholder="">
-        </div>
+      <div class="row">
         <div class="field">
           <label>Destination IP</label>
-          <input id="r_dst" placeholder="e.g. 127.0.0.1 (receiver IP)" value="">
+          <input id="r_dst" placeholder="auto-filled from PCAP — edit to redirect" value="" oninput="this.dataset.autofilled='0'">
         </div>
         <div class="field">
           <label>Interval (seconds)</label>
@@ -350,10 +346,32 @@
         document.getElementById('r_pcap').value = d.path;
         status.textContent='✓ '+d.filename;
         status.style.color='var(--good)';
+        peekAndFillDst();
       } else {
         status.textContent='Error: '+(d.error||'upload failed');
         status.style.color='var(--bad)';
       }
+    }
+    // Pre-fill the Destination IP from the PCAP's baked-in destination, so
+    // "Replay" defaults to re-running what was generated. The field stays
+    // editable for redirecting to a different target.
+    async function peekAndFillDst(){
+      const pcap_path = document.getElementById("r_pcap").value.trim();
+      const dstEl = document.getElementById("r_dst");
+      if(!pcap_path) return;
+      try{
+        const res = await fetch("/api/pcap/peek-dst",{
+          method:"POST", headers:{"Content-Type":"application/json","X-CSRF-Token":(document.querySelector('meta[name="csrf-token"]')||{getAttribute:()=>''}).getAttribute('content')||''},
+          body: JSON.stringify({pcap_path})
+        });
+        const d = await res.json();
+        // Only auto-fill if empty or previously auto-filled, so we never clobber
+        // a value the user typed by hand.
+        if(d && d.dst_ip && (!dstEl.value.trim() || dstEl.dataset.autofilled==="1")){
+          dstEl.value = d.dst_ip;
+          dstEl.dataset.autofilled = "1";
+        }
+      }catch(e){ /* peek is best-effort; leave field as-is */ }
     }
     async function replayTool(){
       const pcap_path = document.getElementById("r_pcap").value.trim();

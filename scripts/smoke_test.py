@@ -29,13 +29,13 @@ SKIP = "\033[33mSKIP\033[0m"
 def check_engine_signature():
     """Verify run_scenario has skip_intervals param — prevents 25s pcap delay in live send."""
     import ast
-    src = open(os.path.join(os.path.dirname(__file__), "..", "icsforge", "scenarios", "engine.py")).read()
+    src = ""
+    with open(os.path.join(os.path.dirname(__file__), "..", "icsforge", "scenarios", "engine.py")) as _sf:
+        src = _sf.read()
     tree = ast.parse(src)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "run_scenario":
             params = [a.arg for a in node.args.args] + [a.arg for a in node.args.kwonlyargs]
-            defaults = node.args.defaults
-            kw_defaults = node.args.kw_defaults
             has_param = "skip_intervals" in params
             if has_param:
                 print(f"  {PASS}  run_scenario has skip_intervals parameter")
@@ -50,7 +50,9 @@ def check_engine_signature():
 def check_launcher():
     """Verify main() uses create_app() not a partial app — the v0.50.0 regression."""
     import ast
-    src = open(os.path.join(os.path.dirname(__file__), "..", "icsforge", "web", "app.py")).read()
+    src = ""
+    with open(os.path.join(os.path.dirname(__file__), "..", "icsforge", "web", "app.py")) as _sf:
+        src = _sf.read()
     tree = ast.parse(src)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "main":
@@ -206,7 +208,7 @@ def run_smoke(verbose: bool = False) -> int:
         ]
 
         with app.test_client() as c:
-            for method, path, body, should_not_500, desc in checks:
+            for method, path, body, _should_not_500, desc in checks:
                 total += 1
                 try:
                     if method == "GET":

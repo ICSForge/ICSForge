@@ -20,6 +20,22 @@ if ! command -v tshark >/dev/null 2>&1; then
   exit 2
 fi
 
+# Detect known buggy Wireshark versions for GOOSE.
+# Wireshark issue #19580 ("Incorrect recursion depth assert failure when
+# dissecting a legitimate GOOSE message") affects 4.2.0, 4.2.1, 4.2.2 and
+# was fixed in 4.2.3 and 4.0.13. On affected versions, *any* legitimate
+# GOOSE packet (including real-world captures) trips the assertion.
+TSHARK_VER=$(tshark -v 2>&1 | grep -E "^TShark" | head -1 | awk '{print $3}')
+GOOSE_BUGGY=0
+case "$TSHARK_VER" in
+  4.2.0|4.2.1|4.2.2|4.0.10|4.0.11|4.0.12)
+    GOOSE_BUGGY=1
+    echo "NOTE: tshark $TSHARK_VER has Wireshark issue #19580 (GOOSE recursion_depth"
+    echo "      assertion). GOOSE results may be misleading; upgrade to 4.2.3+ or 4.0.13+."
+    echo ""
+    ;;
+esac
+
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
@@ -62,7 +78,9 @@ for entry in "${PROTOS[@]}"; do
 
   std_pcap=$(ls "$std_dir"/pcaps/*.pcap 2>/dev/null | head -1 || true)
   stlth_pcap=$(ls "$stlth_dir"/pcaps/*.pcap 2>/dev/null | head -1 || true)
-  [ -z "$std_pcap" ] || [ -z "$stlth_pcap" ] && continue
+  if [ -z "$std_pcap" ] || [ -z "$stlth_pcap" ]; then
+    continue
+  fi
 
   std_pkts=$(tshark -r "$std_pcap" 2>/dev/null | wc -l)
   std_diss=$(tshark -r "$std_pcap" -Y "$filt && $diss" 2>/dev/null | wc -l)
@@ -74,6 +92,8 @@ for entry in "${PROTOS[@]}"; do
 
   if [ "$std_err" = "0" ] && [ "$stlth_err" = "0" ]; then
     verdict="PASS"
+  elif [ "$proto" = "iec61850" ] && [ "$GOOSE_BUGGY" = "1" ]; then
+    verdict="UNKNOWN (tshark $TSHARK_VER has GOOSE bug #19580; rerun on 4.2.3+)"
   else
     verdict="FAIL (std=$std_err, stealth=$stlth_err)"
     FAIL=$((FAIL+1))

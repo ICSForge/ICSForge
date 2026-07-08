@@ -41,13 +41,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -121,6 +120,14 @@ stream:
   reassembly:
     memcap: 32mb
     depth: 1mb
+detect:
+  # Suricata caps alerts at PACKET_ALERT_MAX (default 15) per packet, ordered
+  # by SID. ICSForge packets legitimately match many rules at once (the lab
+  # band rule + the heuristic protocol-ID rule + multiple semantic FC rules),
+  # so the default 15 silently starves higher-SID tiers (heuristic/semantic)
+  # whenever lab rules fill the slots first. Raise the cap so per-tier hit
+  # rates reflect what actually matched rather than the truncation order.
+  packet-alert-max: 256
 """)
     return cfg
 
@@ -139,7 +146,62 @@ def _tier_from_signature(sig: str) -> str:
 
 def _run_suricata_all_tiers(pcap: Path, rule_files: dict[str, Path],
                              tmp: Path) -> dict[str, list[dict]]:
-    """Run suricata once with all three rule files and split alerts by tier."""
+    """Run Suricata once PER TIER and collect alerts.
+
+    Historically this loaded all three rule files in a single Suricata run.
+    That produced misleading per-tier hit rates: ICSForge packets legitimately
+    match many rules at once, and when 200+ rules co-load, Suricata's
+    multi-pattern-matcher prefilter groups signatures such that a short,
+    highly-common heuristic pattern (e.g. Modbus Protocol-Identifier "00 00")
+    is absorbed/suppressed by the larger lab+semantic groups — even when the
+    per-packet alert cap is not reached. The net effect was heuristic/semantic
+    tiers reading near-zero while the rules fire perfectly in isolation.
+
+    Running each tier's rules in its own Suricata invocation eliminates the
+    cross-tier interaction and yields honest per-tier coverage. The cost is
+    ~3x Suricata invocations per pcap; acceptable for a measurement tool, and
+    the batched path still amortises across scenarios within each tier.
+    """
+    by_tier: dict[str, list[dict]] = {"lab": [], "heuristic": [], "semantic": []}
+    for tier, rule_path in rule_files.items():
+        if tier not in by_tier:
+            continue
+        outdir = tmp / f"run_{pcap.stem}_{tier}"
+        outdir.mkdir(parents=True, exist_ok=True)
+        cfg = _make_min_suricata_config({tier: rule_path}, outdir)
+        try:
+            subprocess.run(
+                ["suricata", "-r", str(pcap), "-c", str(cfg), "-l", str(outdir),
+                 "-k", "none"],
+                capture_output=True, timeout=60, check=False,
+            )
+        except subprocess.TimeoutExpired:
+            continue
+        eve = outdir / "eve.json"
+        if not eve.exists():
+            continue
+        with open(eve, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("event_type") != "alert":
+                    continue
+                sig = d.get("alert", {}).get("signature", "")
+                t = _tier_from_signature(sig)
+                if t in by_tier:
+                    by_tier[t].append(d)
+    return by_tier
+
+
+def _run_suricata_all_tiers_single(pcap: Path, rule_files: dict[str, Path],
+                                    tmp: Path) -> dict[str, list[dict]]:
+    """Legacy single-run variant (all tiers in one Suricata process).
+
+    Retained for reference / debugging. See _run_suricata_all_tiers for why
+    per-tier runs are now the default.
+    """
     outdir = tmp / f"run_{pcap.stem}"
     outdir.mkdir(parents=True, exist_ok=True)
     cfg = _make_min_suricata_config(rule_files, outdir)
@@ -211,10 +273,12 @@ def _run_suricata_batched(
         # spread across i=0..253 (i=254 overflows — fall back to per-pcap).
         if i >= 254:
             for p, n in list(pcap_to_scenario.items())[i:]:
-                tail = _run_suricata_all_tiers(p, rule_files, tmp)
+                # NOTE: overflow handling is incomplete — results not merged.
+                # Currently no scenario set hits 254+ unique IPs in practice;
+                # if/when one does, implement merge here.
+                _run_suricata_all_tiers(p, rule_files, tmp)
                 rewritten_name = n
                 scenario_by_ip[f"overflow_{rewritten_name}"] = rewritten_name
-                # Merge into out dict at end; for simplicity collect separately
             break
         uniq_src = f"10.99.{i // 254}.{(i % 254) + 1}"
         rw = batch_dir / f"rw_{i:04d}_{pcap.stem}.pcap"
@@ -252,11 +316,48 @@ def _run_suricata_batched(
         capture_output=True, timeout=600, check=False,
     )
 
-    # Dispatch alerts back to scenarios by src IP
+    # Dispatch alerts back to scenarios by src IP.
+    # Run each tier's rules in a SEPARATE Suricata pass over the merged pcap:
+    # co-loading all tiers lets Suricata's MPM prefilter suppress short/common
+    # heuristic patterns (see _run_suricata_all_tiers docstring). Per-tier
+    # passes give honest coverage at the cost of 3 passes over one merged pcap.
     result: dict[str, dict[str, list[dict]]] = {
         name: {"lab": [], "heuristic": [], "semantic": []}
         for name in pcap_to_scenario.values()
     }
+    for tier, rule_path in rule_files.items():
+        if tier not in ("lab", "heuristic", "semantic"):
+            continue
+        outdir = batch_dir / f"run_{tier}"
+        outdir.mkdir(exist_ok=True)
+        cfg = _make_min_suricata_config({tier: rule_path}, outdir)
+        subprocess.run(
+            ["suricata", "-r", str(merged), "-c", str(cfg), "-l", str(outdir),
+             "-k", "none"],
+            capture_output=True, timeout=600, check=False,
+        )
+        eve = outdir / "eve.json"
+        if not eve.exists():
+            continue
+        with open(eve, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("event_type") != "alert":
+                    continue
+                src = d.get("src_ip", "")
+                scenario = scenario_by_ip.get(src)
+                if not scenario or scenario not in result:
+                    continue
+                sig = d.get("alert", {}).get("signature", "")
+                t = _tier_from_signature(sig)
+                if t in result[scenario]:
+                    result[scenario][t].append(d)
+    return result
+
+    # (legacy single-pass dispatch retained below but unreachable)
     eve = outdir / "eve.json"
     if not eve.exists():
         return result
@@ -375,7 +476,7 @@ def measure(scenarios: list[dict], tmp: Path,
 
     # Phase 1: generate all PCAPs
     pcap_to_scenario: dict[Path, dict] = {}
-    for i, scen in enumerate(scenarios, 1):
+    for _i, scen in enumerate(scenarios, 1):
         name = scen["name"]
         per_proto[scen["proto"]]["scenarios"] += 1
         pcap = _generate_pcap(name, pcap_dir)

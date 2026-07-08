@@ -143,6 +143,55 @@ class TestBasicEndpoints:
         resp = client.get("/api/runs")
         assert resp.status_code == 200
 
+    def test_tools_pcap_replay_dst_field_visible(self, client):
+        """The PCAP-replay Destination IP field must not be inside a hidden row.
+
+        Regression guard: the r_dst input was previously wrapped in a
+        display:none row, so replayTool() always errored 'Destination IP is
+        required' because the user could never fill it.
+        """
+        body = client.get("/tools").get_data(as_text=True)
+        assert 'id="r_dst"' in body, "Destination IP input must exist"
+        # Find the row wrapper that contains r_dst and ensure it is not hidden.
+        idx = body.find('id="r_dst"')
+        # Walk back to the nearest enclosing <div class="row" ...> opening tag.
+        row_start = body.rfind('<div class="row"', 0, idx)
+        assert row_start != -1, "r_dst should sit inside a .row container"
+        row_tag = body[row_start:body.find(">", row_start) + 1]
+        assert "display:none" not in row_tag, (
+            "r_dst row must not be hidden — replay needs a visible Destination IP"
+        )
+        # The leftover dummy field should be gone.
+        assert 'id="_dummy_"' not in body, "stale dummy field should be removed"
+
+    def test_pcap_peek_dst(self, client, tmp_path):
+        """peek-dst returns the destination IP baked into a generated PCAP, so the
+        Replay UI can auto-fill it (so 'replay' re-runs what was created)."""
+        import subprocess
+        import sys
+        from pathlib import Path as _Path
+
+        # Generate a PCAP with a known destination inside the repo's out/ dir.
+        import icsforge
+        repo = _Path(icsforge.__file__).resolve().parent.parent
+        outdir = repo / "out"
+        outdir.mkdir(exist_ok=True)
+        subprocess.run(
+            [sys.executable, "-m", "icsforge", "generate",
+             "--name", "T0855__unauth_command__modbus",
+             "--dst-ip", "192.168.213.128", "--src-ip", "10.10.10.5",
+             "--outdir", str(outdir)],
+            check=True, capture_output=True, timeout=60)
+        pcaps = sorted((outdir / "pcaps").glob("*.pcap"))
+        assert pcaps, "expected a generated pcap"
+        rel = str(pcaps[-1].relative_to(repo))
+        r = client.post("/api/pcap/peek-dst", json={"pcap_path": rel})
+        assert r.status_code == 200
+        assert r.get_json().get("dst_ip") == "192.168.213.128"
+        # Path-safety guard: refuse paths outside out/.
+        r2 = client.post("/api/pcap/peek-dst", json={"pcap_path": "/etc/hostname"})
+        assert r2.status_code == 400
+
 
 # ── Route audit ───────────────────────────────────────────────────────
 
@@ -263,3 +312,180 @@ class TestLiveCallbackConfig:
             assert resp.get_json()["stored"] is True
         finally:
             web_helpers._callback_token = None
+
+
+# ── Stateful TCP mode through the web API (v0.75.x) ───────────────────
+
+
+class TestStatefulWebFlow:
+    """The --stateful CLI feature must also be reachable from the web app,
+    since the audience prioritises the UI. /api/generate_offline must honour
+    a `stateful` flag and produce a handshake; the default must stay stateless.
+    """
+
+    SCEN = "T0855__unauth_command__modbus"
+
+    def _syn_count(self, pcap_path):
+        import subprocess
+        out = subprocess.run(
+            ["tshark", "-r", pcap_path, "-Y", "tcp.flags.syn==1",
+             "-T", "fields", "-e", "frame.number"],
+            capture_output=True, text=True,
+        ).stdout
+        return len([x for x in out.splitlines() if x.strip()])
+
+    def test_offline_stateful_true_has_handshake(self, client, tmp_path):
+        import shutil
+        if not shutil.which("tshark"):
+            pytest.skip("tshark not available")
+        resp = client.post("/api/generate_offline", json={
+            "name": self.SCEN, "dst_ip": "192.0.2.10", "src_ip": "192.0.2.11",
+            "build_pcap": True, "stateful": True, "outdir": str(tmp_path),
+        })
+        assert resp.status_code == 200
+        pcap = resp.get_json().get("pcap")
+        if not pcap:
+            pytest.skip("pcap not produced in this environment")
+        assert self._syn_count(pcap) > 0, "stateful=True must emit SYN handshake"
+
+    def test_offline_default_is_stateless(self, client, tmp_path):
+        import shutil
+        if not shutil.which("tshark"):
+            pytest.skip("tshark not available")
+        resp = client.post("/api/generate_offline", json={
+            "name": self.SCEN, "dst_ip": "192.0.2.10", "src_ip": "192.0.2.11",
+            "build_pcap": True, "outdir": str(tmp_path),
+        })
+        assert resp.status_code == 200
+        pcap = resp.get_json().get("pcap")
+        if not pcap:
+            pytest.skip("pcap not produced in this environment")
+        assert self._syn_count(pcap) == 0, "default must stay stateless (no SYN)"
+
+    def test_sender_page_exposes_stateful_toggle(self, client):
+        html = client.get("/sender").get_data(as_text=True)
+        assert "btn_stateful" in html, "sender page missing stateful toggle"
+
+    def test_sender_js_wires_stateful(self, client):
+        js = client.get("/static/js/sender.js").get_data(as_text=True)
+        assert "window.toggleStateful" in js
+        assert "stateful:_stateful" in js
+
+
+# ── Three-way marker mode through the web preview (v0.75.x) ───────────
+
+
+class TestMarkerModeWebPreview:
+    """The sender UI exposes a covert/explicit/stealth selector (default covert).
+    /api/preview_payload must honour a `marker_mode` param and the preview must be
+    byte-faithful to what generate/send emit for that mode.
+    """
+
+    SCEN = "T0855__unauth_command__modbus"
+
+    def _preview(self, client, mode):
+        url = f"/api/preview_payload?name={self.SCEN}&step=0&marker_mode={mode}"
+        return client.get(url).get_json()
+
+    def test_default_is_covert(self, client):
+        # No marker_mode param -> covert (no ICSF literal, marker in TID field).
+        d = client.get(f"/api/preview_payload?name={self.SCEN}&step=0").get_json()
+        assert d.get("marker_mode") == "covert"
+        assert "49435346" not in (d.get("hex_raw") or "")
+
+    def test_covert_has_no_icsf_literal(self, client):
+        d = self._preview(client, "covert")
+        assert d.get("marker_mode") == "covert"
+        assert "49435346" not in (d.get("hex_raw") or "")
+
+    def test_explicit_has_icsf_literal(self, client):
+        d = self._preview(client, "explicit")
+        assert d.get("marker_mode") == "explicit"
+        assert "49435346" in (d.get("hex_raw") or "")   # 'ICSF' ASCII
+
+    def test_stealth_has_no_marker(self, client):
+        d = self._preview(client, "stealth")
+        assert d.get("marker_mode") == "stealth"
+        assert "49435346" not in (d.get("hex_raw") or "")
+
+    def test_legacy_no_marker_maps_to_stealth(self, client):
+        d = client.get(
+            f"/api/preview_payload?name={self.SCEN}&step=0&no_marker=1"
+        ).get_json()
+        assert d.get("marker_mode") == "stealth"
+
+    def test_modes_produce_distinct_previews(self, client):
+        cov = self._preview(client, "covert").get("hex_raw")
+        exp = self._preview(client, "explicit").get("hex_raw")
+        sth = self._preview(client, "stealth").get("hex_raw")
+        assert cov and exp and sth
+        assert len({cov, exp, sth}) == 3, "all three modes must differ"
+
+    def test_sender_page_has_marker_selector(self, client):
+        html = client.get("/sender").get_data(as_text=True)
+        assert "marker_seg" in html
+        assert 'data-mode="covert"' in html
+        assert 'data-mode="explicit"' in html
+        assert 'data-mode="stealth"' in html
+        assert "marker_help" in html  # the '?' help affordance
+
+    def test_sender_js_wires_marker_mode(self, client):
+        js = client.get("/static/js/sender.js").get_data(as_text=True)
+        assert "window.setMarkerMode" in js
+        assert "marker_mode=${_mm}" in js          # live preview refresh
+        assert '_explicitMarker = (_mm === "explicit")' in js
+
+
+# ── Test Profile (Firewall/ACL ⟷ NSM) through the web API (v0.75.x) ──
+
+
+class TestProfileWebFlow:
+    SCEN = "T0855__unauth_command__modbus"
+
+    def _syn(self, pcap):
+        import subprocess
+        out = subprocess.run(
+            ["tshark", "-r", pcap, "-Y", "tcp.flags.syn==1",
+             "-T", "fields", "-e", "frame.number"],
+            capture_output=True, text=True).stdout
+        return len([x for x in out.splitlines() if x.strip()])
+
+    def test_nsm_profile_defaults_handshake_on(self, client, tmp_path):
+        import shutil
+        if not shutil.which("tshark"):
+            pytest.skip("tshark not available")
+        r = client.post("/api/generate_offline", json={
+            "name": self.SCEN, "dst_ip": "192.0.2.10", "src_ip": "192.0.2.11",
+            "build_pcap": True, "test_profile": "nsm", "outdir": str(tmp_path),
+        })
+        assert r.status_code == 200
+        pcap = r.get_json().get("pcap")
+        if not pcap:
+            pytest.skip("pcap not produced")
+        assert self._syn(pcap) > 0, "NSM profile must default the handshake on"
+
+    def test_firewall_profile_stays_unidirectional(self, client, tmp_path):
+        import shutil
+        if not shutil.which("tshark"):
+            pytest.skip("tshark not available")
+        r = client.post("/api/generate_offline", json={
+            "name": self.SCEN, "dst_ip": "192.0.2.10", "src_ip": "192.0.2.11",
+            "build_pcap": True, "test_profile": "firewall", "outdir": str(tmp_path),
+        })
+        assert r.status_code == 200
+        pcap = r.get_json().get("pcap")
+        if not pcap:
+            pytest.skip("pcap not produced")
+        assert self._syn(pcap) == 0, "firewall profile must stay unidirectional"
+
+    def test_sender_page_has_profile_selector(self, client):
+        html = client.get("/sender").get_data(as_text=True)
+        assert "profile_seg" in html
+        assert 'data-profile="firewall"' in html
+        assert 'data-profile="nsm"' in html
+        assert "profile_help" in html
+
+    def test_sender_js_wires_profile(self, client):
+        js = client.get("/static/js/sender.js").get_data(as_text=True)
+        assert "window.setTestProfile" in js
+        assert "test_profile:_profile" in js

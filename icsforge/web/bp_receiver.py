@@ -121,7 +121,8 @@ def api_receiver_callback():
         # HMAC integrity check — mandatory when token is configured.
         # Receiver must sign the payload body with HMAC-SHA256(token, body).
         # A token-bearing callback without a valid HMAC is rejected.
-        import hmac as _hmac, hashlib as _hl
+        import hashlib as _hl
+        import hmac as _hmac
         raw_body = request.get_data()
         supplied_hmac = (request.headers.get("X-ICSForge-HMAC") or "").strip()
         if not supplied_hmac:
@@ -134,7 +135,15 @@ def api_receiver_callback():
         if not _hmac.compare_digest(supplied_hmac, expected):
             return jsonify({"error": "HMAC verification failed"}), 401
     data = request.get_json(force=True, silent=True) or {}
-    if not data.get("marker_found"):
+    # Store a receipt if it is either marker-attributed OR expectation-attributed.
+    # The receiver fires callbacks for both (see receiver._write_receipt): covert/
+    # explicit-marker traffic has marker_found=True, while IEC-104 and stealth
+    # (--no-marker) traffic is attributed purely via the expectation registry with
+    # marker_found=False and attributed_via="expectation". Previously this endpoint
+    # only stored marker_found receipts, silently dropping every IEC-104 / stealth
+    # receipt — so those runs showed no delivery on the sender even though the
+    # receiver saw the traffic.
+    if not (data.get("marker_found") or data.get("attributed_via") == "expectation"):
         return jsonify({"ok": True, "stored": False})
     data["_received_at"] = datetime.now(timezone.utc).isoformat()
     _h._live_receipts.append(data)
@@ -270,6 +279,97 @@ def api_run_detail():
         "techniques": techs,
         "bins": _bin_receipts(items, bins=40),
     })
+
+
+# ── Expectation registry endpoints ─────────────────────────────────
+#
+# Markerless attribution: when the sender is about to run a scenario whose
+# wire format cannot embed the ICSFORGE_SYNTH marker (IEC-104) or has been
+# deliberately stripped (--no-marker / stealth), the sender first POSTs an
+# expectation here. The receiver attributes any matching protocol traffic
+# arriving during the TTL window to that expectation, and forwards a
+# callback to the sender even though the packet bytes carry no marker.
+
+@bp.route("/api/receiver/expect", methods=["POST"])
+def api_receiver_expect():
+    """
+    Register an expectation for an upcoming run.
+
+    Body (JSON):
+      run_id      str   required   the run_id the sender will use
+      scenario    str   optional   scenario name
+      technique   str   optional   primary technique
+      steps       int   optional   number of steps (diagnostic)
+      ttl_sec     float optional   how long to keep the expectation alive
+      protos      list  optional   list of expected protocols
+
+    Authentication: same callback-token + HMAC scheme as the callback ingest
+    endpoint when token is configured. This prevents unauthenticated peers
+    from attributing arbitrary traffic to fake runs.
+    """
+    if _h._callback_token:
+        supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
+        if not supplied or not secrets.compare_digest(supplied, _h._callback_token):
+            return jsonify({"error": "invalid callback token"}), 401
+        import hashlib as _hl
+        import hmac as _hmac
+        raw_body = request.get_data()
+        supplied_hmac = (request.headers.get("X-ICSForge-HMAC") or "").strip()
+        if not supplied_hmac:
+            return jsonify({"error": "HMAC required"}), 401
+        expected = _hmac.new(
+            _h._callback_token.encode("utf-8"), raw_body, _hl.sha256,
+        ).hexdigest()
+        if not _hmac.compare_digest(supplied_hmac, expected):
+            return jsonify({"error": "HMAC verification failed"}), 401
+
+    data = request.get_json(force=True, silent=True) or {}
+    run_id = (data.get("run_id") or "").strip()
+    if not run_id:
+        return jsonify({"error": "run_id is required"}), 400
+
+    # Lazy import — receiver module may not be in path in some test setups
+    try:
+        from icsforge.receiver.receiver import register_expectation
+    except Exception as e:
+        return jsonify({"error": f"receiver module unavailable: {e}"}), 500
+
+    entry = register_expectation(
+        run_id=run_id,
+        scenario=str(data.get("scenario") or ""),
+        technique=str(data.get("technique") or ""),
+        steps=int(data.get("steps") or 1),
+        ttl_sec=float(data.get("ttl_sec") or 300.0),
+        protos=data.get("protos") if isinstance(data.get("protos"), list) else None,
+        test_profile=str(data.get("test_profile") or ""),
+        expected_alert=str(data.get("expected_alert") or ""),
+    )
+    return jsonify({"ok": True, "expectation": entry})
+
+
+@bp.route("/api/receiver/expectations", methods=["GET"])
+def api_receiver_expectations():
+    """List currently active expectations (auto-prunes expired ones)."""
+    try:
+        from icsforge.receiver.receiver import list_expectations
+    except Exception:
+        return jsonify({"expectations": []})
+    return jsonify({"expectations": list_expectations()})
+
+
+@bp.route("/api/receiver/expect/<run_id>", methods=["DELETE"])
+def api_receiver_expect_clear(run_id: str):
+    """Clear an expectation early (e.g. on scenario abort)."""
+    if _h._callback_token:
+        supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
+        if not supplied or not secrets.compare_digest(supplied, _h._callback_token):
+            return jsonify({"error": "invalid callback token"}), 401
+    try:
+        from icsforge.receiver.receiver import clear_expectation
+    except Exception:
+        return jsonify({"ok": False, "error": "receiver module unavailable"}), 500
+    cleared = clear_expectation(run_id)
+    return jsonify({"ok": True, "cleared": cleared})
 
 
 

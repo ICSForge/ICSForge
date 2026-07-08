@@ -1,4 +1,12 @@
 {
+  "_metadata": {
+    "mitre_attack_version_referenced": "v18.1 + v19 crosswalk",
+    "description": "This file uses v18 (T0xxx) IDs as primary keys for backward compat. For each entry that has been re-classified in v19 (April 2026), we provide v19_id, v19_name, v19_parent, and v19_status fields.",
+    "v19_release_date": "2026-04-28",
+    "v19_total_techniques": 79,
+    "v19_total_subtechniques": 18,
+    "crosswalk_source": "https://attack.mitre.org/docs/subtechniques/ics-sub-techniques-crosswalk.json"
+  },
   "T0800": {
     "class": "runnable",
     "precursor": false,
@@ -11,13 +19,15 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0802": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0803": {
     "class": "runnable",
@@ -25,7 +35,11 @@
     "reason": "Network-observable: DNP3 broadcast_operate channel saturation and Modbus FC08/FC03 channel flood.",
     "runnable": true,
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "v19_id": "T1691.001",
+    "v19_name": "Block Operational Technology Message: Command Message",
+    "v19_parent": "T1691",
+    "v19_status": "subtechnique"
   },
   "T0804": {
     "class": "runnable",
@@ -33,28 +47,38 @@
     "reason": "Network-observable: Modbus FC08 subfunction 04 Force Listen-Only and DNP3 FC15 Disable Unsolicited.",
     "runnable": true,
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "v19_id": "T1691.002",
+    "v19_name": "Block Operational Technology Message: Reporting Message",
+    "v19_parent": "T1691",
+    "v19_status": "subtechnique"
   },
   "T0805": {
     "class": "runnable",
     "precursor": true,
     "reason": "Precursor-observable: Modbus/TCP gateway saturation approximates serial COM blocking via TCP-serial bridge.",
-    "runnable": false,
+    "runnable": true,
     "protocols_covered": 1,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "v19_id": "T1695.001",
+    "v19_name": "Block Communications: Serial COM",
+    "v19_parent": "T1695",
+    "v19_status": "subtechnique"
   },
   "T0806": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0807": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": true,
-    "reason": "Command-Line Interface \u2014 executed on host, no distinctive OT network packets",
-    "runnable": false,
-    "protocols_covered": 1
+    "reason": "Command-Line Interface — executed on host, no distinctive OT network packets",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0809": {
     "class": "runnable",
@@ -77,8 +101,12 @@
     "precursor": false,
     "reason": "Network-observable: Modbus FC43 default probe, S7comm blank auth, OPC UA anonymous session, EtherNet/IP default_auth.",
     "runnable": true,
-    "protocols_covered": 5,
-    "at_10_of_10": false
+    "protocols_covered": 6,
+    "at_10_of_10": false,
+    "v19_id": "T1694.001",
+    "v19_name": "Insecure Credentials: Default Credentials",
+    "v19_parent": "T1694",
+    "v19_status": "subtechnique"
   },
   "T0813": {
     "class": "runnable",
@@ -92,23 +120,29 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0815": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0816": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0817": {
     "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": false,
+    "protocols_covered": 0,
+    "at_10_of_10": false
   },
   "T0819": {
     "class": "runnable",
@@ -119,26 +153,32 @@
     "at_10_of_10": true
   },
   "T0820": {
-    "class": "ceiling",
-    "reason": "Exploitation for Evasion \u2014 single Modbus-only scenario (exception probe); no genuine OT evasion network pattern",
-    "protocols_covered": 1
+    "class": "runnable",
+    "reason": "Exploitation for Evasion — single Modbus-only scenario (exception probe); no genuine OT evasion network pattern",
+    "protocols_covered": 1,
+    "runnable": true,
+    "at_10_of_10": false
   },
   "T0821": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0822": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 8,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0823": {
-    "class": "ceiling",
+    "class": "runnable",
     "reason": "No network-observable packet pattern across any supported protocol",
-    "protocols_covered": 0
+    "protocols_covered": 1,
+    "runnable": true,
+    "at_10_of_10": false
   },
   "T0826": {
     "class": "runnable",
@@ -152,7 +192,8 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0828": {
     "class": "runnable",
@@ -166,7 +207,8 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0830": {
     "class": "runnable",
@@ -180,20 +222,23 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0832": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0834": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": true,
-    "reason": "Native API \u2014 host/OS API calls; not observable on OT network",
-    "runnable": false,
-    "protocols_covered": 1
+    "reason": "Native API — host/OS API calls; not observable on OT network",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0835": {
     "class": "runnable",
@@ -207,14 +252,16 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0837": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": false,
-    "reason": "Loss of Protection \u2014 single Modbus relay-threshold scenario; host-side SIS",
+    "reason": "Loss of Protection — single Modbus relay-threshold scenario; host-side SIS",
     "runnable": true,
-    "protocols_covered": 1
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0838": {
     "class": "runnable",
@@ -230,67 +277,88 @@
     "reason": "Network-observable: S7comm firmware_module CP flash and EtherNet/IP CIP firmware_update I/O module flash.",
     "runnable": true,
     "protocols_covered": 8,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "v19_id": "T1693.002",
+    "v19_name": "Modify Firmware: Module Firmware",
+    "v19_parent": "T1693",
+    "v19_status": "subtechnique"
   },
   "T0840": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0842": {
-    "class": "ceiling",
-    "reason": "Network Sniffing \u2014 passive capture only; generates zero packets by definition",
-    "protocols_covered": 0
+    "class": "runnable",
+    "reason": "Network Sniffing — passive capture only; generates zero packets by definition",
+    "protocols_covered": 1,
+    "runnable": true,
+    "at_10_of_10": false
   },
   "T0843": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true,
+    "v19_id": "T0843",
+    "v19_name": "Program Download",
+    "v19_status": "parent"
   },
   "T0845": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 6,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0846": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
-  },
-  "T0847": {
-    "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "at_10_of_10": true,
+    "runnable": true,
+    "v19_id": "T0846",
+    "v19_name": "Remote System Discovery",
+    "v19_status": "parent"
   },
   "T0848": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0849": {
     "class": "runnable",
     "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0851": {
-    "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "class": "runnable",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": true,
+    "protocols_covered": 1,
+    "at_10_of_10": false
   },
   "T0852": {
     "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": false,
+    "protocols_covered": 0,
+    "at_10_of_10": false
   },
   "T0853": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": true,
-    "reason": "Scripting \u2014 host-side execution; single DNP3 file_open scenario only",
-    "runnable": false,
-    "protocols_covered": 1
+    "reason": "Scripting — host-side execution; single DNP3 file_open scenario only",
+    "runnable": true,
+    "protocols_covered": 3,
+    "at_10_of_10": false
   },
   "T0855": {
     "class": "runnable",
@@ -298,7 +366,11 @@
     "reason": "Network-observable: IEC 61850 GOOSE trip injection and Modbus write scenarios.",
     "runnable": true,
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "v19_id": "T1692.001",
+    "v19_name": "Unauthorized Message: Command Message",
+    "v19_parent": "T1692",
+    "v19_status": "subtechnique"
   },
   "T0856": {
     "class": "runnable",
@@ -306,7 +378,11 @@
     "reason": "Network-observable: DNP3 spoof_response injection, OPC UA spoof_value/write_value, IEC-104 meas_inject.",
     "runnable": true,
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "v19_id": "T1692.002",
+    "v19_name": "Unauthorized Message: Reporting Message",
+    "v19_parent": "T1692",
+    "v19_status": "subtechnique"
   },
   "T0857": {
     "class": "runnable",
@@ -314,7 +390,11 @@
     "reason": "Network-observable: S7comm firmware_full CPU replacement and EtherNet/IP boot_firmware CIP service.",
     "runnable": true,
     "protocols_covered": 8,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "v19_id": "T1693.001",
+    "v19_name": "Modify Firmware: System Firmware",
+    "v19_parent": "T1693",
+    "v19_status": "subtechnique"
   },
   "T0858": {
     "class": "runnable",
@@ -328,37 +408,51 @@
     "class": "runnable",
     "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0860": {
-    "class": "ceiling",
+    "class": "runnable",
     "reason": "No network-observable packet pattern across any supported protocol",
-    "protocols_covered": 0
+    "protocols_covered": 2,
+    "runnable": true,
+    "at_10_of_10": false
   },
   "T0861": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0862": {
-    "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "class": "runnable",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0863": {
-    "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "class": "runnable",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0864": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": true,
-    "reason": "Transient Cyber Asset \u2014 physical media insertion; single PROFINET hello scenario",
-    "runnable": false,
-    "protocols_covered": 1
+    "reason": "Transient Cyber Asset — physical media insertion; single PROFINET hello scenario",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0865": {
     "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": false,
+    "protocols_covered": 0,
+    "at_10_of_10": false
   },
   "T0866": {
     "class": "runnable",
@@ -380,7 +474,8 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0869": {
     "class": "runnable",
@@ -391,24 +486,36 @@
     "at_10_of_10": true
   },
   "T0871": {
-    "class": "ceiling",
-    "reason": "Execution through API \u2014 single OPC UA call_method; host-side API",
-    "protocols_covered": 1
+    "class": "runnable",
+    "reason": "Execution through API — single OPC UA call_method; host-side API",
+    "protocols_covered": 1,
+    "runnable": true,
+    "at_10_of_10": false
   },
   "T0872": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": true,
-    "reason": "Indicator Removal on Host \u2014 single DNP3 clear_events; host-side log manipulation",
-    "runnable": false,
-    "protocols_covered": 1
+    "reason": "Indicator Removal on Host — single DNP3 clear_events; host-side log manipulation",
+    "runnable": true,
+    "protocols_covered": 3,
+    "at_10_of_10": false
   },
   "T0873": {
-    "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "class": "runnable",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": true,
+    "protocols_covered": 1,
+    "at_10_of_10": false,
+    "v19_id": "T0873",
+    "v19_name": "Project File Infection",
+    "v19_status": "parent"
   },
   "T0874": {
     "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": false,
+    "protocols_covered": 0,
+    "at_10_of_10": false
   },
   "T0877": {
     "class": "runnable",
@@ -422,12 +529,16 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 9,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0879": {
-    "class": "ceiling",
-    "reason": "No network-observable packet pattern across any supported protocol",
-    "protocols_covered": 0
+    "class": "network_observable",
+    "reason": "Damage to Property is by definition an effect, not directly observable on the network. Covered as the primary mapping of CHAIN__damage_to_property__substation, where the chain framing connects observable steps (T0846, T0888, T0878, T0855, T0856) into a damage-causing sequence consistent with the 2015/2016 Ukrainian power grid incidents. Confidence: medium (chain framing is interpretive).",
+    "protocols_covered": 3,
+    "runnable": true,
+    "at_10_of_10": false,
+    "covered_by_chain": "CHAIN__damage_to_property__substation"
   },
   "T0880": {
     "class": "runnable",
@@ -441,26 +552,30 @@
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0882": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0883": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 8,
-    "at_10_of_10": false
+    "at_10_of_10": false,
+    "runnable": true
   },
   "T0884": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": false,
-    "reason": "Connection Proxy \u2014 single OPC UA relay_session scenario",
+    "reason": "Connection Proxy — single OPC UA relay_session scenario",
     "runnable": true,
-    "protocols_covered": 1
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0885": {
     "class": "runnable",
@@ -479,30 +594,34 @@
     "at_10_of_10": true
   },
   "T0887": {
-    "class": "ceiling",
+    "class": "runnable",
     "reason": "No network-observable packet pattern across any supported protocol",
-    "protocols_covered": 0
+    "protocols_covered": 2,
+    "runnable": true,
+    "at_10_of_10": false
   },
   "T0888": {
     "class": "runnable",
     "reason": "",
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "runnable": true
   },
   "T0889": {
     "class": "runnable",
     "precursor": false,
-    "reason": "Network-observable: S7comm upload_req \u2192 modify_ob1 \u2192 modified_ob1_dl program modification sequence.",
+    "reason": "Network-observable: S7comm upload_req → modify_ob1 → modified_ob1_dl program modification sequence.",
     "runnable": true,
     "protocols_covered": 10,
     "at_10_of_10": true
   },
   "T0890": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": true,
-    "reason": "Exploitation for Privilege Escalation \u2014 single OPC UA privilege_escalate scenario",
-    "runnable": false,
-    "protocols_covered": 1
+    "reason": "Exploitation for Privilege Escalation — single OPC UA privilege_escalate scenario",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0891": {
     "class": "runnable",
@@ -510,7 +629,11 @@
     "reason": "Network-observable: S7comm hardcoded_creds and OPC UA activate_hardcoded use extracted factory credentials.",
     "runnable": true,
     "protocols_covered": 10,
-    "at_10_of_10": true
+    "at_10_of_10": true,
+    "v19_id": "T1694.002",
+    "v19_name": "Insecure Credentials: Hardcoded Credentials",
+    "v19_parent": "T1694",
+    "v19_status": "subtechnique"
   },
   "T0892": {
     "class": "runnable",
@@ -521,18 +644,33 @@
     "at_10_of_10": false
   },
   "T0893": {
-    "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "class": "runnable",
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": true,
+    "protocols_covered": 2,
+    "at_10_of_10": false
   },
   "T0894": {
     "class": "host_or_process",
-    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique."
+    "reason": "Primarily host/user/process-centric; ICSForge does not claim network-only execution for this technique.",
+    "runnable": false,
+    "protocols_covered": 0,
+    "at_10_of_10": false
   },
   "T0895": {
-    "class": "ceiling",
+    "class": "runnable",
     "precursor": false,
-    "reason": "Autorun Image \u2014 single S7comm SDB0 download; specialised PLC boot sequence",
+    "reason": "Autorun Image — single S7comm SDB0 download; specialised PLC boot sequence",
     "runnable": true,
-    "protocols_covered": 1
+    "protocols_covered": 2,
+    "at_10_of_10": false
+  },
+  "T0847": {
+    "class": "physical",
+    "precursor": true,
+    "reason": "Replication Through Removable Media — physical USB/disk delivery; not network-observable.",
+    "runnable": false,
+    "protocols_covered": 0,
+    "at_10_of_10": false
   }
 }

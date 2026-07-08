@@ -11,14 +11,74 @@ from icsforge.log import get_logger
 from icsforge.protocols import TCP_PROTOS as PROTO_PAYLOADS
 from icsforge.protocols import UDP_PROTOS as UDP_PAYLOADS
 from icsforge.protocols import iec61850, profinet_dcp
-from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet, _src_mac_from_ip, _resolve_dst_mac
+from icsforge.protocols.common import (
+    TCPFlow,
+    _resolve_dst_mac,
+    _src_mac_from_ip,
+    ether_frame,
+    tcp_packet,
+    udp_packet,
+)
+
+_SCENARIO_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
 def load_scenarios(scenario_path: str) -> dict[str, Any]:
+    # Use libyaml's C loader when available — it parses the ~700 KB scenarios
+    # file roughly 8x faster than the pure-Python SafeLoader (≈0.2s vs ≈1.5s),
+    # which matters because every generate/send invocation loads it. Falls back
+    # to the pure-Python loader if libyaml isn't built in.
+    #
+    # In-process cache keyed on (path, mtime): the catalog is parsed at most once
+    # per process for a given file, and automatically re-parsed if the file
+    # changes on disk. This removes repeated full-catalog parsing when many
+    # operations run in one process (test suites, batch generation, the web app),
+    # while staying correct for live edits.
+    try:
+        mtime = os.path.getmtime(scenario_path)
+        cached = _SCENARIO_CACHE.get(scenario_path)
+        if cached is not None and cached[0] == mtime:
+            return cached[1]
+    except OSError:
+        mtime = None
+
+    _Loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
     with open(scenario_path, encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+        data = yaml.load(f, Loader=_Loader) or {}
+
+    if mtime is not None:
+        _SCENARIO_CACHE[scenario_path] = (mtime, data)
+    return data
 
 log = get_logger(__name__)
+
+
+def profile_defaults(profile: str) -> dict[str, Any]:
+    """Map a test profile to its generation/transport defaults.
+
+    Profiles encode operator *intent*; they set safe defaults and how results
+    are framed — they never fabricate device responses (the receiver is a safe
+    sinkhole, not a simulated device).
+
+      firewall (default) — boundary/ACL test. Sender sits in IT or another OT
+          zone; the receiver is a safe sinkhole. The question is purely whether
+          sender->receiver traffic *arrives* (a misconfigured rule let it
+          through). Unidirectional by design: no handshake assumption, because a
+          firewall that permits the forward flow may still block the return.
+      nsm — sensor test. The path is known-open; the question is whether the NSM
+          *alarms* on the behaviour. Completing the TCP handshake helps stream-
+          tracking sensors engage, so the offline pcap defaults to stateful, and
+          the witnessed receipt is paired with the expected technique/alert for
+          diffing against what the NSM fired.
+
+    Returns a dict of defaults; callers apply them only where the user has not
+    set an explicit override.
+    """
+    p = (profile or "firewall").strip().lower()
+    if p == "nsm":
+        return {"stateful": True}
+    # firewall (and any unknown value) -> conservative, unidirectional
+    return {"stateful": False}
 
 
 def run_scenario(
@@ -31,13 +91,24 @@ def run_scenario(
     build_pcap: bool = True,
     skip_intervals: bool = False,
     no_marker: bool = False,
+    explicit_marker: bool = False,
     resolve_mac: bool = False,
+    stateful: bool = False,
 ) -> dict[str, Any]:
     """Offline scenario runner.
 
     Produces:
     - Ground-truth events JSONL (always)
     - PCAP (optional) with per-step correlation markers embedded in payloads
+
+    Marker modes:
+    - default (covert/stego): the run marker is woven into genuinely-arbitrary
+      protocol fields (Modbus transaction ID, ENIP sender context, S7 PDU ref,
+      etc.) for zero added bytes and realistic traffic. Detection uses a
+      Layer-1 band pre-filter plus Layer-2 receiver HMAC verification.
+    - explicit_marker=True: embed the compact 13-byte 'ICSF<code><hash>'
+      string in the payload so Layer-1 detection works without a receiver.
+    - no_marker=True: stealth, no marker at all (registry-only attribution).
 
     NOTE: Live sending is handled by icsforge.live.sender; this runner is for
     offline generation and evidence artifacts.
@@ -92,6 +163,7 @@ def run_scenario(
     _s7_pdu_ref:  int = _rnd_eng.randint(1, 0xFFFF)        # S7comm PDU reference
     _modbus_tid:  int = _rnd_eng.randint(0, 0xFFFF)        # Modbus transaction ID
     _bacnet_inv:  int = _rnd_eng.randint(0, 255)           # BACnet invoke ID
+    _pkt_index:   int = 0                                  # global packet index (covert marker HMAC input)
 
     with open(events_path, "w", encoding="utf-8") as ef:
         for idx, step in enumerate((sc.get("steps") or []), start=1):
@@ -161,9 +233,30 @@ def run_scenario(
                         log.warning("PCAP skipped for step %d: unknown proto '%s' (events already written)", idx, proto)
                     elif pb:
                         dport, payload_builder = pb
+                        # Stateful mode: wrap this step's segments in a real TCP
+                        # conversation (handshake → data+ACK → teardown). Default
+                        # stays the stateless single-PSH/ACK model.
+                        _flow = None
+                        if stateful:
+                            # Fresh ephemeral source port per connection (a real
+                            # client would not reuse the same port for a new
+                            # session); keeps each flow a clean, independent
+                            # conversation in the trace.
+                            _flow = TCPFlow(src_ip, dst_ip, _tcp_sport, dport,
+                                            client_isn=_tcp_seq,
+                                            dst_mac=_dst_mac_bytes, proto=proto)
+                            packets.extend(_flow.handshake())
+                            _tcp_sport = 49152 + ((_tcp_sport - 49152 + 1) % 16383)
                         for _ in range(count):
                             marker = b'' if no_marker else build_marker(run_id, tech, step_id)
                             _pkt_opts = {**options}
+                            # Marker mode + run identity + per-packet index let the
+                            # builder weave a covert marker into protocol fields.
+                            _pkt_opts["marker_mode"] = (
+                                "none" if no_marker else ("explicit" if explicit_marker else "covert")
+                            )
+                            _pkt_opts["run_marker"] = run_id or "offline"
+                            _pkt_opts["pkt_index"] = _pkt_index
                             if proto == "opcua":
                                 _pkt_opts["sequence_number"] = _opcua_ctx["sequence_number"]
                                 _pkt_opts["request_id"]      = _opcua_ctx["request_id"]
@@ -182,24 +275,39 @@ def run_scenario(
                                 _pkt_opts["modbus_tid"] = _modbus_tid
                                 _modbus_tid = (_modbus_tid + 1) & 0xFFFF
                             _payload = payload_builder(marker, style=style, **_pkt_opts)
-                            packets.append(tcp_packet(src_ip, dst_ip, dport,
-                                _payload, tcp_seq=_tcp_seq,
-                                dst_mac=_dst_mac_bytes, proto=proto,
-                                sport=_tcp_sport))
-                            _tcp_seq = (_tcp_seq + max(len(_payload), 1)) & 0xFFFF_FFFF
+                            if _flow is not None:
+                                packets.extend(_flow.client_data(_payload))
+                            else:
+                                packets.append(tcp_packet(src_ip, dst_ip, dport,
+                                    _payload, tcp_seq=_tcp_seq,
+                                    dst_mac=_dst_mac_bytes, proto=proto,
+                                    sport=_tcp_sport))
+                                _tcp_seq = (_tcp_seq + max(len(_payload), 1)) & 0xFFFF_FFFF
+                            _pkt_index += 1
                             if interval and not skip_intervals:
                                 time.sleep(interval)
+                        if _flow is not None:
+                            packets.extend(_flow.teardown())
+                            # Advance the scenario ISN past this whole flow so a
+                            # subsequent same-tuple step doesn't reuse sequence space.
+                            _tcp_seq = (_flow.cseq + 1) & 0xFFFF_FFFF
                     elif upb:
                         dport, payload_builder = upb
                         for _ in range(count):
                             marker = b'' if no_marker else build_marker(run_id, tech, step_id)
                             _udp_opts = {**options}
+                            _udp_opts["marker_mode"] = (
+                                "none" if no_marker else ("explicit" if explicit_marker else "covert")
+                            )
+                            _udp_opts["run_marker"] = run_id or "offline"
+                            _udp_opts["pkt_index"] = _pkt_index
                             if proto == "bacnet":
                                 _udp_opts["bacnet_invoke_id"] = _bacnet_inv
                                 _bacnet_inv = (_bacnet_inv + 1) & 0xFF
                             packets.append(udp_packet(src_ip, dst_ip, dport,
                                 payload_builder(marker, style=style, **_udp_opts),
                                 dst_mac=_dst_mac_bytes, proto=proto))
+                            _pkt_index += 1
                             if interval and not skip_intervals:
                                 time.sleep(interval)
 

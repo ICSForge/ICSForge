@@ -71,13 +71,16 @@ __all__ = [
 ]
 
 # ATT&CK for ICS matrix data paths (bundled)
-MATRIX_JSON_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ics_attack_matrix.json")
+MATRIX_JSON_PATH     = os.path.join(os.path.dirname(__file__), "..", "data", "ics_attack_matrix.json")
+MATRIX_JSON_PATH_V19 = os.path.join(os.path.dirname(__file__), "..", "data", "ics_attack_matrix_v19.json")
 MATRIX_SINGLETON_PACK = os.path.join(os.path.dirname(__file__), "..", "scenarios", "scenarios.yml")
 
 
-def _load_matrix() -> dict:
+def _load_matrix(version: str = "v18") -> dict:
+    """Load the ATT&CK ICS matrix. version='v18' (default) or 'v19'."""
+    path = MATRIX_JSON_PATH_V19 if version == "v19" else MATRIX_JSON_PATH
     try:
-        return json.loads(Path(MATRIX_JSON_PATH).read_text(encoding="utf-8"))
+        return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"tactics": [], "x_mitre_version": "?"}
 
@@ -104,7 +107,8 @@ def _is_safe_private_ip(ip: str) -> bool:
     Block public/global IPs not in any of the above.
     """
     try:
-        import ipaddress, os
+        import ipaddress
+        import os
         a = ipaddress.ip_address(ip)
         if a.is_loopback or a.is_private or a.is_link_local:
             return True
@@ -275,6 +279,57 @@ def _callback_headers() -> dict:
     return headers
 
 
+def announce_expectation(run_id: str, scenario: str = "", technique: str = "",
+                         steps: int = 1, ttl_sec: float = 300.0,
+                         protos: list | None = None,
+                         test_profile: str = "", expected_alert: str = "") -> dict:
+    """
+    POST a markerless-attribution expectation to the configured receiver
+    BEFORE replaying a scenario. The receiver will then attribute incoming
+    matching-protocol traffic to (run_id, technique) even when the wire
+    bytes carry no marker (IEC-104, --no-marker stealth runs).
+
+    test_profile ("firewall"/"nsm") and expected_alert are recorded on the
+    expectation so witnessed receipts can be framed by intent and diffed
+    against what an NSM fired.
+
+    Returns the receiver's response dict on success, or {} on any failure.
+    Failures are non-fatal — the scenario will still run; it just won't
+    benefit from markerless attribution.
+    """
+    if not _receiver_ip:
+        return {}
+    import hashlib as _hl
+    import hmac as _hmac
+    import json as _json
+    import urllib.request as _urlreq
+    url = f"http://{_receiver_ip}:{_receiver_port}/api/receiver/expect"
+    body = _json.dumps({
+        "run_id": run_id,
+        "scenario": scenario or "",
+        "technique": technique or "",
+        "steps": int(steps or 1),
+        "ttl_sec": float(ttl_sec or 300.0),
+        "protos": list(protos) if protos else None,
+        "test_profile": test_profile or "",
+        "expected_alert": expected_alert or "",
+    }, ensure_ascii=False).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if _callback_token:
+        headers["X-ICSForge-Callback-Token"] = _callback_token
+        headers["X-ICSForge-HMAC"] = _hmac.new(
+            _callback_token.encode("utf-8"), body, _hl.sha256,
+        ).hexdigest()
+    try:
+        req = _urlreq.Request(url, data=body, headers=headers, method="POST")
+        with _urlreq.urlopen(req, timeout=2.0) as resp:
+            raw = resp.read()
+        return _json.loads(raw.decode("utf-8", "ignore")) if raw else {}
+    except Exception as exc:
+        log.debug("announce_expectation failed for run=%s: %s", run_id, exc)
+        return {}
+
+
 # Load persisted config at module import time
 _load_persisted_config()
 
@@ -294,7 +349,8 @@ def get_webhook_url() -> str | None:
 
 def _is_safe_webhook_url(url: str) -> bool:
     """Validate webhook URL: must be http/https and not a public IP unless ICSFORGE_WEBHOOK_ALLOW_PUBLIC is set."""
-    import urllib.parse as _up, ipaddress as _ip
+    import ipaddress as _ip
+    import urllib.parse as _up
     try:
         p = _up.urlparse(url)
         if p.scheme not in ("http", "https"):

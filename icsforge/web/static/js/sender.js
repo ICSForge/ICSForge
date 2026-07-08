@@ -158,8 +158,8 @@ async function loadHexDump(name, stepIdx){
   $("hex_dump").innerHTML = '<span style="color:#475569">Loading…</span>';
   $("hex_meta").innerHTML = "";
   $("hex_nav").style.display = "none";
-  const stealth = !!(document.getElementById("stealth_mode") && document.getElementById("stealth_mode").checked);
-  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}${stealth?"&no_marker=1":""}&_=${Date.now()}`);
+  const _mm = (document.getElementById("marker_mode") && document.getElementById("marker_mode").value) || "covert";
+  const data = await API(`/api/preview_payload?name=${encodeURIComponent(name)}&step=${stepIdx}&marker_mode=${_mm}&_=${Date.now()}`);
   if(data.error){$("hex_dump").innerHTML=`<span style="color:var(--bad)">${escHtml(data.error)}</span>`;return;}
   const lines = (data.hexdump||"").split("\n").map(line=>{
     const m = line.match(/^([0-9a-f]{4})  ([ 0-9a-f]{47})  (.+)$/);
@@ -315,11 +315,17 @@ async function doSend(offline=false){
     return Object.keys(opts).length ? opts : null;
   }
   const stepOptions = _collectStepOptions();
+  const _stateful = !!($("stateful_mode") && $("stateful_mode").checked);
+  const _mm = ($("marker_mode") && $("marker_mode").value) || "covert";
+  const _noMarker = (_mm === "stealth");
+  const _explicitMarker = (_mm === "explicit");
+  const _profile = ($("test_profile") && $("test_profile").value) || "firewall";
   const payload = offline
-    ? {name:selectedName, dst_ip:dst_ip||$("cfg_receiver_ip").value.trim()||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true, no_marker: !!($("stealth_mode") && $("stealth_mode").checked)}
+    ? {name:selectedName, dst_ip:dst_ip||$("cfg_receiver_ip").value.trim()||"198.51.100.99", src_ip:$("src_ip").value.trim(), build_pcap:true, no_marker:_noMarker, explicit_marker:_explicitMarker, stateful:_stateful, test_profile:_profile}
     : {name:selectedName, dst_ip, src_ip:$("src_ip").value.trim(), iface:$("iface").value.trim(),
        timeout:parseFloat($("timeout").value)||2.0, also_build_pcap:$("pcap").checked,
-       no_marker: !!($("stealth_mode") && $("stealth_mode").checked),
+       no_marker:_noMarker, explicit_marker:_explicitMarker,
+       stateful:_stateful, test_profile:_profile,
        ...(stepOptions ? {step_options: stepOptions} : {})};
   logln(`[${offline?"OFFLINE":"LIVE"}] ${selectedName} → ${dst_ip||"(offline)"}`, "log-info");
   // Launch timeline
@@ -768,17 +774,82 @@ window._senderTlConfirm = tlConfirmStep;
 window._senderGetTlRunId = () => tlRunId;
 window._sender$ = $;
 
-// ── Stealth toggle — INSIDE IIFE so selectedName/loadHexDump are in scope ──
-window.toggleStealth = function() {
-  const cb  = document.getElementById("stealth_mode");
-  const btn = document.getElementById("btn_stealth");
-  const ico = document.getElementById("stealth_icon");
-  if (!cb) return;
-  cb.checked = !cb.checked;
+// ── Marker mode (covert / explicit / stealth) — INSIDE IIFE so selectedName
+//    and loadHexDump are in scope. Default is covert. Changing the mode updates
+//    the segmented control, syncs the legacy stealth_mode checkbox (used by the
+//    timeline badge + confirmation path), and immediately refreshes the live
+//    preview for the selected scenario/step. ────────────────────────────────
+const _MARKER_INFO = {
+  covert: {
+    label: "Covert",
+    accent: "var(--brand2)", tint: "rgba(0,212,255,.10)",
+    desc: "Default. Correlation marker woven into an existing protocol field " +
+          "(e.g. Modbus transaction ID, S7 PDU reference) — zero added bytes, " +
+          "no ASCII signature. Realistic traffic an IDS can't cheat on; the " +
+          "receiver still correlates it back to this run.",
+  },
+  explicit: {
+    label: "Explicit",
+    accent: "var(--brand)", tint: "rgba(240,165,0,.10)",
+    desc: "Embeds a literal 13-byte 'ICSF' tag in the payload. Visible in " +
+          "Wireshark and matchable by a single content rule — useful for " +
+          "offline PCAP detection without a receiver. Obviously synthetic, " +
+          "so not for stealth/realism testing.",
+  },
+  stealth: {
+    label: "Stealth",
+    accent: "var(--bad)", tint: "rgba(255,59,92,.10)",
+    desc: "No marker at all — traffic is bit-for-bit like a real device. " +
+          "Use to test whether detections fire on the attack itself, not on " +
+          "any watermark. Correlation then relies on the receiver expectation " +
+          "registry / timing rather than the packet.",
+  },
+};
+
+window.setMarkerMode = function(mode) {
+  if (!_MARKER_INFO[mode]) mode = "covert";
+  const hidden = document.getElementById("marker_mode");
+  if (hidden) hidden.value = mode;
+  // Keep the legacy stealth checkbox in sync (timeline badge + confirm logic).
+  const cb = document.getElementById("stealth_mode");
+  if (cb) cb.checked = (mode === "stealth");
+  // Paint the segmented control.
+  const seg = document.getElementById("marker_seg");
+  if (seg) {
+    seg.querySelectorAll("button[data-mode]").forEach(b => {
+      const info = _MARKER_INFO[b.dataset.mode];
+      const on = (b.dataset.mode === mode);
+      b.style.background = on ? info.tint : "transparent";
+      b.style.color      = on ? info.accent : "var(--muted)";
+      b.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    seg.style.borderColor = _MARKER_INFO[mode].accent;
+  }
+  // Description + help tooltip.
+  const desc = document.getElementById("marker_desc");
+  if (desc) desc.textContent = _MARKER_INFO[mode].desc;
+  const help = document.getElementById("marker_help");
+  if (help) {
+    help.title =
+      "Covert (default): marker hidden in a protocol field, no added bytes.\n" +
+      "Explicit: literal 'ICSF' tag in payload, matchable offline without a receiver.\n" +
+      "Stealth: no marker — realistic traffic; correlation via the receiver registry.";
+  }
+  // Live preview must reflect the new mode immediately.
+  if (selectedName) loadHexDump(selectedName, hexStepIdx || 0);
+};
+
+// ── Stateful TCP toggle — mirrors stealth; uses the accent (info) colour ──
+function _paintStateful(on) {
+  const cb  = document.getElementById("stateful_mode");
+  const btn = document.getElementById("btn_stateful");
+  const ico = document.getElementById("stateful_icon");
+  if (!cb || !btn || !ico) return;
+  cb.checked = !!on;
   if (cb.checked) {
-    btn.style.borderColor = "var(--bad)";
-    btn.style.background  = "rgba(255,59,92,.08)";
-    btn.style.color       = "var(--bad)";
+    btn.style.borderColor = "var(--brand2)";
+    btn.style.background  = "rgba(0,212,255,.08)";
+    btn.style.color       = "var(--brand2)";
     ico.textContent = "●";
   } else {
     btn.style.borderColor = "var(--border)";
@@ -786,9 +857,69 @@ window.toggleStealth = function() {
     btn.style.color       = "var(--muted)";
     ico.textContent = "○";
   }
-  // selectedName and loadHexDump are in scope because this is inside the IIFE
-  if (selectedName) loadHexDump(selectedName, hexStepIdx || 0);
+}
+window.toggleStateful = function() {
+  const cb = document.getElementById("stateful_mode");
+  if (!cb) return;
+  _paintStateful(!cb.checked);
 };
+
+// ── Test profile (Firewall/ACL ⟷ NSM) — sets safe defaults + how results are
+//    framed. NEVER fabricates device responses; the receiver stays a safe sink.
+//    Firewall (default): unidirectional, arrival is the signal. NSM: path
+//    assumed open, defaults the Stateful TCP toggle on so stream sensors engage,
+//    and the receiver pairs the witnessed receipt with the expected technique.
+const _PROFILE_INFO = {
+  firewall: {
+    accent: "var(--brand)", tint: "rgba(240,165,0,.10)",
+    desc: "Boundary / ACL test. Sender sits in IT or another OT zone; the " +
+          "receiver is a safe sinkhole. Unidirectional by design — arrival of " +
+          "any of the 10 protocols means a rule allowed it (a forward-path " +
+          "finding). No return traffic is assumed; a permitted forward flow " +
+          "does not imply the reverse is open.",
+    stateful: false,
+  },
+  nsm: {
+    accent: "var(--brand2)", tint: "rgba(0,212,255,.10)",
+    desc: "Sensor test. The path is assumed open; the question is whether the " +
+          "NSM alarms on the behaviour. Completes the TCP handshake (Stateful " +
+          "TCP defaulted on) so stream-tracking sensors engage, and the " +
+          "receiver pairs each witnessed scenario with its expected ATT&CK " +
+          "technique for diffing against what the sensor fired.",
+    stateful: true,
+  },
+};
+window.setTestProfile = function(profile) {
+  if (!_PROFILE_INFO[profile]) profile = "firewall";
+  const hidden = document.getElementById("test_profile");
+  if (hidden) hidden.value = profile;
+  const seg = document.getElementById("profile_seg");
+  if (seg) {
+    seg.querySelectorAll("button[data-profile]").forEach(b => {
+      const info = _PROFILE_INFO[b.dataset.profile];
+      const on = (b.dataset.profile === profile);
+      b.style.background = on ? info.tint : "transparent";
+      b.style.color      = on ? info.accent : "var(--muted)";
+      b.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    seg.style.borderColor = _PROFILE_INFO[profile].accent;
+  }
+  const desc = document.getElementById("profile_desc");
+  if (desc) desc.textContent = _PROFILE_INFO[profile].desc;
+  const help = document.getElementById("profile_help");
+  if (help) {
+    help.title =
+      "Firewall / ACL (default): unidirectional boundary test; arrival means a rule allowed it.\n" +
+      "NSM: path assumed open; completes the handshake so stream sensors engage and pairs witnessed traffic with the expected technique.\n" +
+      "Neither fabricates device responses — the receiver is a safe sinkhole.";
+  }
+  // Apply the profile's transport default to the Stateful toggle.
+  _paintStateful(_PROFILE_INFO[profile].stateful);
+};
+
+// Initialise controls on load (covert marker, firewall profile).
+try { window.setMarkerMode("covert"); } catch (e) {}
+try { window.setTestProfile("firewall"); } catch (e) {}
 
 })();
 

@@ -1,0 +1,788 @@
+{
+  "enip/list_identity": [
+    "discover",
+    "identify"
+  ],
+  "enip/list_services": [
+    "discover",
+    "identify"
+  ],
+  "enip/list_interfaces": [
+    "discover",
+    "identify"
+  ],
+  "modbus/read_exception_status": [
+    "read"
+  ],
+  "dnp3/delay_measure": [
+    "identify",
+    "probe"
+  ],
+  "opcua/get_endpoints": [
+    "discover",
+    "identify"
+  ],
+  "iec104/testfr": [
+    "probe",
+    "session"
+  ],
+  "mqtt/pingreq": [
+    "discover",
+    "identify"
+  ],
+  "profinet_dcp/hello": [
+    "identify",
+    "session"
+  ],
+  "profinet_dcp/get_name": [
+    "identify",
+    "read"
+  ],
+  "profinet_dcp/get_ip": [
+    "identify",
+    "read"
+  ],
+  "s7comm/setup": [
+    "session"
+  ],
+  "s7comm/cpu_stop": [
+    "block",
+    "mode_change",
+    "operate",
+    "restart",
+    "write"
+  ],
+  "s7comm/cpu_start_cold": [
+    "mode_change",
+    "restart"
+  ],
+  "s7comm/cpu_start_warm": [
+    "mode_change",
+    "restart"
+  ],
+  "s7comm/write_var": [
+    "write"
+  ],
+  "profinet_dcp/identify": [
+    "discover",
+    "identify"
+  ],
+  "enip/register_session": [
+    "session"
+  ],
+  "enip/get_identity": [
+    "discover",
+    "identify"
+  ],
+  "enip/get_device_type": [
+    "identify"
+  ],
+  "opcua/hello": [
+    "identify",
+    "session"
+  ],
+  "opcua/find_servers": [
+    "discover",
+    "identify"
+  ],
+  "s7comm/szl_read": [
+    "read"
+  ],
+  "opcua/open_session": [
+    "session"
+  ],
+  "opcua/browse": [
+    "discover",
+    "identify"
+  ],
+  "opcua/browse_next": [
+    "discover",
+    "identify"
+  ],
+  "opcua/translate_paths": [
+    "browse",
+    "identify"
+  ],
+  "modbus/read_holding": [
+    "read"
+  ],
+  "modbus/read_input": [
+    "read"
+  ],
+  "modbus/read_coils": [
+    "read"
+  ],
+  "modbus/read_discrete": [
+    "read"
+  ],
+  "modbus/exception_probe": [
+    "identify",
+    "probe"
+  ],
+  "dnp3/assign_class": [
+    "config",
+    "identify",
+    "write"
+  ],
+  "dnp3/read": [
+    "flood",
+    "read"
+  ],
+  "iec104/startdt": [
+    "mode_change",
+    "restart"
+  ],
+  "iec104/interrogation": [
+    "discover",
+    "identify",
+    "probe"
+  ],
+  "iec104/meas_sp": [
+    "spoof",
+    "write"
+  ],
+  "iec104/meas_mv": [
+    "spoof",
+    "write"
+  ],
+  "opcua/create_sub": [
+    "read",
+    "session"
+  ],
+  "opcua/publish": [
+    "read"
+  ],
+  "modbus/get_comm_event_counter": [
+    "identify",
+    "read"
+  ],
+  "opcua/read_history": [
+    "read"
+  ],
+  "s7comm/read_db": [
+    "read"
+  ],
+  "opcua/activate_session": [
+    "session"
+  ],
+  "modbus/write_single_register": [
+    "write"
+  ],
+  "modbus/write_multiple_registers": [
+    "write"
+  ],
+  "dnp3/select": [
+    "write"
+  ],
+  "dnp3/operate": [
+    "operate",
+    "write"
+  ],
+  "iec104/single_command": [
+    "operate",
+    "write"
+  ],
+  "iec104/double_command": [
+    "operate",
+    "write"
+  ],
+  "modbus/write_single_coil": [
+    "write"
+  ],
+  "dnp3/direct_operate": [
+    "operate",
+    "write"
+  ],
+  "dnp3/direct_operate_nr": [
+    "operate",
+    "write"
+  ],
+  "iec104/setpoint_float": [
+    "write"
+  ],
+  "s7comm/read_outputs": [
+    "read"
+  ],
+  "s7comm/write_outputs": [
+    "write"
+  ],
+  "modbus/mask_write_register": [
+    "write"
+  ],
+  "iec104/regulating_step": [
+    "operate",
+    "write"
+  ],
+  "opcua/read_value": [
+    "read"
+  ],
+  "opcua/write_value": [
+    "write"
+  ],
+  "s7comm/write_db": [
+    "write"
+  ],
+  "enip/get_param": [
+    "identify",
+    "read"
+  ],
+  "enip/set_param": [
+    "write"
+  ],
+  "modbus/brute_force_write": [
+    "write"
+  ],
+  "modbus/write_multiple_coils": [
+    "write"
+  ],
+  "iec104/stopdt": [
+    "mode_change",
+    "restart"
+  ],
+  "dnp3/disable_unsolicited": [
+    "block",
+    "config",
+    "write"
+  ],
+  "opcua/delete_sub": [
+    "delete",
+    "write"
+  ],
+  "iec104/inhibit_alarm": [
+    "block",
+    "config",
+    "write"
+  ],
+  "modbus/dos_read": [
+    "flood",
+    "read"
+  ],
+  "enip/reset_device": [
+    "delete",
+    "mode_change",
+    "operate",
+    "restart",
+    "write"
+  ],
+  "enip/stop_device": [
+    "mode_change",
+    "operate",
+    "restart",
+    "write"
+  ],
+  "modbus/read_write_multiple": [
+    "read",
+    "write"
+  ],
+  "modbus/diagnostic": [
+    "block",
+    "identify",
+    "mode_change",
+    "probe",
+    "restart"
+  ],
+  "profinet_dcp/set_name": [
+    "config",
+    "write"
+  ],
+  "profinet_dcp/set_ip": [
+    "config",
+    "write"
+  ],
+  "iec104/clock_sync": [
+    "config",
+    "write"
+  ],
+  "s7comm/download_req": [
+    "session",
+    "write"
+  ],
+  "s7comm/download_block": [
+    "upload",
+    "write"
+  ],
+  "s7comm/download_end": [
+    "session"
+  ],
+  "s7comm/upload_req": [
+    "upload"
+  ],
+  "s7comm/upload_block": [
+    "read",
+    "upload"
+  ],
+  "s7comm/upload_end": [
+    "session"
+  ],
+  "opcua/call_method": [
+    "method",
+    "operate",
+    "write"
+  ],
+  "modbus/safety_write": [
+    "write"
+  ],
+  "opcua/close_session": [
+    "block",
+    "session",
+    "write"
+  ],
+  "s7comm/firmware_module": [
+    "firmware"
+  ],
+  "s7comm/firmware_full": [
+    "firmware"
+  ],
+  "enip/firmware_update": [
+    "firmware"
+  ],
+  "enip/boot_firmware": [
+    "firmware",
+    "write"
+  ],
+  "dnp3/broadcast_operate": [
+    "operate",
+    "write"
+  ],
+  "modbus/channel_flood": [
+    "flood"
+  ],
+  "dnp3/clear_events": [
+    "delete",
+    "write"
+  ],
+  "dnp3/file_open": [
+    "read",
+    "session"
+  ],
+  "s7comm/zero_db": [
+    "delete",
+    "write"
+  ],
+  "s7comm/szl_clear": [
+    "delete",
+    "write"
+  ],
+  "opcua/history_read": [
+    "read"
+  ],
+  "s7comm/read_all_dbs": [
+    "read"
+  ],
+  "s7comm/default_creds": [
+    "auth",
+    "session"
+  ],
+  "opcua/activate_default": [
+    "auth",
+    "session"
+  ],
+  "modbus/default_creds_probe": [
+    "auth",
+    "session"
+  ],
+  "enip/default_auth": [
+    "auth",
+    "session"
+  ],
+  "s7comm/malformed_param": [
+    "malformed"
+  ],
+  "opcua/malformed_browse": [
+    "discover",
+    "identify",
+    "malformed"
+  ],
+  "enip/malformed_ucmm": [
+    "malformed"
+  ],
+  "iec104/setpoint_scale": [
+    "write"
+  ],
+  "opcua/relay_session": [
+    "session"
+  ],
+  "dnp3/spoof_response": [
+    "spoof",
+    "write"
+  ],
+  "s7comm/native_cotp": [
+    "session"
+  ],
+  "modbus/input_write": [
+    "write"
+  ],
+  "s7comm/read_inputs": [
+    "read"
+  ],
+  "s7comm/write_inputs": [
+    "write"
+  ],
+  "modbus/protection_relay": [
+    "config",
+    "write"
+  ],
+  "modbus/alarm_threshold": [
+    "write"
+  ],
+  "opcua/write_alarm_node": [
+    "write"
+  ],
+  "iec104/param_threshold": [
+    "write"
+  ],
+  "iec104/param_mv": [
+    "config",
+    "write"
+  ],
+  "iec104/meas_inject": [
+    "spoof",
+    "write"
+  ],
+  "opcua/spoof_value": [
+    "spoof",
+    "write"
+  ],
+  "s7comm/program_mode": [
+    "mode_change"
+  ],
+  "dnp3/warm_restart": [
+    "mode_change",
+    "restart"
+  ],
+  "dnp3/cold_restart": [
+    "mode_change",
+    "restart"
+  ],
+  "s7comm/tool_transfer_db": [
+    "upload",
+    "write"
+  ],
+  "enip/tool_transfer": [
+    "upload",
+    "write"
+  ],
+  "modbus/c2_beacon": [
+    "session",
+    "write"
+  ],
+  "enip/c2_beacon": [
+    "session",
+    "write"
+  ],
+  "opcua/c2_write": [
+    "write"
+  ],
+  "enip/assembly_read": [
+    "read"
+  ],
+  "enip/read_tag": [
+    "read"
+  ],
+  "modbus/io_image_read": [
+    "read"
+  ],
+  "modbus/sis_disable": [
+    "block",
+    "config",
+    "write"
+  ],
+  "s7comm/write_failsafe": [
+    "write"
+  ],
+  "s7comm/lateral_pivot": [
+    "session",
+    "write"
+  ],
+  "s7comm/modify_ob1": [
+    "firmware",
+    "write"
+  ],
+  "s7comm/modified_ob1_dl": [
+    "firmware",
+    "write"
+  ],
+  "opcua/privilege_escalate": [
+    "auth",
+    "write"
+  ],
+  "s7comm/hardcoded_creds": [
+    "auth",
+    "session"
+  ],
+  "opcua/activate_hardcoded": [
+    "auth",
+    "session"
+  ],
+  "modbus/credential_write": [
+    "write"
+  ],
+  "opcua/change_password": [
+    "auth",
+    "session"
+  ],
+  "s7comm/download_sdb0": [
+    "upload",
+    "write"
+  ],
+  "bacnet/who_is": [
+    "discover",
+    "identify"
+  ],
+  "bacnet/read_property_multi": [
+    "read"
+  ],
+  "bacnet/who_has": [
+    "discover",
+    "identify"
+  ],
+  "bacnet/read_property": [
+    "read"
+  ],
+  "bacnet/subscribe_cov": [
+    "read"
+  ],
+  "bacnet/read_file": [
+    "read"
+  ],
+  "bacnet/write_property": [
+    "write"
+  ],
+  "bacnet/write_property_multi": [
+    "write"
+  ],
+  "bacnet/reinitialize_device": [
+    "mode_change",
+    "restart"
+  ],
+  "bacnet/device_comm_control": [
+    "block",
+    "mode_change",
+    "write"
+  ],
+  "bacnet/write_file": [
+    "write"
+  ],
+  "bacnet/i_am": [
+    "identify",
+    "spoof"
+  ],
+  "bacnet/time_sync": [
+    "config",
+    "write"
+  ],
+  "bacnet/private_transfer": [
+    "write"
+  ],
+  "bacnet/create_object": [
+    "config",
+    "write"
+  ],
+  "bacnet/delete_object": [
+    "delete",
+    "write"
+  ],
+  "mqtt/auto": [
+    "identify",
+    "session"
+  ],
+  "mqtt/connect_creds": [
+    "auth",
+    "session"
+  ],
+  "mqtt/publish_setpoint": [
+    "write"
+  ],
+  "mqtt/publish_firmware": [
+    "firmware",
+    "upload",
+    "write"
+  ],
+  "mqtt/publish_config": [
+    "config",
+    "write"
+  ],
+  "mqtt/subscribe_all": [
+    "read"
+  ],
+  "mqtt/disconnect": [
+    "block",
+    "session"
+  ],
+  "mqtt/connect_anonymous": [
+    "auth",
+    "session"
+  ],
+  "mqtt/publish_command": [
+    "operate",
+    "write"
+  ],
+  "mqtt/subscribe_telemetry": [
+    "read"
+  ],
+  "mqtt/publish_telemetry": [
+    "spoof",
+    "write"
+  ],
+  "mqtt/subscribe_commands": [
+    "read"
+  ],
+  "mqtt/publish_alarm": [
+    "spoof",
+    "write"
+  ],
+  "mqtt/unsubscribe": [
+    "block",
+    "write"
+  ],
+  "mqtt/publish_dos": [
+    "flood",
+    "write"
+  ],
+  "mqtt/will_message": [
+    "session",
+    "write"
+  ],
+  "iec61850/trip_inject": [
+    "operate",
+    "spoof",
+    "write"
+  ],
+  "iec61850/spoof_measurement": [
+    "spoof",
+    "write"
+  ],
+  "iec61850/protection_block": [
+    "block",
+    "mode_change",
+    "write"
+  ],
+  "iec61850/relay_inject": [
+    "spoof",
+    "write"
+  ],
+  "profinet_dcp/factory_reset": [
+    "delete",
+    "mode_change",
+    "operate",
+    "restart",
+    "write"
+  ],
+  "modbus/report_block": [
+    "identify",
+    "read"
+  ],
+  "modbus/coil_sweep": [
+    "discover",
+    "identify"
+  ],
+  "s7comm/read_var": [
+    "read"
+  ],
+  "enip/write_tag": [
+    "write"
+  ],
+  "dnp3/read_class1": [
+    "read"
+  ],
+  "dnp3/read_analog": [
+    "read"
+  ],
+  "dnp3/read_counter": [
+    "read"
+  ],
+  "dnp3/write": [
+    "write"
+  ],
+  "enip/send_rr_data": [
+    "session",
+    "write"
+  ],
+  "iec104/counter_interr": [
+    "identify",
+    "read"
+  ],
+  "profinet_dcp/identify_unicast": [
+    "discover",
+    "identify"
+  ],
+  "iec61850/enumerate_ied": [
+    "discover",
+    "identify"
+  ],
+  "iec104/available": [
+    "identify",
+    "session"
+  ],
+  "iec104/clock_inject": [
+    "spoof",
+    "write"
+  ],
+  "iec104/block_cmd": [
+    "block",
+    "mode_change",
+    "write"
+  ],
+  "enip/unregister_session": [
+    "block",
+    "session",
+    "write"
+  ],
+  "modbus/zero_all": [
+    "delete",
+    "write"
+  ],
+  "iec104/reset_process": [
+    "mode_change",
+    "restart"
+  ],
+  "opcua/file_read": [
+    "read"
+  ],
+  "enip/start_device": [
+    "mode_change"
+  ],
+  "opcua/write_large_blob": [
+    "write"
+  ],
+  "enip/reset_safe": [
+    "mode_change",
+    "restart"
+  ],
+  "dnp3/authenticate_req": [
+    "auth",
+    "session"
+  ],
+  "dnp3/default_auth_bypass": [
+    "auth",
+    "session"
+  ],
+  "iec104/counter_reset": [
+    "mode_change",
+    "restart"
+  ],
+  "opcua/native_raw": [
+    "write"
+  ],
+  "opcua/call_script": [
+    "method",
+    "write"
+  ],
+  "iec104/protection_cmd": [
+    "operate",
+    "write"
+  ],
+  "dnp3/warm_restart2": [
+    "mode_change",
+    "restart"
+  ],
+  "profinet_dcp/dcp_identify_multicast": [
+    "discover",
+    "identify"
+  ],
+  "enip/forward_close": [
+    "block",
+    "session",
+    "write"
+  ]
+}

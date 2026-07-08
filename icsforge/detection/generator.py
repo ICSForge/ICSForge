@@ -38,7 +38,34 @@ from typing import Any
 from icsforge import __version__
 
 _SPECS_PATH = Path(__file__).parent.parent / "data" / "detection_rules_specs.json"
-_MARKER_HEX = "49 43 53 46 4F 52 47 45 5F 53 59 4E 54 48 7C"  # ICSFORGE_SYNTH|
+
+# ── Tier-1 covert marker detection (v0.74.0) ─────────────────────────────
+# The synthetic-traffic marker is no longer an explicit ICSFORGE_SYNTH string
+# in the payload. It is woven into genuinely-arbitrary protocol fields whose
+# high-order byte is forced into a reserved synthetic band (0xF7) — see
+# icsforge/protocols/covert_marker.py. The Tier-1 (Layer-1) Suricata rule is a
+# cheap pre-filter that matches that band byte at the field's exact offset.
+# It deliberately is NOT zero-FP on its own (~1/256 per packet); the receiver
+# performs Layer-2 HMAC verification for the authoritative zero-FP guarantee.
+#
+# Per-protocol covert-field offset within the L7 (TCP/UDP) payload:
+#   modbus  : transaction-ID high byte           @ offset 0
+#   s7comm  : PDU-reference high byte             @ offset 11 (TPKT4+COTP3+S7hdr)
+#   enip    : Sender Context first byte           @ offset 12 (encap header)
+#   opcua   : RequestHandle first byte (MSG body) @ offset 41
+#   bacnet  : Invoke ID (confirmed-request APDU)  @ offset 8
+# mqtt carries the marker as a compact hex suffix on the client_id string;
+# dnp3 uses the explicit 13-byte 'ICSF'+code+hash marker (fits one CRC chunk).
+_SYNTH_BAND_HEX = "F7"
+_COVERT_OFFSET = {
+    "modbus": 0,
+    "s7comm": 11,
+    "enip": 12,
+    "opcua": 41,
+    "bacnet": 8,
+}
+# Explicit-marker mode (and DNP3 always) match the compact 'ICSF' magic.
+_MARKER_ICSF_HEX = "49 43 53 46"  # 'ICSF'
 _SID_BASE = 9_800_000
 
 # ── Protocol semantic constants ─────────────────────────────────────────────
@@ -116,16 +143,32 @@ _PROTO_MAGIC = {
     },
     "bacnet": {
         "port": 47808, "transport": "udp",
-        "magic": "81 0A", "magic_offset": 0, "magic_depth": 2,
-        "magic_label": "BACnet/IP BVLC Header (0x81 0x0A)",
+        # Magic is just 0x81 (BVLL Type for BACnet/IP) — covers both
+        # 81 0A (Original-Unicast-NPDU) and 81 0B (Original-Broadcast-NPDU)
+        # which differ only in the BVLC function byte. Using a 1-byte
+        # magic match keeps the rules simple while covering both frame
+        # types. BACnet/IP traffic on UDP/47808 always starts with 0x81.
+        "magic": "81", "magic_offset": 0, "magic_depth": 1,
+        "magic_label": "BACnet/IP BVLL Type (0x81)",
         "fc_offset": 7, "fc_depth": 8,
         "function_codes": {
-            "0C": "readProperty", "0E": "readPropertyConditional",
-            "0F": "writeProperty", "10": "writePropertyMultiple",
-            "1A": "subscribeCOV", "1C": "deviceCommunicationControl",
-            "12": "reinitializeDevice", "0A": "createObject",
-            "0B": "deleteObject", "09": "atomicWriteFile",
-            "07": "atomicReadFile",
+            # Confirmed services (APDU type 0) — these are at byte 9 in real
+            # confirmed-request frames; the wider depth=8 window catches them.
+            "06": "atomicReadFile",
+            "07": "atomicWriteFile",  # also matches who-Has unconfirmed (overlap)
+            "0A": "createObject",
+            "0B": "deleteObject",
+            "0C": "readProperty",
+            "0E": "readPropertyMultiple",
+            "0F": "writeProperty",
+            "10": "writePropertyMultiple",
+            "05": "subscribeCOV",
+            "11": "deviceCommunicationControl",
+            "12": "confirmedPrivateTransfer",
+            "14": "reinitializeDevice",
+            # Unconfirmed services (APDU type 1) — at byte 7
+            "00": "i-Am or timeSync",
+            "08": "who-Is",
         },
     },
     "enip": {
@@ -135,8 +178,31 @@ _PROTO_MAGIC = {
         "fc_offset": 0, "fc_depth": 2,
         "function_codes": {
             "63 00": "ListIdentity", "64 00": "ListInterfaces",
+            "04 00": "ListServices",
             "65 00": "RegisterSession", "66 00": "UnRegisterSession",
-            "70 00": "SendUnitData",
+            "6f 00": "SendRRData", "70 00": "SendUnitData",
+        },
+        # CIP service codes carried inside the SendRRData (6f 00) CPF
+        # unconnected-data item (b2 00 <len:2> <service>). Matching these
+        # gives a true semantic (operation-level) match rather than only the
+        # encapsulation command word — a Write (0x4D) is meaningfully different
+        # from a Read (0x4C). The service byte sits 4 bytes after the CPF data
+        # item marker `b2 00`, matched via content+distance below.
+        "cip_services": {
+            "4c": "CIP ReadTag (0x4C)",
+            "4d": "CIP WriteTag (0x4D)",
+            "4e": "CIP ReadModifyWrite (0x4E)",
+            "52": "CIP UnconnectedSend (0x52)",
+            "53": "CIP MultipleServicePacket (0x53)",
+            "01": "CIP GetAttributesAll (0x01)",
+            "02": "CIP SetAttributesAll (0x02)",
+            "0e": "CIP GetAttributeSingle (0x0E)",
+            "10": "CIP SetAttributeSingle (0x10)",
+            "05": "CIP Reset (0x05)",
+            "06": "CIP Start (0x06)",
+            "07": "CIP Stop (0x07)",
+            "4b": "CIP ExecutePCCC (0x4B)",
+            "54": "CIP ForwardOpen (0x54)",
         },
     },
     "opcua": {
@@ -239,28 +305,41 @@ _STYLE_FC: dict[str, dict[str, str]] = {
         "unsubscribe": "A2", "pingreq": "C0", "disconnect": "E0",
     },
     "bacnet": {
-        "read_property": "0C", "read_property_multi": "0E",
-        "write_property": "0F", "write_property_multi": "10",
-        "subscribe_cov": "1A", "device_comm_control": "1C",
-        "reinitialize_device": "12",
-        "create_object": "0A", "delete_object": "0B",
-        "read_file": "07", "write_file": "09",
-        "who_is": "1A", "who_has": "1C",
-        "time_sync": "1A", "private_transfer": "1A",
+        # Confirmed services (APDU type 0) — service choice at byte 9 of UDP payload
+        "read_property": "0C",            # readProperty
+        "read_property_multi": "0E",      # readPropertyMultiple
+        "write_property": "0F",            # writeProperty
+        "write_property_multi": "10",      # writePropertyMultiple
+        "subscribe_cov": "05",             # subscribeCOV (was incorrectly 1A)
+        "device_comm_control": "11",       # deviceCommunicationControl (was 1C)
+        "reinitialize_device": "14",       # reinitializeDevice (was 12)
+        "create_object": "0A",             # createObject
+        "delete_object": "0B",             # deleteObject
+        "read_file": "06",                 # atomicReadFile (was 07)
+        "write_file": "07",                # atomicWriteFile (was 09)
+        "private_transfer": "12",          # confirmedPrivateTransfer (was 1A)
+        # Unconfirmed services (APDU type 1) — service choice at byte 7 of UDP payload
+        # Both byte positions (7 and 9) fall within the existing fc_offset:7
+        # depth:8 search window in _PROTO_MAGIC, so a single FC byte match works.
+        "who_is": "08",                    # whoIs (was incorrectly 1A)
+        "who_has": "07",                   # whoHas (was 1C)
+        "i_am": "00",                      # iAm
+        "time_sync": "00",                 # timeSynchronization shares iAm shape currently
     },
     "enip": {
-        "list_identity": "63 00", "list_services": "64 00",
+        "list_identity": "63 00", "list_services": "04 00",
         "list_interfaces": "64 00",
         "register_session": "65 00", "unregister_session": "66 00",
         "get_identity": "65 00", "get_device_type": "65 00",
         "get_param": "65 00", "set_param": "65 00",
-        "read_tag": "65 00", "write_tag": "65 00",
-        "start_device": "65 00", "stop_device": "65 00",
-        "reset_device": "65 00", "reset_safe": "65 00",
-        "firmware_update": "65 00", "boot_firmware": "65 00",
-        "tool_transfer": "65 00", "malformed_ucmm": "65 00",
-        "assembly_read": "65 00", "default_auth": "65 00",
-        "c2_beacon": "65 00", "send_rr_data": "65 00",
+        "read_tag": "6f 00", "write_tag": "6f 00",
+        "start_device": "6f 00", "stop_device": "6f 00",
+        "reset_device": "6f 00", "reset_safe": "6f 00",
+        "firmware_update": "6f 00", "boot_firmware": "6f 00",
+        "tool_transfer": "6f 00", "malformed_ucmm": "6f 00",
+        "assembly_read": "6f 00", "default_auth": "65 00",
+        "c2_beacon": "6f 00", "send_rr_data": "6f 00",
+        "multicast_sniff": "63 00",
     },
     "opcua": {
         "hello": "48 45 4C 46", "find_servers": "4F 50 4E 46",
@@ -272,6 +351,32 @@ _STYLE_FC: dict[str, dict[str, str]] = {
         "activate_default": "4F 50 4E 46",
         "activate_hardcoded": "4F 50 4E 46",
     },
+    "iec61850": {
+        # GOOSE styles aren't single-byte distinguishable (same APDU shape).
+        # Discriminator is the gocbRef IED-name bytes: "IED1" vs "IED2"
+        # encoded as ASCII appearing early in the GOOSE PDU. The Zeek
+        # signature emitter will use these as `payload /.../` regex bytes.
+        "trip_inject":        "49 45 44 31",  # 'IED1'
+        "spoof_measurement":  "49 45 44 31",
+        "protection_block":   "49 45 44 31",
+        "enumerate_ied":      "49 45 44 31",
+        "relay_inject":       "49 45 44 32",  # 'IED2'
+    },
+}
+
+# ENIP style → CIP service code carried in the SendRRData CPF data item.
+# These give Tier-3 a true operation-level match (Read vs Write vs Reset) instead
+# of only the encapsulation command word. Values mirror what the ENIP builder
+# emits at find(b'\xb2\x00')+4; styles not listed here have no CIP service
+# (pure encapsulation commands like ListIdentity/RegisterSession) and fall back
+# to the encapsulation-word match.
+_STYLE_CIP_SERVICE: dict[str, str] = {
+    "get_identity": "01", "get_device_type": "0e", "get_param": "0e",
+    "set_param": "10", "read_tag": "4c", "write_tag": "4d",
+    "start_device": "06", "stop_device": "07", "reset_device": "05",
+    "reset_safe": "05", "boot_firmware": "05", "tool_transfer": "53",
+    "malformed_ucmm": "01", "assembly_read": "01", "c2_beacon": "10",
+    "send_rr_data": "01",
 }
 
 _TRANSPORT = {
@@ -292,6 +397,153 @@ def _load_specs() -> dict[str, Any]:
     return json.loads(_SPECS_PATH.read_text(encoding="utf-8"))
 
 
+def _zeek_signature(spec: dict, base_id: int) -> list[str]:
+    """Emit Zeek signature-framework rules for L2-only protocols.
+
+    Zeek's signature framework can match L2 traffic via the `eth-proto`
+    keyword — something Suricata 7.x cannot do. We emit one or more
+    signatures per L2 scenario covering:
+
+    - **EtherType match** — basic protocol-presence detection
+    - **Lab-marker match** — payload contains ICSFORGE_SYNTH (Tier 1)
+    - **Per-style payload matches** — distinguishing different scenario
+      styles by their wire-format signatures (Tier 3 equivalent)
+
+    Returns an empty list for IP-based protocols (Suricata is the right
+    tool for those — Zeek emission would just duplicate the work).
+
+    Output format follows Zeek's signature-framework syntax. Users load
+    the resulting `icsforge.sig` file via `zeek -r <pcap> icsforge.sig`
+    or by adding it to their site-policy via `redef signature_files`.
+
+    Returns:
+        List of Zeek signature blocks (each is a multi-line string ready
+        to be joined with newlines into a .sig file).
+    """
+    proto = spec["proto"]
+    pm = _PROTO_MAGIC.get(proto, {})
+    if pm.get("transport") != "l2":
+        return []  # Suricata handles IP-based protocols
+
+    tech = spec["technique"]
+    sc_id = spec["id"]
+    style_fcs = _STYLE_FC.get(proto, {})
+
+    # EtherType per protocol (canonical IEEE 802.1Q codes)
+    ETHERTYPE = {
+        "iec61850":     0x88B8,  # GOOSE
+        "profinet_dcp": 0x8892,  # PROFINET DCP / context-data
+    }
+    eth_proto = ETHERTYPE.get(proto)
+    if eth_proto is None:
+        return []
+
+    rules = []
+
+    def _ascii(s: str) -> str:
+        """Replace Unicode dashes etc. with ASCII for Zeek compatibility."""
+        return (
+            s.replace("\u2013", "-")  # en-dash
+             .replace("\u2014", "-")  # em-dash
+             .replace("\u2018", "'").replace("\u2019", "'")
+             .replace("\u201C", '"').replace("\u201D", '"')
+             .encode("ascii", "ignore").decode("ascii")
+        )
+
+    # Tier 1 / lab marker — fires when ICSForge marker is present in payload
+    sig_id = f"icsforge-{sc_id.lower().replace('__', '-').replace('_', '-')}-lab"
+    msg = _ascii(_clean_msg(
+        f"ICSForge LAB-MARKER {tech} {spec['tech_name']} "
+        f"[{spec['proto_label']}] {spec['title']}"
+    ))
+    rules.append(
+        f"# {sc_id} - Tier 1 (lab marker)\n"
+        f"# v0.74.0: covert marker rides in protocol fields (0x{_SYNTH_BAND_HEX} synthetic\n"
+        f"# band); in explicit-marker mode the compact 'ICSF' magic appears in payload.\n"
+        f"signature {sig_id} {{\n"
+        f"    eth-proto == 0x{eth_proto:04X}\n"
+        f"    payload /.*ICSF/\n"
+        f"    event \"{msg}\"\n"
+        f"}}"
+    )
+
+    # Tier 2 / heuristic — EtherType match (always fires, like protocol-presence)
+    sig_id_h = f"icsforge-{sc_id.lower().replace('__', '-').replace('_', '-')}-heur"
+    msg_h = _ascii(_clean_msg(
+        f"ICSForge HEURISTIC {tech} {spec['tech_name']} "
+        f"[{spec['proto_label']}] {pm.get('magic_label', proto)}"
+    ))
+    rules.append(
+        f"# {sc_id} - Tier 2 (EtherType heuristic)\n"
+        f"signature {sig_id_h} {{\n"
+        f"    eth-proto == 0x{eth_proto:04X}\n"
+        f"    event \"{msg_h}\"\n"
+        f"}}"
+    )
+
+    # Tier 3 / semantic — per-style frame-id / service-id match
+    seen_styles: set[str] = set()
+    for style in spec.get("styles", []):
+        if style in seen_styles:
+            continue
+        seen_styles.add(style)
+        fc = style_fcs.get(style)
+        if not fc:
+            continue
+        sig_id_s = (
+            f"icsforge-{sc_id.lower().replace('__', '-').replace('_', '-')}"
+            f"-sem-{style.lower().replace('_', '-')}"
+        )
+        msg_s = _ascii(_clean_msg(
+            f"ICSForge SEMANTIC {tech} {spec['tech_name']} "
+            f"[{spec['proto_label']}] {style}"
+        ))
+        # Build a bytewise payload regex from the FC hex string
+        fc_bytes = fc.replace(" ", "").lower()
+        payload_re = "".join(f"\\x{fc_bytes[i:i+2]}" for i in range(0, len(fc_bytes), 2))
+        rules.append(
+            f"# {sc_id} - Tier 3 ({style} semantic)\n"
+            f"signature {sig_id_s} {{\n"
+            f"    eth-proto == 0x{eth_proto:04X}\n"
+            f"    payload /.*{payload_re}/\n"
+            f"    event \"{msg_s}\"\n"
+            f"}}"
+        )
+    return rules
+
+
+def _zeek_header() -> str:
+    """File header preamble for the generated icsforge.sig file."""
+    return (
+        "# ICSForge L2 detection signatures for Zeek\n"
+        "#\n"
+        "# Auto-generated by `icsforge detections export --zeek`.\n"
+        "# Do not edit by hand - re-run the generator instead.\n"
+        "#\n"
+        "# Coverage: IEC 61850 GOOSE (EtherType 0x88B8) and PROFINET DCP\n"
+        "# (EtherType 0x8892). Both are L2-only protocols that Suricata 7.x\n"
+        "# cannot match (no rule-protocol for L2 in the detect engine).\n"
+        "# Zeek's signature framework supports `eth-proto` and bytewise\n"
+        "# `payload` matching, which is exactly what L2 detection needs.\n"
+        "#\n"
+        "# Deployment:\n"
+        "#   1. Copy this file into your Zeek site policy directory.\n"
+        "#   2. Either pass it on the CLI:\n"
+        "#        zeek -r capture.pcap /path/to/icsforge.sig\n"
+        "#      or add to local.zeek:\n"
+        "#        redef signature_files += \"icsforge\";\n"
+        "#   3. Notices appear in notice.log.\n"
+        "#\n"
+        f"# Generated: {date.today().isoformat()}\n"
+        "#\n"
+        "# Tier structure (match Suricata):\n"
+        "#   *-lab     Tier 1 - ICSForge marker bytes present (zero FP)\n"
+        "#   *-heur    Tier 2 - EtherType match (protocol-presence)\n"
+        "#   *-sem-*   Tier 3 - Per-style payload pattern (function code)\n"
+        "\n"
+    )
+
+
 def _hex_str(raw: str) -> str:
     clean = raw.replace(" ", "").upper()
     return "|" + " ".join(clean[i:i+2] for i in range(0, len(clean), 2)) + "|"
@@ -308,51 +560,169 @@ def _sigma_id(sc_id: str) -> str:
 
 # ── Suricata tier builders ─────────────────────────────────────────────────────
 
-def _tier1_marker(spec: dict, sid: int) -> str:
-    transport = _TRANSPORT.get(spec["proto"], "tcp")
+def _tier1_marker(spec: dict, sid: int) -> str | None:
+    proto = spec["proto"]
+    pm = _PROTO_MAGIC.get(proto, {})
+    # L2-only protocols (PROFINET DCP, IEC 61850 GOOSE) cannot be matched
+    # by Suricata 7.x — Suricata's detect engine requires IP packets.
+    # We emit no Suricata rule here; detection for these protocols belongs
+    # in Zeek (which has L2 protocol parsers) or custom tooling. The Sigma
+    # rules emitted alongside are engine-neutral and can be consumed there.
+    if pm.get("transport") == "l2":
+        return None
+    transport = _TRANSPORT.get(proto, "tcp")
     port = spec["port"] or "any"
     tech = spec["technique"]
     msg = _clean_msg(
         f"ICSForge LAB-MARKER {tech} {spec['tech_name']} "
         f"[{spec['proto_label']}] {spec['title']}"
     )
+
+    # Build the content match for the covert marker (v0.74.0).
+    #  * Band protocols: match the 0xF7 synthetic-band byte at the covert
+    #    field's exact offset (Layer-1 pre-filter; receiver does Layer-2 HMAC).
+    #  * DNP3 (always) and explicit-marker mode: match the 'ICSF' magic.
+    #  * MQTT: the marker is a hex suffix on the client_id string; match the
+    #    'ICSF' magic only when present (explicit mode), otherwise the band
+    #    model doesn't apply and detection relies on Tier-2/registry.
+    offset = _COVERT_OFFSET.get(proto)
+    if offset is not None:
+        # Anchor on the synthetic band byte at the precise field offset.
+        content_clause = (
+            f'content:"{_hex_str(_SYNTH_BAND_HEX)}"; offset:{offset}; depth:1; '
+        )
+        marker_note = f"synthetic-band 0x{_SYNTH_BAND_HEX} at offset {offset}"
+    elif proto == "dnp3":
+        # DNP3 carries the compact explicit 'ICSF' marker inside its payload.
+        content_clause = f'content:"{_hex_str(_MARKER_ICSF_HEX.replace(" ", ""))}"; '
+        marker_note = "compact ICSF marker (DNP3 in-payload)"
+    else:
+        # No covert field model for this proto (e.g. MQTT band N/A): match the
+        # explicit ICSF marker, which is present in explicit-marker mode.
+        content_clause = f'content:"{_hex_str(_MARKER_ICSF_HEX.replace(" ", ""))}"; '
+        marker_note = "compact ICSF marker (explicit mode)"
+
     return (
         f'alert {transport} any any -> any {port} '
         f'(msg:"{msg}"; '
         f'flow:to_server; '
-        f'content:"{_hex_str(_MARKER_HEX.replace(" ", ""))}"; '
+        f'{content_clause}'
         f'classtype:policy-violation; '
         f'sid:{sid}; rev:1; '
         f'metadata:confidence lab_marker, icsforge_tier 1, '
         f'mitre_technique {tech}, icsforge_scenario {spec["id"]}, '
+        f'icsforge_marker {marker_note.replace(",", "")}, '
         f'created_at {date.today().isoformat()};)'
     )
 
 
-def _tier2_heuristic(spec: dict, sid: int) -> str | None:
+def _tier2_heuristic(spec: dict, sid_start: int) -> list[str]:
+    """Emit one or more Tier 2 (protocol heuristic) rules.
+
+    Returns a list because protocols whose magic-byte position coincides
+    with their function-code position (ENIP, OPC UA, MQTT — see
+    `_PROTO_MAGIC[proto]['magic_offset'] == ['fc_offset'] == 0`) need
+    one rule per distinct command-byte the scenario produces. Otherwise
+    the rule's `content:"|magic|"` would only match the single hardcoded
+    magic (e.g. ENIP `63 00` ListIdentity) and miss every scenario whose
+    styles use a different command (e.g. RegisterSession `65 00`).
+
+    Pre-v0.66.0 this returned a single rule with the hardcoded magic,
+    which caused 31.9% Tier 2 hit rate on ENIP, 25.0% on OPC UA, 34.0%
+    on MQTT. This was documented as the v0.66 work item in
+    docs/REFERENCE_DETECTION_COVERAGE.md.
+
+    For protocols without magic/FC overlap (Modbus, DNP3, IEC-104,
+    S7comm, BACnet) the magic byte is genuinely a protocol marker and
+    the single-rule pattern is correct.
+    """
     proto = spec["proto"]
     pm = _PROTO_MAGIC.get(proto, {})
     if pm.get("transport") == "l2" or not pm.get("magic"):
-        return None
+        return []
     transport = _TRANSPORT.get(proto, "tcp")
     port = spec["port"] or "any"
     tech = spec["technique"]
-    magic_hex = _hex_str(pm["magic"].replace(" ", ""))
-    msg = _clean_msg(
-        f"ICSForge HEURISTIC {tech} {spec['tech_name']} "
-        f"[{spec['proto_label']}] {pm['magic_label']}"
+
+    # Determine whether this protocol has magic-FC overlap.
+    overlap = (
+        pm.get("magic_offset") == pm.get("fc_offset")
+        and pm.get("magic_offset") is not None
+        and pm.get("function_codes")
     )
-    return (
-        f'alert {transport} any any -> any {port} '
-        f'(msg:"{msg}"; '
-        f'flow:to_server; '
-        f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
-        f'classtype:protocol-command-decode; '
-        f'sid:{sid}; rev:1; '
-        f'metadata:confidence protocol_heuristic, icsforge_tier 2, '
-        f'mitre_technique {tech}, icsforge_scenario {spec["id"]}, '
-        f'created_at {date.today().isoformat()};)'
-    )
+
+    if not overlap:
+        # Single-rule classic path — magic alone is sufficient.
+        magic_hex = _hex_str(pm["magic"].replace(" ", ""))
+        msg = _clean_msg(
+            f"ICSForge HEURISTIC {tech} {spec['tech_name']} "
+            f"[{spec['proto_label']}] {pm['magic_label']}"
+        )
+        return [(
+            f'alert {transport} any any -> any {port} '
+            f'(msg:"{msg}"; '
+            f'flow:to_server; '
+            f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
+            f'classtype:protocol-command-decode; '
+            f'sid:{sid_start}; rev:1; '
+            f'metadata:confidence protocol_heuristic, icsforge_tier 2, '
+            f'mitre_technique {tech}, icsforge_scenario {spec["id"]}, '
+            f'created_at {date.today().isoformat()};)'
+        )]
+
+    # Overlap path: emit one rule per distinct command-byte the styles produce.
+    style_fcs = _STYLE_FC.get(proto, {})
+    fcs_seen: set[str] = set()
+    rules: list[str] = []
+
+    for style in spec.get("styles", []):
+        fc = style_fcs.get(style)
+        if not fc:
+            continue
+        fc_normalized = fc.upper()
+        if fc_normalized in fcs_seen:
+            continue
+        fcs_seen.add(fc_normalized)
+        fc_name = pm["function_codes"].get(fc_normalized, f"FC 0x{fc_normalized}")
+        fc_hex = _hex_str(fc.replace(" ", ""))
+        msg = _clean_msg(
+            f"ICSForge HEURISTIC {tech} {spec['tech_name']} "
+            f"[{spec['proto_label']}] {fc_name}"
+        )
+        rules.append(
+            f'alert {transport} any any -> any {port} '
+            f'(msg:"{msg}"; '
+            f'flow:to_server; '
+            f'content:"{fc_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
+            f'classtype:protocol-command-decode; '
+            f'sid:{sid_start + len(rules)}; rev:1; '
+            f'metadata:confidence protocol_heuristic, icsforge_tier 2, '
+            f'mitre_technique {tech}, icsforge_scenario {spec["id"]}, '
+            f'icsforge_style {style}, '
+            f'created_at {date.today().isoformat()};)'
+        )
+
+    if not rules:
+        # Fallback: scenario has styles but none map to a known FC.
+        # Emit one rule using the protocol's default magic (preserves
+        # behaviour for any edge case the spec doesn't cover).
+        magic_hex = _hex_str(pm["magic"].replace(" ", ""))
+        msg = _clean_msg(
+            f"ICSForge HEURISTIC {tech} {spec['tech_name']} "
+            f"[{spec['proto_label']}] {pm['magic_label']}"
+        )
+        rules.append(
+            f'alert {transport} any any -> any {port} '
+            f'(msg:"{msg}"; '
+            f'flow:to_server; '
+            f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
+            f'classtype:protocol-command-decode; '
+            f'sid:{sid_start}; rev:1; '
+            f'metadata:confidence protocol_heuristic, icsforge_tier 2, '
+            f'mitre_technique {tech}, icsforge_scenario {spec["id"]}, '
+            f'created_at {date.today().isoformat()};)'
+        )
+    return rules
 
 
 def _tier3_semantic(spec: dict, sid_start: int) -> list[str]:
@@ -364,11 +734,56 @@ def _tier3_semantic(spec: dict, sid_start: int) -> list[str]:
     port = spec["port"] or "any"
     tech = spec["technique"]
     style_fcs = _STYLE_FC.get(proto, {})
-    magic_hex = _hex_str(pm["magic"].replace(" ", ""))
     rules = []
     seen: set[str] = set()
 
+    # When magic and FC share the same byte position (ENIP, OPC UA, MQTT —
+    # the magic IS the function code), emitting both content matches is
+    # contradictory ("byte 0 == magic AND byte 0 == FC") and only fires
+    # for scenarios whose style equals the hardcoded magic. Skip the
+    # redundant magic match for these protocols. Other protocols
+    # (Modbus, DNP3, IEC-104, etc.) still need both since magic and FC
+    # are at different offsets.
+    overlap = (
+        pm.get("magic_offset") == pm.get("fc_offset")
+        and pm.get("magic_offset") is not None
+    )
+    magic_hex = _hex_str(pm["magic"].replace(" ", ""))
+
     for style in spec.get("styles", []):
+        # ── ENIP: prefer a true CIP service-code match where the style carries
+        # one (Read 0x4C vs Write 0x4D vs Reset 0x05 …). This is the real
+        # operation-level semantic match — the CIP service lives in the
+        # SendRRData (6f 00) CPF data item: `b2 00 <len:2> <service>`, so we
+        # anchor on the data-item marker and test the service byte 2 bytes on.
+        if proto == "enip":
+            cip = _STYLE_CIP_SERVICE.get(style)
+            if cip:
+                if f"cip:{cip}" in seen:
+                    continue
+                seen.add(f"cip:{cip}")
+                svc_name = pm.get("cip_services", {}).get(cip, f"CIP service 0x{cip.upper()}")
+                msg = _clean_msg(
+                    f"ICSForge SEMANTIC {tech} {spec['tech_name']} "
+                    f"[{spec['proto_label']}] {svc_name}"
+                )
+                rules.append(
+                    f'alert {transport} any any -> any {port} '
+                    f'(msg:"{msg}"; '
+                    f'flow:to_server; '
+                    f'content:"|6f 00|"; offset:0; depth:2; '
+                    f'content:"|b2 00|"; '
+                    f'content:"|{cip}|"; distance:2; within:1; '
+                    f'classtype:attempted-admin; '
+                    f'sid:{sid_start + len(rules)}; rev:1; '
+                    f'metadata:confidence semantic, icsforge_tier 3, '
+                    f'mitre_technique {tech}, icsforge_scenario {spec["id"]}, '
+                    f'icsforge_style {style}, '
+                    f'created_at {date.today().isoformat()};)'
+                )
+                continue
+            # else: fall through to the encapsulation-word match below
+
         fc = style_fcs.get(style)
         if not fc or fc in seen:
             continue
@@ -379,12 +794,44 @@ def _tier3_semantic(spec: dict, sid_start: int) -> list[str]:
             f"ICSForge SEMANTIC {tech} {spec['tech_name']} "
             f"[{spec['proto_label']}] {fc_name}"
         )
+        if overlap:
+            # Tier 3 for overlap protocols: same content match as Tier 2
+            # (the command byte at offset 0 IS the function code), but
+            # we add `byte_test` to verify the length field is non-zero.
+            # This makes Tier 3 strictly more specific and prevents
+            # Suricata's signature group manager from collapsing the two
+            # rules at the multi-pattern matcher level.
+            #
+            # Length-field offset varies by protocol:
+            #   ENIP:   bytes 2-3, little-endian
+            #   OPC UA: bytes 4-7, little-endian (we test 1 byte at offset 4)
+            #   MQTT:   byte 1, single-byte (Variable Byte Integer >= 1)
+            length_byte_test = {
+                "enip":  "byte_test:2,>,0,2,little; ",
+                "opcua": "byte_test:1,>,0,4; ",
+                "mqtt":  "byte_test:1,>,0,1; ",
+            }.get(proto, "")
+            # ENIP discovery/teardown commands (ListIdentity 63 00, ListServices
+            # 04 00, ListInterfaces 64 00, UnRegisterSession 66 00) legitimately
+            # carry a ZERO-length encapsulation data field, so a "length > 0"
+            # byte_test would never fire on them. For those the command word IS
+            # the complete semantic, so drop the byte_test and match the word.
+            if proto == "enip" and fc.replace(" ", "").lower() in ("6300", "0400", "6400", "6600"):
+                length_byte_test = ""
+            content_clauses = (
+                f'content:"{fc_hex}"; offset:{pm["fc_offset"]}; depth:{pm["fc_depth"]}; '
+                f'{length_byte_test}'
+            )
+        else:
+            content_clauses = (
+                f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
+                f'content:"{fc_hex}"; offset:{pm["fc_offset"]}; depth:{pm["fc_depth"]}; '
+            )
         rules.append(
             f'alert {transport} any any -> any {port} '
             f'(msg:"{msg}"; '
             f'flow:to_server; '
-            f'content:"{magic_hex}"; offset:{pm["magic_offset"]}; depth:{pm["magic_depth"]}; '
-            f'content:"{fc_hex}"; offset:{pm["fc_offset"]}; depth:{pm["fc_depth"]}; '
+            f'{content_clauses}'
             f'classtype:attempted-admin; '
             f'sid:{sid_start + len(rules)}; rev:1; '
             f'metadata:confidence semantic, icsforge_tier 3, '
@@ -476,7 +923,9 @@ def sigma_rule(spec: dict) -> str:
         f"    product: zeek\n"
         f"detection:\n"
         f"    lab_marker:\n"
-        f"        payload|contains: 'ICSFORGE_SYNTH'\n"
+        f"        # v0.74.0 compact marker; covert mode uses a protocol-field\n"
+        f"        # synthetic band (0x{_SYNTH_BAND_HEX}), explicit mode emits 'ICSF' in payload.\n"
+        f"        payload|contains: 'ICSF'\n"
         f"    protocol_heuristic:\n"
         f"        dst_port: {port}\n"
         f"        network.transport: '{transport}'\n"
@@ -534,21 +983,30 @@ def generate_all(
     t2_lines = [header + "# === TIER 2: PROTOCOL HEURISTIC ===\n"]
     t3_lines = [header + "# === TIER 3: SEMANTIC (RECOMMENDED) ===\n"]
     sigma_rules: dict[str, str] = {}
+    zeek_signatures: list[str] = []  # L2-only protocols (GOOSE, PROFINET DCP)
     techniques: set[str] = set()
     sid = _SID_BASE
     c1 = c2 = c3 = 0
+    cz = 0  # Zeek signature count
 
     for sc_id, spec in sorted(specs.items()):
-        # Tier 1
+        # Tier 1 — emits None for L2-only protocols (Suricata cannot match them)
         r1 = _tier1_marker(spec, sid)
-        t1_lines += [f"# {sc_id}", r1, ""]
-        sid += 1; c1 += 1
+        if r1:
+            t1_lines += [f"# {sc_id}", r1, ""]
+            sid += 1
+            c1 += 1
 
-        # Tier 2
-        r2 = _tier2_heuristic(spec, sid)
-        if r2:
-            t2_lines += [f"# {sc_id}", r2, ""]
-            sid += 1; c2 += 1
+        # Tier 2 — now returns a list (one or more rules per scenario;
+        # ENIP/OPC UA/MQTT need per-command-byte rules, see _tier2_heuristic)
+        r2_list = _tier2_heuristic(spec, sid)
+        if r2_list:
+            t2_lines.append(f"# {sc_id}")
+            for r in r2_list:
+                t2_lines.append(r)
+                sid += 1
+                c2 += 1
+            t2_lines.append("")
 
         # Tier 3
         r3_list = _tier3_semantic(spec, sid)
@@ -556,8 +1014,15 @@ def generate_all(
             t3_lines.append(f"# {sc_id}")
             for r in r3_list:
                 t3_lines.append(r)
-                sid += 1; c3 += 1
+                sid += 1
+                c3 += 1
             t3_lines.append("")
+
+        # Zeek signatures — emitted for L2-only protocols (returns [] for IP)
+        zeek_blocks = _zeek_signature(spec, sid)
+        for block in zeek_blocks:
+            zeek_signatures.append(block)
+            cz += 1
 
         sigma_rules[sc_id] = sigma_rule(spec)
         techniques.add(spec["technique"])
@@ -568,12 +1033,14 @@ def generate_all(
         "suricata_semantic":   "\n".join(t3_lines),
         "suricata":            "\n".join(t3_lines),  # legacy compat
         "sigma":               sigma_rules,
+        "zeek":                _zeek_header() + "\n\n".join(zeek_signatures) + "\n",
         "count":               len(specs),
         "techniques":          sorted(techniques),
         "rule_counts": {
             "lab_marker":         c1,
             "protocol_heuristic": c2,
             "semantic":           c3,
+            "zeek":               cz,
         },
     }
 
@@ -598,22 +1065,35 @@ def _write_outputs(outdir: str, result: dict[str, Any]) -> None:
         with open(_os.path.join(sigma_dir, f"{safe}.yml"), "w", encoding="utf-8") as f:
             f.write(body)
 
+    # Zeek signatures for L2-only protocols (GOOSE, PROFINET DCP)
+    zeek_content = result.get("zeek", "")
+    if zeek_content.strip():
+        with open(_os.path.join(outdir, "icsforge.sig"), "w", encoding="utf-8") as f:
+            f.write(zeek_content)
+
     readme = (
         "ICSForge detection content\n"
         "==========================\n\n"
         "Three confidence tiers (recommendation: deploy tier 3 only):\n\n"
-        "  icsforge_lab.rules        Tier 1 — requires ICSFORGE_SYNTH marker\n"
+        "  icsforge_lab.rules        Tier 1 - requires ICSFORGE_SYNTH marker\n"
         "                            Use only during ICSForge runs.\n"
         "                            Zero false positives.\n\n"
-        "  icsforge_heuristic.rules  Tier 2 — protocol magic bytes.\n"
+        "  icsforge_heuristic.rules  Tier 2 - protocol magic bytes.\n"
         "                            Fires on ANY legit protocol traffic.\n"
         "                            Use to validate NSM visibility only.\n\n"
-        "  icsforge_semantic.rules   Tier 3 — function-code / command-level.\n"
+        "  icsforge_semantic.rules   Tier 3 - function-code / command-level.\n"
         "                            Recommended for real networks.\n"
         "                            Low FP rate in segmented OT.\n\n"
+        "  icsforge.sig              Zeek signatures for L2 protocols.\n"
+        "                            Covers IEC 61850 GOOSE (0x88B8) and\n"
+        "                            PROFINET DCP (0x8892). Suricata 7.x\n"
+        "                            cannot match L2 traffic; Zeek can via\n"
+        "                            its signature framework `eth-proto` and\n"
+        "                            `payload` keywords.\n\n"
         f"Rule counts:  lab={result['rule_counts']['lab_marker']}  "
         f"heuristic={result['rule_counts']['protocol_heuristic']}  "
-        f"semantic={result['rule_counts']['semantic']}\n"
+        f"semantic={result['rule_counts']['semantic']}  "
+        f"zeek={result['rule_counts'].get('zeek', 0)}\n"
         f"Scenarios covered: {result['count']}\n"
         f"Unique techniques: {len(result['techniques'])}\n"
     )

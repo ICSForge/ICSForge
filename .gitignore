@@ -20,9 +20,13 @@ env/
 
 # Testing
 .pytest_cache/
+.ruff_cache/
 htmlcov/
 coverage.xml
 .coverage
+# pytest tmp_path basetemp (when it lands under the repo)
+tmp/
+tmp/pytest-of-*/
 
 # ICSForge runtime artifacts
 out/pcaps/*.pcap

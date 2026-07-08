@@ -35,7 +35,7 @@ import random
 import struct
 import time
 
-from .common import marker_bytes, _src_mac_from_ip
+from .common import _src_mac_from_ip, marker_bytes
 
 # ── GOOSE multicast MACs (IEC 61850-8-1 Annex C) ─────────────────────────────
 _GOOSE_DST_PROTECTION = bytes([0x01, 0x0C, 0xCD, 0x01, 0x00, 0x01])  # class 1/2

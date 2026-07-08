@@ -202,7 +202,8 @@ def api_matrix_status():
                         for line in f:
                             try:
                                 t = json.loads(line).get("mitre.ics.technique")
-                                if t: executed.add(t)
+                                if t:
+                                    executed.add(t)
                             except json.JSONDecodeError:
                                 continue
                 # Fallback: techniques in run meta (campaign runs)

@@ -1,8 +1,8 @@
 """ICSForge config blueprint — network config, callback setup, health, interfaces."""
 import json
 import os
-import secrets
 import re
+import secrets
 import socket
 import subprocess
 import sys
@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
+
 import icsforge
 import icsforge.web.helpers as _h
 from icsforge import __version__
@@ -298,24 +299,78 @@ def api_version():
     except Exception:
         standalone = chains = None
     # Technique coverage — derive live from scenarios.yml (source of truth)
+    techs_v18 = set()
+    techs_v19_subs = set()
     try:
         _sc_path = _canonical_scenarios_path()
         _sc_doc = _load_yaml(_sc_path) or {}
         _sc_map = _sc_doc.get('scenarios') or {}
-        # Count unique technique IDs from non-chain scenario steps
-        _techs = set()
+        # Count unique technique IDs from BOTH scenarios and chain primaries.
+        # Chains contribute their tactical-objective primary (e.g. T0879 in
+        # CHAIN__damage_to_property), even though steps reference other
+        # techniques.
         for _name, _data in _sc_map.items():
-            if _name.startswith('CHAIN__'):
+            if not isinstance(_data, dict):
                 continue
+            # Scenario-level primary (chain primaries belong here too)
+            _primary = _data.get('technique')
+            if _primary:
+                techs_v18.add(_primary)
+            # Step-level techniques
             for _step in (_data.get('steps') or []):
                 _t = _step.get('technique')
                 if _t:
-                    _techs.add(_t)
-        runnable_count = len(_techs)
-        # Total ATT&CK for ICS techniques is fixed at 83
+                    techs_v18.add(_t)
+            # v19 sub-tech annotations (scenario-level)
+            _v19 = _data.get('technique_v19')
+            if _v19 and '.' in _v19:
+                techs_v19_subs.add(_v19)
+        runnable_count = len(techs_v18)
+        # Total ATT&CK for ICS techniques in v18: 83 standalone
         total_techniques = 83
     except Exception:
         runnable_count = total_techniques = None
+
+    # v19 mapping. Use the crosswalk to translate v18 → v19. Standalone
+    # v19 count = (v18 IDs we cover that didn't become subs) + (parents of
+    # any sub-techs we annotated).
+    v19_standalone_covered = None
+    v19_subs_covered = None
+    v19_total_standalone = 79
+    v19_total_subs = 18
+    try:
+        from pathlib import Path
+        cw_path = Path(__file__).parent.parent / "data" / "mitre_v18_v19_crosswalk.json"
+        with open(cw_path, encoding="utf-8") as f:
+            cw = json.load(f)
+        remapped = {k: v.get('attack-v19-attack-id')
+                    for k, v in cw.get('existing-techniques', {}).items()}
+        v18_became_subs = {k for k, v in remapped.items() if v and '.' in v}
+
+        # Load v19 standalone catalog
+        mv19_path = Path(__file__).parent.parent / "data" / "ics_attack_matrix_v19.json"
+        with open(mv19_path, encoding="utf-8") as f:
+            mv19 = json.load(f)
+        v19_standalone_set = set()
+        for tactic in mv19.get('tactics', []):
+            for tech in tactic.get('techniques', []):
+                tid = tech.get('id', '')
+                if tid and '.' not in tid:
+                    v19_standalone_set.add(tid)
+
+        # Direct: v18 IDs we cover that are still v19 standalone
+        still_standalone = (techs_v18 - v18_became_subs) & v19_standalone_set
+        # Plus: parents of any sub-techs we cover via v19 annotations
+        parents_covered = set()
+        for _v18, _v19 in remapped.items():
+            if _v18 in techs_v18 and _v19 and '.' in _v19:
+                parents_covered.add(_v19.split('.')[0])
+
+        v19_standalone_covered = len(still_standalone | parents_covered)
+        v19_subs_covered = len(techs_v19_subs)
+    except Exception:
+        pass
+
     total_scenarios = None
     if standalone is not None and chains is not None:
         total_scenarios = standalone + chains
@@ -326,6 +381,12 @@ def api_version():
         "scenarios_detail": {"standalone": standalone, "chains": chains},
         "techniques": runnable_count,
         "techniques_total": total_techniques,
+        "v19": {
+            "standalone_covered": v19_standalone_covered,
+            "standalone_total":   v19_total_standalone,
+            "subtechniques_covered": v19_subs_covered,
+            "subtechniques_total":   v19_total_subs,
+        },
     })
 
 

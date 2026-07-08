@@ -1,0 +1,38 @@
+{
+    "metadata": {
+        "file": "ics-sub-techniques-crosswalk.json",
+        "domain": "ics-attack",
+        "description": "ATT&CK ICS v18 -> v19 crosswalk. Source: https://attack.mitre.org/docs/subtechniques/ics-sub-techniques-crosswalk.json",
+        "date": "2026-04-28"
+    },
+    "existing-techniques": {
+        "T0803": {"attack-v18-attack-id":"T0803","attack-v19-attack-id":"T1691.001","attack-v18-name":"Block Command Message","attack-v19-name":"Block Operational Technology Message: Command Message","attack-v19-parent-attack-id":"T1691","technique-change-type":"Became new sub-technique"},
+        "T0804": {"attack-v18-attack-id":"T0804","attack-v19-attack-id":"T1691.002","attack-v18-name":"Block Reporting Message","attack-v19-name":"Block Operational Technology Message: Reporting Message","attack-v19-parent-attack-id":"T1691","technique-change-type":"Became new sub-technique"},
+        "T0855": {"attack-v18-attack-id":"T0855","attack-v19-attack-id":"T1692.001","attack-v18-name":"Unauthorized Command Message","attack-v19-name":"Unauthorized Message: Command Message","attack-v19-parent-attack-id":"T1692","technique-change-type":"Became new sub-technique"},
+        "T0856": {"attack-v18-attack-id":"T0856","attack-v19-attack-id":"T1692.002","attack-v18-name":"Spoof Reporting Message","attack-v19-name":"Unauthorized Message: Reporting Message","attack-v19-parent-attack-id":"T1692","technique-change-type":"Became new sub-technique"},
+        "T0857": {"attack-v18-attack-id":"T0857","attack-v19-attack-id":"T1693.001","attack-v18-name":"System Firmware","attack-v19-name":"Modify Firmware: System Firmware","attack-v19-parent-attack-id":"T1693","technique-change-type":"Became new sub-technique"},
+        "T0839": {"attack-v18-attack-id":"T0839","attack-v19-attack-id":"T1693.002","attack-v18-name":"Module Firmware","attack-v19-name":"Modify Firmware: Module Firmware","attack-v19-parent-attack-id":"T1693","technique-change-type":"Became new sub-technique"},
+        "T0812": {"attack-v18-attack-id":"T0812","attack-v19-attack-id":"T1694.001","attack-v18-name":"Default Credentials","attack-v19-name":"Insecure Credentials: Default Credentials","attack-v19-parent-attack-id":"T1694","technique-change-type":"Became new sub-technique"},
+        "T0891": {"attack-v18-attack-id":"T0891","attack-v19-attack-id":"T1694.002","attack-v18-name":"Hardcoded Credentials","attack-v19-name":"Insecure Credentials: Hardcoded Credentials","attack-v19-parent-attack-id":"T1694","technique-change-type":"Became new sub-technique"},
+        "T0805": {"attack-v18-attack-id":"T0805","attack-v19-attack-id":"T1695.001","attack-v18-name":"Block Serial COM","attack-v19-name":"Block Communications: Serial COM","attack-v19-parent-attack-id":"T1695","technique-change-type":"Became new sub-technique"},
+        "T0873": {"attack-v18-attack-id":"T0873","attack-v19-attack-id":"T0873","attack-v18-name":"Project File Infection","attack-v19-name":"Project File Infection","attack-v19-parent-attack-id":"","technique-change-type":"Remains a technique","explanation":"Getting a sub-technique for Siemens Project File Format"},
+        "T0846": {"attack-v18-attack-id":"T0846","attack-v19-attack-id":"T0846","attack-v18-name":"Remote System Discovery","attack-v19-name":"Remote System Discovery","attack-v19-parent-attack-id":"","technique-change-type":"Remains a technique","explanation":"Getting sub-techniques for port scan, broadcast discovery, multicast discovery"},
+        "T0843": {"attack-v18-attack-id":"T0843","attack-v19-attack-id":"T0843","attack-v18-name":"Program Download","attack-v19-name":"Program Download","attack-v19-parent-attack-id":"","technique-change-type":"Remains a technique","explanation":"Getting sub-techniques for Download All and Program Append"}
+    },
+    "new-techniques": {
+        "T1691": {"attack-v19-attack-id":"T1691","attack-v19-name":"Block Operational Technology Message","technique-change-type":"Became a new technique"},
+        "T1692": {"attack-v19-attack-id":"T1692","attack-v19-name":"Unauthorized Message","technique-change-type":"Became a new technique"},
+        "T1693": {"attack-v19-attack-id":"T1693","attack-v19-name":"Modify Firmware","technique-change-type":"Became a new technique"},
+        "T1694": {"attack-v19-attack-id":"T1694","attack-v19-name":"Insecure Credentials","technique-change-type":"Became a new technique"},
+        "T1695": {"attack-v19-attack-id":"T1695","attack-v19-name":"Block Communications","technique-change-type":"Became a new technique"},
+        "T0873.001": {"attack-v19-attack-id":"T0873.001","attack-v19-name":"Project File Infection: Siemens Project File Format","attack-v19-parent-attack-id":"T0873","technique-change-type":"Became new sub-technique"},
+        "T0846.001": {"attack-v19-attack-id":"T0846.001","attack-v19-name":"Remote System Discovery: Port Scan","attack-v19-parent-attack-id":"T0846","technique-change-type":"Became new sub-technique"},
+        "T0846.002": {"attack-v19-attack-id":"T0846.002","attack-v19-name":"Remote System Discovery: Broadcast Discovery","attack-v19-parent-attack-id":"T0846","technique-change-type":"Became new sub-technique"},
+        "T0846.003": {"attack-v19-attack-id":"T0846.003","attack-v19-name":"Remote System Discovery: Multicast Discovery","attack-v19-parent-attack-id":"T0846","technique-change-type":"Became new sub-technique"},
+        "T1695.002": {"attack-v19-attack-id":"T1695.002","attack-v19-name":"Block Communications: Ethernet","attack-v19-parent-attack-id":"T1695","technique-change-type":"Became new sub-technique"},
+        "T1695.003": {"attack-v19-attack-id":"T1695.003","attack-v19-name":"Block Communications: Wi-Fi","attack-v19-parent-attack-id":"T1695","technique-change-type":"Became new sub-technique"},
+        "T0843.001": {"attack-v19-attack-id":"T0843.001","attack-v19-name":"Program Download: Download All","attack-v19-parent-attack-id":"T0843","technique-change-type":"Became new sub-technique"},
+        "T0843.002": {"attack-v19-attack-id":"T0843.002","attack-v19-name":"Program Download: Online Edit","attack-v19-parent-attack-id":"T0843","technique-change-type":"Became new sub-technique"},
+        "T0843.003": {"attack-v19-attack-id":"T0843.003","attack-v19-name":"Program Download: Program Append","attack-v19-parent-attack-id":"T0843","technique-change-type":"Became new sub-technique"}
+    }
+}

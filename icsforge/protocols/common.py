@@ -42,49 +42,104 @@ def _tcp_csum(src_ip: str, dst_ip: str, tcp_seg: bytes) -> int:
 
 # ── Public API ────────────────────────────────────────────────────────
 
-def marker_bytes(marker: str) -> bytes:
-    """Return a deterministic marker payload for correlation."""
+_PROTO_CODE = {
+    "modbus": b"M", "dnp3": b"D", "s7comm": b"S", "iec104": b"I",
+    "enip": b"E", "opcua": b"O", "bacnet": b"B", "mqtt": b"Q",
+    "iec61850": b"G", "profinet_dcp": b"P",
+}
+
+
+def _run_hash(marker) -> bytes:
+    """8 lowercase-hex chars (~32 bits) of SHA1(marker) for correlation."""
+    import hashlib
+    if not marker:
+        marker = "offline"
+    raw = bytes(marker) if isinstance(marker, (bytes, bytearray)) else str(marker).encode("utf-8", errors="ignore")
+    return hashlib.sha1(raw).hexdigest()[:8].encode("ascii")
+
+
+def marker_bytes(marker: str, proto: str | None = None) -> bytes:
+    """Return the compact ICSForge synthetic-traffic marker (13 bytes).
+
+    Format:  'ICSF' (4) + <proto code> (1) + <8 hex chars of SHA1(run_id)> (8)
+
+    Rationale (v0.74.0): the historical marker was
+    ``ICSFORGE:ICSFORGE_SYNTH|<run_id>|<technique>|<step>:`` — 60-90 bytes,
+    which was 59-91% of a typical ICS frame. That dominated payloads (so
+    captures looked synthetic rather than realistic), overflowed fixed-size
+    transport chunks (the DNP3 CRC-splitting that forced a separate
+    short-marker code path), and the double ``ICSFORGE:`` wrapper produced
+    the malformed payload-preview marker.
+
+    The compact marker:
+      * is 13 bytes for **every** protocol (one code path, no special cases)
+      * is 7-15% of a frame instead of 59-91% — realistic traffic
+      * fits inside a single 16-byte DNP3 transport chunk with no splitting
+      * keeps a deterministic 32-bit run hash for correlation
+
+    Attribution no longer relies on an inline run_id/technique/step string.
+    Defenders correlate via the expectation registry
+    (``/api/receiver/expect``), and the 8-char hash lets the receiver
+    *verify* a packet belongs to the expected run. The 4-byte ``ICSF``
+    magic (optionally plus the 1-byte proto code) is the Tier-1
+    detection fast-pattern.
+
+    proto: protocol name (e.g. "modbus"); selects the 1-byte code. If
+    omitted or unknown, a generic 'X' code is used — detection still
+    fires on the 4-byte ``ICSF`` magic.
+    """
     if not marker:
         return b""
-    mb = marker.encode("utf-8", errors="ignore") if isinstance(marker, str) else bytes(marker)
-    return b"ICSFORGE:" + mb + b":"
+    code = _PROTO_CODE.get((proto or "").lower(), b"X")
+    return b"ICSF" + code + _run_hash(marker)
 
 
-def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes,
-               src_mac: bytes | None = None, tcp_seq: int | None = None,
-               dst_mac: bytes | None = None, proto: str | None = None,
-               sport: int | None = None) -> bytes:
+def short_marker_bytes(marker: str, proto_code: bytes = b"D") -> bytes:
+    """Deprecated alias — retained for backward compatibility.
+
+    Since v0.74.0 the standard marker_bytes() is already compact (13 bytes)
+    and fits inside a DNP3 transport chunk, so a separate short marker is no
+    longer needed. This now returns the same unified format. proto_code is
+    accepted for signature compatibility; the first byte is used as the
+    protocol code.
     """
-    Build a complete Ethernet II + IPv4 + TCP frame as raw bytes.
+    pc = proto_code[:1] if proto_code else b"D"
+    return b"ICSF" + pc + _run_hash(marker)
 
-    MAC addressing:
-      src: derived from src_ip via _src_mac_from_ip()
-      dst: dst_mac if provided, else ff:ff:ff:ff:ff:ff (offline PCAP)
-    Ethernet type: 0x0800 (IPv4)
-    IP + TCP checksums are computed correctly (Wireshark-valid).
+
+def tcp_segment(src_ip: str, dst_ip: str, sport: int, dport: int,
+                seq: int, ack: int, flags: int, payload: bytes = b"",
+                src_mac: bytes | None = None, dst_mac: bytes | None = None,
+                window: int = 8192, ip_id: int | None = None) -> bytes:
     """
-    rnd   = random.Random()
-    _sport = sport if sport is not None else rnd.randint(49152, 65534)
-    seq   = (tcp_seq if tcp_seq is not None else rnd.randint(0, 0xFFFF_FFFF)) & 0xFFFF_FFFF
+    Build one complete Ethernet II + IPv4 + TCP frame with explicit control
+    fields. Unlike tcp_packet() (which hardcodes PSH|ACK for the attacker→target
+    data model), this lets the caller set seq, ack, flags and direction, so a
+    full stateful conversation — SYN / SYN-ACK / ACK handshake, ACKs for data,
+    FIN/ACK teardown — can be emitted. IP + TCP checksums are computed correctly.
 
-    # ── TCP header (checksum placeholder = 0) ────────────────────
-    # offset=5 (20 bytes header), flags PSH|ACK = 0x18
+    flags: TCP control bits, e.g. 0x02=SYN, 0x12=SYN|ACK, 0x10=ACK,
+           0x18=PSH|ACK, 0x11=FIN|ACK, 0x04=RST.
+    """
+    rnd = random.Random()
+    seq &= 0xFFFF_FFFF
+    ack &= 0xFFFF_FFFF
+    # offset=5 (20-byte header), checksum placeholder = 0
     tcp_hdr = struct.pack(">HHIIBBHHH",
-        _sport, dport,
-        seq, 0,
-        0x50, 0x18,
-        8192, 0, 0,
+        sport, dport,
+        seq, ack,
+        0x50, flags & 0xFF,
+        window, 0, 0,
     )
-    tcp_seg  = tcp_hdr + payload
-    tcp_c    = _tcp_csum(src_ip, dst_ip, tcp_seg)
-    tcp_seg  = tcp_hdr[:16] + struct.pack(">H", tcp_c) + tcp_hdr[18:] + payload
+    tcp_seg = tcp_hdr + payload
+    tcp_c   = _tcp_csum(src_ip, dst_ip, tcp_seg)
+    tcp_seg = tcp_hdr[:16] + struct.pack(">H", tcp_c) + tcp_hdr[18:] + payload
 
-    # ── IP header (checksum placeholder = 0) ─────────────────────
     total_len = 20 + len(tcp_seg)
     ip_hdr = struct.pack(">BBHHHBBH4s4s",
         0x45, 0,
         total_len,
-        rnd.randint(0, 0xFFFF),
+        (ip_id if ip_id is not None else rnd.randint(0, 0xFFFF)),
         0x4000,
         64, 6, 0,
         socket.inet_aton(src_ip),
@@ -92,7 +147,6 @@ def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes,
     )
     ip_hdr = ip_hdr[:10] + struct.pack(">H", _ip_csum(ip_hdr)) + ip_hdr[12:]
 
-    # ── Ethernet II frame ─────────────────────────────────────────
     _smac = src_mac if src_mac is not None else _src_mac_from_ip(src_ip)
     _dmac = dst_mac if dst_mac is not None else _mac_bytes("ff:ff:ff:ff:ff:ff")
     eth   = _dmac + _smac + struct.pack(">H", 0x0800)
@@ -102,8 +156,113 @@ def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes,
     return frame
 
 
+def tcp_packet(src_ip: str, dst_ip: str, dport: int, payload: bytes,
+               src_mac: bytes | None = None, tcp_seq: int | None = None,
+               dst_mac: bytes | None = None, proto: str | None = None,
+               sport: int | None = None) -> bytes:
+    """
+    Build a complete Ethernet II + IPv4 + TCP frame as raw bytes.
 
-# ── Realistic OUI table — maps protocol to real OT vendor MAC prefixes ─────────
+    This is the stateless attacker→target data model: a single PSH|ACK segment,
+    no handshake, ack=0. For a full stateful conversation use tcp_segment() via
+    the TCPFlow helper instead.
+
+    MAC addressing:
+      src: derived from src_ip via _src_mac_from_ip()
+      dst: dst_mac if provided, else ff:ff:ff:ff:ff:ff (offline PCAP)
+    Ethernet type: 0x0800 (IPv4)
+    IP + TCP checksums are computed correctly (Wireshark-valid).
+    """
+    rnd    = random.Random()
+    _sport = sport if sport is not None else rnd.randint(49152, 65534)
+    seq    = (tcp_seq if tcp_seq is not None else rnd.randint(0, 0xFFFF_FFFF)) & 0xFFFF_FFFF
+    _smac  = src_mac if src_mac is not None else _src_mac_from_ip(src_ip)
+    # PSH|ACK (0x18), ack=0 — preserves the historical stateless byte layout.
+    return tcp_segment(src_ip, dst_ip, _sport, dport, seq, 0, 0x18, payload,
+                       src_mac=_smac, dst_mac=dst_mac)
+
+class TCPFlow:
+    """Stateful TCP conversation builder for offline pcaps.
+
+    Emits a real handshake, ACKs each data segment from the peer, and tears the
+    connection down — so the resulting pcap survives stream reassembly and looks
+    like a genuine flow to a stateful IDS (Suricata stream engine, Zeek conn
+    tracking). The default stateless model (tcp_packet) stays the contract; this
+    is opt-in via the generator's `stateful` mode.
+
+    Direction model: the *client* is the attacker/sender (src_ip), the *server*
+    is the target (dst_ip). Only the client sends application payloads (ICSForge
+    is attacker→target); the server contributes SYN-ACK and bare ACKs, which is
+    what gives the stream engine a two-sided conversation to track. Synthesising
+    full application-layer responses is Phase B; this phase delivers the
+    transport-layer handshake/teardown.
+    """
+
+    def __init__(self, src_ip: str, dst_ip: str, sport: int, dport: int,
+                 client_isn: int, server_isn: int | None = None,
+                 src_mac: bytes | None = None, dst_mac: bytes | None = None,
+                 proto: str | None = None):
+        self.src_ip, self.dst_ip = src_ip, dst_ip
+        self.sport, self.dport = sport, dport
+        self.cseq = client_isn & 0xFFFF_FFFF                       # client next seq
+        rnd = random.Random((client_isn or 1) ^ 0x5A5A5A5A)
+        self.sseq = (server_isn if server_isn is not None
+                     else rnd.randint(0, 0xFFFF_FFFF)) & 0xFFFF_FFFF
+        self.cack = 0                                              # client's ack of server
+        self.sack = 0                                              # server's ack of client
+        self._cmac = src_mac if src_mac is not None else _src_mac_from_ip(src_ip, proto)
+        self._smac = dst_mac if dst_mac is not None else _resolve_dst_mac(dst_ip)
+        self.handshake_done = False
+
+    # client→server frame
+    def _c(self, flags: int, payload: bytes = b"") -> bytes:
+        return tcp_segment(self.src_ip, self.dst_ip, self.sport, self.dport,
+                           self.cseq, self.cack, flags, payload,
+                           src_mac=self._cmac, dst_mac=self._smac)
+
+    # server→client frame
+    def _s(self, flags: int, payload: bytes = b"") -> bytes:
+        return tcp_segment(self.dst_ip, self.src_ip, self.dport, self.sport,
+                           self.sseq, self.sack, flags, payload,
+                           src_mac=self._smac, dst_mac=self._cmac)
+
+    def handshake(self) -> list[bytes]:
+        """SYN → SYN-ACK → ACK. Advances both ISNs by 1 (SYN consumes a seq)."""
+        frames = []
+        # SYN (client)
+        frames.append(self._c(0x02))
+        self.cseq = (self.cseq + 1) & 0xFFFF_FFFF
+        # SYN-ACK (server) acks client's SYN
+        self.sack = self.cseq
+        frames.append(self._s(0x12))
+        self.sseq = (self.sseq + 1) & 0xFFFF_FFFF
+        # ACK (client) acks server's SYN
+        self.cack = self.sseq
+        frames.append(self._c(0x10))
+        self.handshake_done = True
+        return frames
+
+    def client_data(self, payload: bytes) -> list[bytes]:
+        """One PSH|ACK data segment from client + a bare ACK back from server."""
+        frames = [self._c(0x18, payload)]
+        self.cseq = (self.cseq + max(len(payload), 1)) & 0xFFFF_FFFF
+        # server ACKs the data (no payload — Phase A is transport-only)
+        self.sack = self.cseq
+        frames.append(self._s(0x10))
+        return frames
+
+    def teardown(self) -> list[bytes]:
+        """FIN-ACK (client) → FIN-ACK (server) → ACK (client). Graceful close."""
+        frames = []
+        frames.append(self._c(0x11))                 # client FIN|ACK
+        self.cseq = (self.cseq + 1) & 0xFFFF_FFFF
+        self.sack = self.cseq
+        frames.append(self._s(0x11))                 # server FIN|ACK
+        self.sseq = (self.sseq + 1) & 0xFFFF_FFFF
+        self.cack = self.sseq
+        frames.append(self._c(0x10))                 # client final ACK
+        return frames
+
 # Source: IEEE OUI registry + known OT device manufacturers.
 # Using registered OUI prefixes means MACs pass vendor lookups in Wireshark,
 # Defender for IoT, Claroty, Dragos etc. — no locally-administered flag.
@@ -153,7 +312,6 @@ def _src_mac_from_ip(src_ip: str, proto: str | None = None) -> bytes:
     The old approach (0x02:... prefix) set the locally-administered bit,
     which immediately identifies synthetic traffic to any OT-aware NSM tool.
     """
-    import random as _rnd
     try:
         b = socket.inet_aton(src_ip)
     except OSError:
@@ -185,8 +343,8 @@ def _resolve_dst_mac(dst_ip: str) -> bytes:
 
     Never returns ff:ff:ff:ff:ff:ff (broadcast).
     """
-    import subprocess as _sp
     import re as _re
+    import subprocess as _sp
 
     # ── 1. Linux /proc/net/arp ─────────────────────────────────────────────
     try:

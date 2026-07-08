@@ -13,15 +13,10 @@ v0.62.0 shipped with known drift:
     Orphan rules for T0841, T0842, T0875, T0876
     Missing rule for T0879
 
-This file documents the drift and locks it. A CI-visible test means the
-maintainer sees it on every PR. If the drift grows, the test fails.
-Reducing drift (good) requires updating the expected set below.
-
-When the drift is finally closed:
-    EXPECTED_ORPHAN_SPEC_TECHS = frozenset()
-    EXPECTED_MISSING_SPEC_TECHS = frozenset()
-
-Then the test reduces to "no drift allowed" which is the target state.
+**v0.62.3 closes the drift entirely.** Standalone scenarios were added
+for T0841, T0842, T0875, T0876 (closing the orphan rules) and T0879
+(closing the missing rule). The expected sets are now empty: any new
+drift will fail CI immediately.
 """
 from __future__ import annotations
 
@@ -30,17 +25,23 @@ from pathlib import Path
 
 import yaml
 
-
 REPO = Path(__file__).resolve().parent.parent
 SCENARIOS_YML = REPO / "icsforge" / "scenarios" / "scenarios.yml"
 SPECS_JSON = REPO / "icsforge" / "data" / "detection_rules_specs.json"
 
 
-# ── Expected drift (v0.62.0 baseline) ───────────────────────────────────
-# Documented in docs/AUDIT_CLOSEOUT_v0_58_8.md and tracked as GFI-002.
-# Either fix by adding scenarios, or shrink these sets to zero.
+# ── Expected drift (v0.62.3: zero) ───────────────────────────────────────
+# Closed in v0.62.3 by adding standalone scenarios for the previously
+# orphaned techniques and a HistoryRead scenario for T0879.
+#
+# v0.68.0: T0879 is intentionally chain-only. CHAIN__damage_to_property
+# uses T0879 as the chain's tactical-objective primary, while each
+# individual step uses high-confidence observable techniques (T0846,
+# T0888, T0878, T0855, T0856) that DO have detection specs. T0879 itself
+# is by definition an effect, not directly observable on the wire, so
+# it has no standalone detection rule spec. This is the honest mapping.
 
-EXPECTED_ORPHAN_SPEC_TECHS = frozenset({"T0841", "T0842", "T0875", "T0876"})
+EXPECTED_ORPHAN_SPEC_TECHS = frozenset()
 EXPECTED_MISSING_SPEC_TECHS = frozenset({"T0879"})
 
 

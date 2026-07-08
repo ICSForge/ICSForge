@@ -21,6 +21,7 @@ Rule msg conventions honoured:
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import queue
@@ -28,7 +29,6 @@ import re
 import threading
 import time
 from collections import Counter, deque
-from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template_string, request
 
@@ -62,6 +62,16 @@ class EveTailer:
         self.subscribers: list[queue.Queue] = []
         self._lock = threading.Lock()
         self._stop = threading.Event()
+        # Diagnostics surfaced by /api/health so users can see why no alerts are showing.
+        self.last_status: str = "starting"
+        self.last_error: str | None = None
+        self.last_line_ts: float | None = None
+        self.lines_read: int = 0
+        self.lines_skipped: int = 0
+        # When True (default) we ingest the entire EVE file from the start so
+        # alerts produced before the viewer started become visible. Set to
+        # False (env ICSFORGE_VIEWER_TAIL_ONLY=1) for "live tail only" behaviour.
+        self.ingest_history: bool = os.environ.get("ICSFORGE_VIEWER_TAIL_ONLY", "0") != "1"
         self._thread = threading.Thread(target=self._run, name="eve-tailer", daemon=True)
 
     def start(self):
@@ -77,11 +87,8 @@ class EveTailer:
         return q
 
     def unsubscribe(self, q: queue.Queue):
-        with self._lock:
-            try:
-                self.subscribers.remove(q)
-            except ValueError:
-                pass
+        with self._lock, contextlib.suppress(ValueError):
+            self.subscribers.remove(q)
 
     def _publish(self, record: dict):
         with self._lock:
@@ -95,10 +102,8 @@ class EveTailer:
                 except queue.Full:
                     dead.append(q)
             for q in dead:
-                try:
+                with contextlib.suppress(ValueError):
                     self.subscribers.remove(q)
-                except ValueError:
-                    pass
 
     def _parse_line(self, line: str) -> dict | None:
         try:
@@ -126,35 +131,59 @@ class EveTailer:
             "tier": tier,
         }
 
-    def _open_and_seek_end(self):
-        # Wait for the file to exist; seek to end so we only see new alerts.
+    def _open_and_position(self):
+        """Open the EVE file and position the cursor.
+
+        Behaviour depends on ``ingest_history``:
+          - True (default): seek to start so all existing alerts are ingested.
+          - False: seek to end so only new alerts after viewer start are seen.
+
+        Waits for the file to exist; updates ``last_status`` and ``last_error``
+        so /api/health and the dashboard banner can show why nothing is flowing.
+        """
+        first_wait = True
         while not self._stop.is_set():
             if os.path.exists(self.path):
                 try:
-                    f = open(self.path, encoding="utf-8", errors="replace")
-                    f.seek(0, os.SEEK_END)
+                    f = open(self.path, encoding="utf-8", errors="replace")  # noqa: SIM115 (long-lived tail handle)
+                    if not self.ingest_history:
+                        f.seek(0, os.SEEK_END)
+                    self.last_status = "tailing"
+                    self.last_error = None
                     return f
-                except OSError:
-                    pass
+                except OSError as e:
+                    self.last_status = "error"
+                    self.last_error = f"open failed: {e!s}"
+            else:
+                if first_wait:
+                    self.last_status = "waiting_for_eve_file"
+                    self.last_error = (
+                        f"{self.path} does not exist yet. "
+                        "Start Suricata (docker compose -f docker-compose.demo.yml up suricata) "
+                        "or set ICSFORGE_EVE_PATH to your eve.json location."
+                    )
+                    first_wait = False
             time.sleep(1)
         return None
 
     def _run(self):
-        f = self._open_and_seek_end()
+        f = self._open_and_position()
         if f is None:
             return
         inode = None
-        try:
+        with contextlib.suppress(OSError):
             inode = os.fstat(f.fileno()).st_ino
-        except OSError:
-            pass
 
         while not self._stop.is_set():
             line = f.readline()
             if line:
+                self.lines_read += 1
+                self.last_line_ts = time.time()
                 rec = self._parse_line(line)
                 if rec is not None:
                     self._publish(rec)
+                else:
+                    self.lines_skipped += 1
                 continue
 
             # Detect rotation: inode change => reopen
@@ -162,13 +191,14 @@ class EveTailer:
             try:
                 cur = os.stat(self.path).st_ino
                 if inode is not None and cur != inode:
-                    try:
+                    with contextlib.suppress(OSError):
                         f.close()
-                    except OSError:
-                        pass
-                    f = open(self.path, encoding="utf-8", errors="replace")
+                    f = open(self.path, encoding="utf-8", errors="replace")  # noqa: SIM115
                     inode = cur
-            except OSError:
+                    # Rotation usually means a fresh file — read it from start.
+                    self.last_status = "rotated"
+            except OSError as e:
+                self.last_error = f"stat failed: {e!s}"
                 continue
 
 
@@ -205,12 +235,46 @@ def create_app() -> Flask:
 
     @app.route("/api/health")
     def api_health():
+        # Detect a stuck-but-empty state and tell the user what's wrong.
+        with tailer._lock:
+            buffered = len(tailer.buffer)
+            subscribers = len(tailer.subscribers)
+        eve_exists = os.path.exists(EVE_PATH)
+        hint = None
+        if not eve_exists:
+            hint = (
+                "EVE file does not exist. Either Suricata isn't running, or "
+                "ICSFORGE_EVE_PATH is wrong. For local use without docker, "
+                "you can replay a PCAP through Suricata: "
+                "`suricata -r path/to.pcap -l /tmp/sout` then point the viewer "
+                "at /tmp/sout/eve.json. Or use `icsforge viewer replay path/to.pcap`."
+            )
+        elif buffered == 0 and tailer.lines_read > 0:
+            hint = (
+                f"Tailer has read {tailer.lines_read} lines but found 0 alerts. "
+                "Either Suricata's rules aren't loaded (check rule-files in "
+                "suricata.yaml), or your scenario traffic isn't reaching the "
+                "Suricata interface. Run `icsforge detections export` and verify "
+                "the icsforge_*.rules files are present in /etc/suricata/rules/."
+            )
+        elif buffered == 0:
+            hint = (
+                "EVE file exists but no JSON lines read yet. Suricata may still "
+                "be starting; or it's writing to a different path. Confirm with "
+                f"`tail -f {EVE_PATH}`."
+            )
         return jsonify({
-            "status": "ok",
+            "status": tailer.last_status,
             "eve_path": EVE_PATH,
-            "eve_exists": os.path.exists(EVE_PATH),
-            "subscribers": len(tailer.subscribers),
-            "buffered": len(tailer.buffer),
+            "eve_exists": eve_exists,
+            "subscribers": subscribers,
+            "buffered": buffered,
+            "lines_read": tailer.lines_read,
+            "lines_skipped_non_alert": tailer.lines_skipped,
+            "last_line_ts": tailer.last_line_ts,
+            "last_error": tailer.last_error,
+            "ingest_history": tailer.ingest_history,
+            "hint": hint,
         })
 
     @app.route("/events")
@@ -220,9 +284,12 @@ def create_app() -> Flask:
             try:
                 # Send a hello event so the browser knows the stream is open.
                 yield f"event: hello\ndata: {json.dumps({'ts': time.time()})}\n\n"
-                # Replay the last 20 alerts on reconnect so the panel is populated.
+                # Replay the last 5 alerts on reconnect to handle the brief
+                # window between page load (backfill via /api/alerts) and
+                # SSE handshake. Larger windows are unnecessary because
+                # the dashboard backfills on every load.
                 with tailer._lock:
-                    replay = list(tailer.buffer)[-20:]
+                    replay = list(tailer.buffer)[-5:]
                 for rec in replay:
                     yield f"event: alert\ndata: {json.dumps(rec)}\n\n"
                 # Then block on new alerts.
@@ -353,13 +420,16 @@ _DASHBOARD_HTML = """<!doctype html>
   <section class="feed" id="feed">
     <div class="empty" id="empty">
       Waiting for Suricata alerts…<br><br>
-      Run a campaign on the sender (:8080) and alerts will appear here live.
+      <span id="empty-hint" style="color: var(--muted); font-size: 12px;">
+        Run a campaign on the sender (:8080) and alerts will appear here live.
+      </span>
     </div>
   </section>
 </main>
 <script>
   const feed = document.getElementById('feed');
   const empty = document.getElementById('empty');
+  const emptyHint = document.getElementById('empty-hint');
   const tiersEl = document.getElementById('tiers');
   const techEl = document.getElementById('techniques');
   const totalEl = document.getElementById('total');
@@ -370,6 +440,7 @@ _DASHBOARD_HTML = """<!doctype html>
   const tierOrder = ['semantic', 'heuristic', 'lab', 'unknown'];
   const tierLabel = { semantic: 'Semantic (FC-level)', heuristic: 'Heuristic (protocol)', lab: 'Lab (marker)', unknown: 'Unknown' };
   const counts = { tech: {}, tier: {} };
+  const seenSids = new Set();   // dedupe SSE-replay vs initial backfill
 
   function renderAside() {
     tiersEl.innerHTML = tierOrder.map(t => {
@@ -385,7 +456,14 @@ _DASHBOARD_HTML = """<!doctype html>
       : tech.map(([t, c]) => `<div class="tech-row"><span class="tid">${t}</span><span class="tc">${c}</span></div>`).join('');
   }
 
+  function alertKey(a) {
+    return `${a.ts}|${a.sid}|${a.src_ip}:${a.src_port}->${a.dst_ip}:${a.dst_port}`;
+  }
+
   function appendAlert(a) {
+    const k = alertKey(a);
+    if (seenSids.has(k)) return;
+    seenSids.add(k);
     if (empty.parentNode) empty.remove();
     counts.tech[a.technique] = (counts.tech[a.technique] || 0) + 1;
     counts.tier[a.tier] = (counts.tier[a.tier] || 0) + 1;
@@ -402,9 +480,45 @@ _DASHBOARD_HTML = """<!doctype html>
       <span class="tier">${a.tier}</span>
     `;
     feed.insertBefore(el, feed.firstChild);
-    // Cap DOM at 120 rows; aside stats still count the full history.
     while (feed.children.length > 120) feed.removeChild(feed.lastChild);
     renderAside();
+  }
+
+  // Backfill from server buffer so a page reload after running scenarios
+  // shows the alerts that were already captured. Without this, the dashboard
+  // looks broken — "Waiting for alerts…" — even though Suricata fired plenty.
+  async function backfill() {
+    try {
+      const r = await fetch('/api/alerts?limit=200');
+      if (!r.ok) return;
+      const j = await r.json();
+      // Server returns oldest-first; dashboard prepends, so iterate forward.
+      (j.alerts || []).forEach(appendAlert);
+    } catch (e) { /* ignored, SSE will catch up */ }
+  }
+
+  // Surface health diagnostics so a stuck-empty viewer tells the user why.
+  async function refreshHealth() {
+    try {
+      const r = await fetch('/api/health');
+      if (!r.ok) return;
+      const h = await r.json();
+      if (emptyHint && empty.parentNode) {
+        if (!h.eve_exists) {
+          emptyHint.style.color = 'var(--heuristic)';
+          emptyHint.innerHTML = `<b>EVE file not found:</b> ${h.eve_path}<br>` +
+            (h.hint || '');
+        } else if (h.lines_read > 0 && h.buffered === 0) {
+          emptyHint.style.color = 'var(--heuristic)';
+          emptyHint.innerHTML = `<b>EVE file is being read but no alerts have fired yet</b> ` +
+            `(${h.lines_read} lines processed). ` + (h.hint || '');
+        } else {
+          emptyHint.innerHTML = `Run a campaign on the sender (:8080) — alerts appear here live.<br>` +
+            `<span style="opacity:0.7">EVE: ${h.eve_path} · ${h.lines_read} lines read · ` +
+            `${h.buffered} alerts buffered</span>`;
+        }
+      }
+    } catch (e) { /* ignored */ }
   }
 
   function connect() {
@@ -418,8 +532,11 @@ _DASHBOARD_HTML = """<!doctype html>
       es.close(); setTimeout(connect, 2000);
     };
   }
-  connect();
+
+  backfill().then(connect);
   renderAside();
+  refreshHealth();
+  setInterval(refreshHealth, 5000);
 </script>
 </body>
 </html>

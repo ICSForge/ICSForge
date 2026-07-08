@@ -4,7 +4,8 @@
 import random
 import struct
 
-from .common import marker_bytes
+from .common import marker_bytes  # noqa: F401
+from .covert_marker import covert_band_byte
 
 # ── BVLC (BACnet Virtual Link Control) ───────────────────────────────
 # Type 0x81 = BACnet/IP (Annex J)
@@ -119,6 +120,33 @@ def _context_tag(tag_number: int, value: bytes) -> bytes:
         return bytes([(tag_number << 4) | 0x0D, length]) + value
 
 
+def _context_boolean(tag_number: int, value: bool) -> bytes:
+    """BACnet context-tagged Boolean.
+
+    Wireshark's BACnet dissector expects context-class Booleans encoded as
+    a 1-byte payload (0x00=FALSE, 0x01=TRUE) following the standard
+    context-tag header. Tag byte = (tag_number << 4) | 0x08 | 0x01
+    (length=1), then payload byte = 0 or 1.
+    """
+    return bytes([(tag_number << 4) | 0x08 | 0x01, 1 if value else 0])
+
+
+def _application_tag(tag_number: int, value: bytes) -> bytes:
+    """BACnet application-tagged value (§20.2.1.3.1).
+
+    Application class (top nibble bit 3 = 0). Tag numbers per Table 20-1:
+      0 = Null, 1 = Boolean, 2 = Unsigned, 3 = Signed, 4 = Real,
+      5 = Double, 6 = Octet String, 7 = Character String,
+      8 = Bit String, 9 = Enumerated, 10 = Date, 11 = Time,
+      12 = BACnetObjectIdentifier
+    """
+    length = len(value)
+    if length <= 4:
+        return bytes([(tag_number << 4) | length]) + value
+    else:
+        return bytes([(tag_number << 4) | 0x05, length]) + value
+
+
 def _opening_tag(tag_number: int) -> bytes:
     return bytes([(tag_number << 4) | 0x0E])
 
@@ -168,9 +196,27 @@ def build_payload(marker: str, style: str = "who_is", **kwargs) -> bytes:
       delete_object        Confirmed DeleteObject — T0809 Data Destruction
     """
     rnd = random.Random(kwargs.get("seed"))
-    mb = marker_bytes(marker)
-    # Monotonic invoke_id from engine; None → random per packet
-    invoke_id = (int(kwargs.get("bacnet_invoke_id")) & 0xFF) if kwargs.get("bacnet_invoke_id") is not None else rnd.randint(0, 255)
+    # BACnet/IP: marker bytes OMITTED for spec compliance. The BVLC Length
+    # field declares the BACnet packet size; appending marker bytes inside
+    # that envelope makes Wireshark's BACnet dissector parse them as
+    # additional APDU content, producing "Wrong tag found" errors. Run
+    # correlation falls back to JSONL events which already carry the run_id
+    # / technique / step metadata.
+    mb = b""
+    _ignored_marker_bytes = marker_bytes(marker)  # noqa: F841
+    _mode = kwargs.get("marker_mode", "covert" if marker else "none")
+    _run = kwargs.get("run_marker", "offline")
+    _idx = int(kwargs.get("pkt_index", 0))
+    # BACnet confirmed-request APDUs carry an 8-bit invoke ID — a genuinely
+    # arbitrary transaction matcher. In covert mode it carries the keyed
+    # covert byte (high nibble in the synthetic band) with zero added bytes.
+    # Unconfirmed services (who-is etc.) have no invoke ID and fall back to
+    # registry-only attribution. A marker is never appended to the APDU
+    # (BACnet's tag structure would flag trailing bytes as malformed).
+    if _mode == "covert" and marker:
+        invoke_id = covert_band_byte(_run, "bacnet", _idx)
+    else:
+        invoke_id = (int(kwargs.get("bacnet_invoke_id")) & 0xFF) if kwargs.get("bacnet_invoke_id") is not None else rnd.randint(0, 255)
     device_instance = int(kwargs.get("device_instance", rnd.randint(1, 4194303)))
 
     if style == "who_is":
@@ -186,12 +232,17 @@ def build_payload(marker: str, style: str = "who_is", **kwargs) -> bytes:
 
     elif style == "i_am":
         # Unconfirmed I-Am (§16.3) — fake device announcement
+        # Per spec §16.3.1, all four parameters use APPLICATION-class tags:
+        #   - iAmDeviceIdentifier:    BACnetObjectIdentifier (app tag 12)
+        #   - maxAPDULengthAccepted:  Unsigned                (app tag 2)
+        #   - segmentationSupported:  Enumerated              (app tag 9)
+        #   - vendorID:               Unsigned                (app tag 2)
         obj_id = _object_identifier(OBJ_DEVICE, device_instance)
         apdu = bytes([APDU_UNCONFIRMED_REQ, SVC_I_AM])
-        apdu += _context_tag(0, obj_id)                              # iAmDeviceIdentifier
-        apdu += _context_tag(1, _unsigned(1476))                     # maxAPDULengthAccepted
-        apdu += _context_tag(2, bytes([0x03]))                       # segmentationSupported: no
-        apdu += _context_tag(3, _unsigned(rnd.randint(0, 1000)))     # vendorID
+        apdu += _application_tag(12, obj_id)                              # iAmDeviceIdentifier
+        apdu += _application_tag(2, _unsigned(1476))                      # maxAPDULengthAccepted
+        apdu += _application_tag(9, bytes([0x03]))                        # segmentationSupported (no_segmentation=3)
+        apdu += _application_tag(2, _unsigned(rnd.randint(0, 1000)))      # vendorID
         npdu = _npdu(NPDU_CTRL_NO_APDU)
         bvlc_fn = BVLC_ORIGINAL_BROADCAST
 
@@ -259,13 +310,15 @@ def build_payload(marker: str, style: str = "who_is", **kwargs) -> bytes:
 
     elif style == "subscribe_cov":
         # Confirmed SubscribeCOV (§13.1)
+        # Per spec: context 2 (issueConfirmedNotifications) is Boolean —
+        # value encoded in tag byte's length nibble (no payload).
         obj_type = int(kwargs.get("object_type", OBJ_ANALOG_INPUT))
         obj_inst = int(kwargs.get("object_instance", rnd.randint(0, 100)))
         subscriber_process_id = rnd.randint(1, 255)
         apdu = bytes([APDU_CONFIRMED_REQ, 0x05, invoke_id, SVC_SUBSCRIBE_COV])
         apdu += _context_tag(0, _unsigned(subscriber_process_id))
         apdu += _context_tag(1, _object_identifier(obj_type, obj_inst))
-        apdu += _context_tag(2, bytes([0x01]))  # issueConfirmedNotifications: TRUE
+        apdu += _context_boolean(2, True)        # issueConfirmedNotifications
         apdu += _context_tag(3, _unsigned(300))  # lifetime: 300 seconds
         npdu = _npdu(NPDU_CTRL_EXPECTING_REPLY)
         bvlc_fn = BVLC_ORIGINAL_UNICAST
@@ -324,15 +377,21 @@ def build_payload(marker: str, style: str = "who_is", **kwargs) -> bytes:
         bvlc_fn = BVLC_ORIGINAL_UNICAST
 
     elif style == "private_transfer":
-        # Confirmed PrivateTransfer (§22.3)
-        vendor_id = int(kwargs.get("vendor_id", rnd.randint(0, 1000)))
-        service_number = int(kwargs.get("service_number", rnd.randint(0, 255)))
+        # Confirmed ConfirmedPrivateTransfer (§17.4) — vendor-specific service
+        vendor_id = int(kwargs.get("vendor_id", rnd.randint(1, 1000)))
+        service_number = int(kwargs.get("service_number", rnd.randint(1, 200)))
         apdu = bytes([APDU_CONFIRMED_REQ, 0x05, invoke_id, SVC_CONFIRMED_PRIVATE_TRANSFER])
         apdu += _context_tag(0, _unsigned(vendor_id))
         apdu += _context_tag(1, _unsigned(service_number))
-        # Optional serviceParameters (context 2)
+        # Optional serviceParameters (context 2) — must contain valid BACnet
+        # primitives, not raw bytes (random bytes can produce invalid tag
+        # extended-length headers that the dissector flags).
         apdu += _opening_tag(2)
-        apdu += bytes([rnd.randint(0, 255) for _ in range(16)])
+        # Pack a few well-formed application-tagged values:
+        #   - Unsigned: tag 2, len 4 = 0x22 + 4 random bytes
+        #   - Octet String: tag 6, len 4 = 0x65 + 4 random bytes
+        apdu += _application_tag(2, struct.pack(">I", rnd.randint(0, 0xFFFFFFFF)))
+        apdu += _application_tag(6, bytes([rnd.randint(0, 255) for _ in range(4)]))
         apdu += _closing_tag(2)
         npdu = _npdu(NPDU_CTRL_EXPECTING_REPLY)
         bvlc_fn = BVLC_ORIGINAL_UNICAST

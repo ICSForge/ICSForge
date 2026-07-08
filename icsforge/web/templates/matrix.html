@@ -21,6 +21,13 @@
       </div>
       <button class="btn" onclick="saveDst()" style="font-size:11px;padding:6px 10px">Save IP</button>
       {% endif %}
+      <!-- ATT&CK version toggle -->
+      <div style="display:flex;gap:0;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <a href="?version=v18" class="btn {% if matrix_version == 'v18' %}primary{% endif %}"
+           style="font-size:10px;padding:5px 10px;border-radius:0;border:none;text-decoration:none">v18</a>
+        <a href="?version=v19" class="btn {% if matrix_version == 'v19' %}primary{% endif %}"
+           style="font-size:10px;padding:5px 10px;border-radius:0;border:none;border-left:1px solid var(--border);text-decoration:none">v19</a>
+      </div>
       <button class="btn" onclick="setFilter('all')"      id="f_all"      style="font-size:10px;padding:5px 9px">All</button>
       <button class="btn" onclick="setFilter('runnable')" id="f_runnable" style="font-size:10px;padding:5px 9px">Runnable</button>
       <button class="btn" onclick="setFilter('precursor')"id="f_precursor"style="font-size:10px;padding:5px 9px">Precursor</button>
@@ -55,12 +62,13 @@
     <div class="mc-body">
       {% for tech in tac.techniques %}
       {% set st = status.get(tech.id, {'runnable': False, 'precursor': False}) %}
-      <div class="mt {% if st.get('runnable') %}mt-run{% elif st.get('precursor') %}mt-pre{% else %}mt-nil{% endif %}"
+      <div class="mt {% if st.get('runnable') %}mt-run{% elif st.get('precursor') %}mt-pre{% else %}mt-nil{% endif %} {% if tech.is_subtechnique %}mt-sub{% endif %}"
         data-techid="{{ tech.id }}"
         data-techname="{{ tech.name|e }}"
         data-runnable="{{ 1 if st.get('runnable') else 0 }}"
-        data-precursor="{{ 1 if st.get('precursor') else 0 }}">
-        <div class="mt-id">{{ tech.id }}</div>
+        data-precursor="{{ 1 if st.get('precursor') else 0 }}"
+        data-issub="{{ 1 if tech.is_subtechnique else 0 }}">
+        <div class="mt-id">{% if tech.is_subtechnique %}↳ {% endif %}{{ tech.id }}</div>
         <div class="mt-name">{{ tech.name }}</div>
       </div>
       {% endfor %}
@@ -221,6 +229,23 @@
 }
 .mt-nil .mt-id,
 .mt-nil .mt-name { color: var(--muted) }
+
+/* ── Sub-techniques (v19) ────────────────────────────────────── */
+.mt-sub {
+  margin-left: 10px;
+  border-left-style: dashed !important;
+  position: relative;
+}
+.mt-sub .mt-id {
+  font-size: 8px;
+  color: var(--brand2);
+  opacity: .85;
+}
+.mt-sub .mt-name {
+  font-size: 8.5px;
+  font-style: italic;
+  opacity: .9;
+}
 
 /* ── Overlay states ──────────────────────────────────────────── */
 .mt.executed { background: rgba(16,185,129,.28) !important; border-color: #10b981 !important; box-shadow: 0 0 0 1px #10b981; }

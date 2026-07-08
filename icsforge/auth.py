@@ -43,6 +43,8 @@ PUBLIC_PATHS = {
     "/login", "/setup", "/health",
     "/api/auth/login", "/api/auth/setup", "/api/health",
     "/api/receiver/callback",
+    "/api/receiver/expect",
+    "/api/receiver/expectations",
     "/api/config/set_callback",
 }
 PUBLIC_PREFIXES = ("/static/",)

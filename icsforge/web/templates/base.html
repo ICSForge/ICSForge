@@ -33,7 +33,7 @@
           <a class="nav-tab {{ 'active' if request.endpoint == 'web.tools' }}" href="{{ url_for('web.tools') }}">Tools</a>
         {% endif %}
       </nav>
-  {%- if not no_auth and not callback_token_set %}
+  {%- if not no_auth and not callback_token_set and ui_mode != 'receiver' %}
   <div id="token_warn" style="background:#7c1d1d;color:#fca5a5;font-size:11px;padding:6px 16px;display:flex;align-items:center;gap:8px;justify-content:space-between">
     <span>⚠ No callback token configured — receipt integrity is not enforced. Set a shared token in Network Settings to protect against forged receipts.</span>
     <a href="/sender#network_bar" style="color:#fca5a5;white-space:nowrap">Configure →</a>

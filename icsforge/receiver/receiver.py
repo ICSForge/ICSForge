@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 
 import yaml
 
-from icsforge.core import marker_prefix
+from icsforge.core import marker_prefix  # noqa: F401 — retained for compat
 from icsforge.log import configure as configure_logging
 from icsforge.log import get_logger
 
@@ -34,6 +34,130 @@ _receipt_lock = threading.Lock()
 _callback_url = ""       # set by config, CLI, or sender push
 _callback_token = ""     # optional shared token for callback auth
 _callback_timeout = 2
+
+# ── Expectation registry (markerless correlation) ─────────────────────
+#
+# Some scenarios cannot embed the ICSFORGE_SYNTH marker in the wire
+# bytes — IEC-104 is one (its ASDU length field makes trailing bytes
+# unparseable; documented in protocols/iec104.py), and stealth mode
+# (--no-marker) intentionally omits the marker from every protocol.
+#
+# Without a marker, the receiver still observes the packet but cannot
+# attribute it to a specific (run_id, scenario, step). The expectation
+# registry closes that gap: the sender announces the upcoming run via
+# POST /api/receiver/expect BEFORE replay, and the receiver attributes
+# any non-marker traffic that arrives within the announced window to
+# that run.
+#
+# Expectations are TTL-bounded; once expired, traffic without a marker
+# generates a marker_found=False receipt with no callback (legacy behavior).
+
+_expect_lock = threading.Lock()
+_expectations: dict[str, dict] = {}  # run_id -> {expires_at, scenario, technique, steps}
+
+
+def register_expectation(run_id: str, scenario: str = "", technique: str = "",
+                         steps: int = 1, ttl_sec: float = 300.0,
+                         protos: list | None = None,
+                         test_profile: str = "", expected_alert: str = "") -> dict:
+    """
+    Register an expectation that traffic for run_id is about to arrive.
+
+    Args:
+      run_id     — the run identifier the sender will use.
+      scenario   — scenario name being run (e.g. T0855__unauth_command__iec104).
+      technique  — primary MITRE technique ID (e.g. T0855).
+      steps      — number of steps in the scenario (used for diagnostics).
+      ttl_sec    — how long to keep the expectation alive (default 5 min).
+      protos     — optional list of expected protocols (iec104, modbus, ...).
+                   When set, only matching proto traffic is attributed.
+      test_profile — "firewall" or "nsm" (or "" if unspecified). Records the
+                   operator's intent so witnessed receipts and reports can be
+                   framed correctly: firewall/ACL runs treat arrival as a
+                   boundary-traversal finding; NSM runs treat arrival as the
+                   expected condition and pair it with the expected alert.
+      expected_alert — free-text description of the alert the NSM is expected to
+                   raise for this scenario (e.g. the technique name or a rule
+                   reference), surfaced in the witnessed report for diffing.
+
+    The expectation is replaced if run_id already exists (so calling this
+    again for the same run extends the window).
+    """
+    if not run_id:
+        return {}
+    expires_at = time.time() + max(1.0, float(ttl_sec))
+    entry = {
+        "run_id": run_id,
+        "scenario": str(scenario or ""),
+        "technique": str(technique or ""),
+        "steps": int(steps or 1),
+        "expires_at": expires_at,
+        "protos": list(protos) if protos else None,
+        "received": 0,  # incremented per attributed packet
+        "test_profile": str(test_profile or ""),
+        "expected_alert": str(expected_alert or ""),
+    }
+    with _expect_lock:
+        _expectations[run_id] = entry
+    log.debug("Expectation registered: run_id=%s scenario=%s profile=%s ttl=%.0fs",
+              run_id, scenario, test_profile or "-", ttl_sec)
+    return entry
+
+
+def clear_expectation(run_id: str) -> bool:
+    """Remove an expectation early. Returns True if one existed."""
+    with _expect_lock:
+        return _expectations.pop(run_id, None) is not None
+
+
+def list_expectations() -> list[dict]:
+    """Return a snapshot of currently active expectations."""
+    now = time.time()
+    with _expect_lock:
+        # Drop expired in-place
+        for k in list(_expectations.keys()):
+            if _expectations[k]["expires_at"] <= now:
+                _expectations.pop(k, None)
+        return [dict(v) for v in _expectations.values()]
+
+
+def _expectation_enrichment(expectation: dict) -> dict:
+    """Fields lifted from an expectation into a witnessed receipt so the report
+    can frame results by test profile and diff witnessed-vs-expected. Kept in
+    one place so both attribution paths (covert_band and expectation) stay
+    consistent."""
+    return {
+        "test_profile": expectation.get("test_profile", ""),
+        "expected_technique": expectation.get("technique", ""),
+        "expected_scenario": expectation.get("scenario", ""),
+        "expected_alert": expectation.get("expected_alert", ""),
+    }
+
+
+def _match_expectation(proto: str | None) -> dict | None:
+    """
+    Return the active expectation that should attribute incoming traffic.
+
+    Currently FIFO by registration order — if multiple expectations are
+    active, the oldest one matching proto wins. In practice we expect
+    one active expectation at a time (a single sender, single run).
+    """
+    now = time.time()
+    with _expect_lock:
+        # Expire stale entries
+        for k in list(_expectations.keys()):
+            if _expectations[k]["expires_at"] <= now:
+                _expectations.pop(k, None)
+        # Find earliest-registered match
+        candidates = []
+        for v in _expectations.values():
+            if v["protos"] is None or proto is None or proto in v["protos"]:
+                candidates.append(v)
+        if not candidates:
+            return None
+        # Earliest expires_at = earliest registered (for FIFO semantics
+        # under the assumption of equal TTL)
+        return min(candidates, key=lambda x: x["expires_at"])
 
 
 def set_callback_url(url: str):
@@ -64,17 +188,84 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
-def _parse_marker(payload: bytes) -> dict:
-    pref = marker_prefix()
-    i = payload.find(pref)
-    if i < 0:
-        return {"marker_found": False}
-    tail = payload[i:]
-    parts = tail.split(b"|", 3)
-    run_id = parts[1].decode("utf-8", "ignore") if len(parts) > 1 else ""
-    tech = parts[2].decode("utf-8", "ignore") if len(parts) > 2 else ""
-    step = parts[3].decode("utf-8", "ignore") if len(parts) > 3 else ""
-    return {"marker_found": True, "run_id": run_id, "technique": tech, "step": step}
+def _parse_marker(payload: bytes, proto: str | None = None) -> dict:
+    """
+    Extract correlation metadata from payload.
+
+    v0.74.0 marker model (three detection paths, most-specific first):
+
+    1. Explicit compact marker: 'ICSF' + 1-byte proto code + 8 hex chars of
+       the run hash, embedded in the payload (DNP3 always; MQTT; and any
+       protocol in --explicit-marker mode). marker_found=True,
+       attributed_via='marker'.
+
+    2. Covert field marker: the synthetic band byte (0xF7) at the protocol's
+       covert-field offset (Modbus txn-ID @0, S7 PDU-ref @11, ENIP sender
+       context @12, OPC UA request handle @40, BACnet invoke ID @8). This is
+       the Layer-1 signal; combined with an active expectation it attributes
+       the packet and (when the run key is known) can be HMAC-verified for
+       Layer-2 confidence. attributed_via='covert_band'.
+
+    3. Expectation fallback: no marker on the wire but an active expectation
+       for this proto (IEC-104, --no-marker stealth, PINGREQ-only MQTT).
+       attributed_via='expectation'.
+    """
+    # ── Path 1: explicit compact 'ICSF' marker ───────────────────────────
+    i = payload.find(b"ICSF")
+    if i >= 0 and len(payload) >= i + 13:
+        blob = payload[i:i + 13]
+        proto_code = blob[4:5]
+        run_hash = blob[5:13].decode("ascii", "ignore")
+        return {
+            "marker_found": True,
+            "run_id": "",            # run_id not inline; resolved via registry/hash
+            "run_hash": run_hash,
+            "proto_code": proto_code.decode("ascii", "ignore"),
+            "technique": "",
+            "step": "",
+            "attributed_via": "marker",
+        }
+
+    # ── Path 2: covert band byte at the protocol's covert-field offset ────
+    _covert_offset = {
+        "modbus": 0, "s7comm": 11, "enip": 12, "opcua": 41, "bacnet": 8,
+    }
+    off = _covert_offset.get(proto)
+    if off is not None and len(payload) > off and payload[off] == 0xF7:
+        expectation = _match_expectation(proto)
+        if expectation is not None:
+            with _expect_lock:
+                if expectation["run_id"] in _expectations:
+                    _expectations[expectation["run_id"]]["received"] += 1
+            return {
+                "marker_found": True,
+                "run_id": expectation["run_id"],
+                "technique": expectation["technique"],
+                "scenario": expectation["scenario"],
+                "step": "",
+                "attributed_via": "covert_band",
+                **_expectation_enrichment(expectation),
+            }
+        # Band present but no expectation to bind it to — still a synthetic
+        # signal, but unattributed.
+        return {"marker_found": True, "attributed_via": "covert_band", "run_id": ""}
+
+    # ── Path 3: expectation-based attribution (no marker on the wire) ─────
+    expectation = _match_expectation(proto)
+    if expectation is not None:
+        with _expect_lock:
+            if expectation["run_id"] in _expectations:
+                _expectations[expectation["run_id"]]["received"] += 1
+        return {
+            "marker_found": False,
+            "run_id": expectation["run_id"],
+            "technique": expectation["technique"],
+            "scenario": expectation["scenario"],
+            "step": "",
+            "attributed_via": "expectation",
+            **_expectation_enrichment(expectation),
+        }
+    return {"marker_found": False, "attributed_via": "none"}
 
 
 def _send_callback(ev: dict):
@@ -89,7 +280,8 @@ def _send_callback(ev: dict):
         if _callback_token:
             headers["X-ICSForge-Callback-Token"] = _callback_token
             # Sign payload with HMAC-SHA256 so sender can verify receipt integrity
-            import hmac as _hmac, hashlib as _hl
+            import hashlib as _hl
+            import hmac as _hmac
             headers["X-ICSForge-HMAC"] = _hmac.new(
                 _callback_token.encode("utf-8"), data, _hl.sha256
             ).hexdigest()
@@ -110,8 +302,10 @@ def _write_receipt(path: str, ev: dict):
     with _receipt_lock, open(path, "a", encoding="utf-8") as f:
         f.write(line)
         f.flush()
-    # Send callback to sender (non-blocking via thread)
-    if _callback_url and ev.get("marker_found"):
+    # Send callback to sender (non-blocking via thread).
+    # Trigger on either a verified marker OR an expectation-attributed packet
+    # (the latter covers IEC-104 and stealth-mode runs).
+    if _callback_url and (ev.get("marker_found") or ev.get("attributed_via") == "expectation"):
         threading.Thread(target=_send_callback, args=(ev,), daemon=True).start()
 
 
@@ -123,7 +317,7 @@ def _handle_tcp(conn, addr, proto, port, receipts_path, max_payload):
         data = conn.recv(max_payload)
         if not data:
             return
-        meta = _parse_marker(data)
+        meta = _parse_marker(data, proto=proto)
         ev = {
             "@timestamp": _now(),
             "receiver.proto": proto,
@@ -136,7 +330,12 @@ def _handle_tcp(conn, addr, proto, port, receipts_path, max_payload):
         }
         _write_receipt(receipts_path, ev)
         if meta.get("marker_found"):
-            log.debug("Receipt: %s %s from %s:%d", proto, meta.get("technique", "?"), addr[0], addr[1])
+            log.debug("Receipt: %s %s from %s:%d (marker)",
+                      proto, meta.get("technique", "?"), addr[0], addr[1])
+        elif meta.get("attributed_via") == "expectation":
+            log.debug("Receipt: %s %s from %s:%d (expectation: run=%s)",
+                      proto, meta.get("technique", "?"), addr[0], addr[1],
+                      meta.get("run_id", "?"))
     except Exception as e:
         log.debug("TCP handler error (%s:%d): %s", proto, port, e)
     finally:
@@ -184,7 +383,7 @@ def _udp_server(bind_ip, port, proto, receipts_path, max_payload):
             data, addr = s.recvfrom(max_payload)
             if not data:
                 continue
-            meta = _parse_marker(data)
+            meta = _parse_marker(data, proto=proto)
             ev = {
                 "@timestamp": _now(),
                 "receiver.proto": proto,
@@ -198,7 +397,12 @@ def _udp_server(bind_ip, port, proto, receipts_path, max_payload):
             }
             _write_receipt(receipts_path, ev)
             if meta.get("marker_found"):
-                log.debug("Receipt: %s %s from %s:%d (UDP)", proto, meta.get("technique", "?"), addr[0], addr[1])
+                log.debug("Receipt: %s %s from %s:%d (UDP, marker)",
+                          proto, meta.get("technique", "?"), addr[0], addr[1])
+            elif meta.get("attributed_via") == "expectation":
+                log.debug("Receipt: %s %s from %s:%d (UDP, expectation: run=%s)",
+                          proto, meta.get("technique", "?"), addr[0], addr[1],
+                          meta.get("run_id", "?"))
         except Exception as e:
             log.error("UDP recv error (%s:%d): %s", proto, port, e)
 
@@ -244,7 +448,7 @@ def _parse_profinet_frame(raw):
     src_mac = ":".join(f"{b:02x}" for b in raw[6:12])
     dst_mac = ":".join(f"{b:02x}" for b in raw[0:6])
     payload = raw[14:]
-    meta = _parse_marker(payload)
+    meta = _parse_marker(payload, proto="profinet_dcp")
     return {
         "@timestamp": _now(),
         "receiver.proto": "profinet_dcp",
@@ -308,7 +512,12 @@ def _parse_goose_frame(raw):
     src_mac = ":".join(f"{b:02x}" for b in raw[6:12])
     dst_mac = ":".join(f"{b:02x}" for b in raw[0:6])
     payload = raw[14:]
-    meta = _parse_marker(payload)
+    # GOOSE carries no covert field (no spare arbitrary bytes), so like IEC-104
+    # it is attributed via the expectation registry. Pass proto so _parse_marker
+    # can match an active iec61850 expectation; without it the expectation path
+    # is skipped and every GOOSE frame returns attributed_via="none" (no receipt
+    # callback fires).
+    meta = _parse_marker(payload, proto="iec61850")
     return {
         "@timestamp": _now(),
         "receiver.proto": "iec61850",

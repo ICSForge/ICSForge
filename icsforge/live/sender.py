@@ -12,7 +12,7 @@ from contextlib import suppress
 
 import yaml
 
-from icsforge.core import build_marker, generate_run_id, parse_interval
+from icsforge.core import generate_run_id, parse_interval
 from icsforge.log import get_logger
 from icsforge.protocols import TCP_PROTOS, UDP_PROTOS, iec61850, profinet_dcp
 
@@ -120,8 +120,23 @@ def send_scenario_live(
     timeout: float = 2.0,
     step_options: dict | None = None,
     no_marker: bool = False,
+    explicit_marker: bool = False,
+    run_id: str | None = None,
 ) -> dict:
-    """Send a scenario live. step_options: {proto: {key: value}} overrides per-step."""
+    """Send a scenario live. step_options: {proto: {key: value}} overrides per-step.
+
+    run_id, if provided, overrides the auto-generated id. This is used by the
+    web blueprint so it can pre-announce a markerless-attribution expectation
+    to the receiver BEFORE traffic starts flowing.
+
+    Marker modes mirror the offline engine exactly: covert (default), explicit
+    (`explicit_marker=True`, literal ICSF tag), or stealth (`no_marker=True`).
+    Per-protocol sequence/correlation fields (Modbus transaction ID, S7 PDU
+    reference, DNP3 application sequence, IEC-104 send sequence, OPC UA sequence
+    /request id) are threaded as monotonic counters so live traffic is as
+    realistic on the wire as the offline PCAP — a real client increments these,
+    and random values would look anomalous to an NSM.
+    """
     if not confirm_live_network:
         raise ValueError("Live send blocked: pass confirm_live_network=True to enable.")
 
@@ -134,10 +149,47 @@ def send_scenario_live(
     if not sc:
         raise ValueError(f"Scenario '{scenario_name}' not found")
 
-    run_id = generate_run_id()
+    if not run_id:
+        run_id = generate_run_id()
     sent   = 0
     errors = []
     confirmed_techniques: set[str] = set()  # techniques with at least one successful send
+    # Monotonic packet index across the whole run, threaded into the covert
+    # marker (HMAC over run_marker||pkt_index) exactly like the offline engine.
+    # A 1-element list so the nested per-step loops can mutate it in place.
+    _pkt_index = [0]
+    # Marker mode resolved once, mirroring engine.run_scenario.
+    _marker_mode = "none" if no_marker else ("explicit" if explicit_marker else "covert")
+    # Per-protocol monotonic sequence/correlation counters — kept in one dict so
+    # the helper below can advance them exactly as the offline engine does.
+    _seq = {"modbus_tid": 0x0000, "s7_pdu_ref": 0x0000, "dnp3_seq": 0x00,
+            "iec104_seq": 0x0000, "opcua_sequence_number": 0x00000001,
+            "opcua_request_id": 0x0001}
+
+    def _proto_seq_opts(proto: str) -> dict:
+        """Return the per-protocol sequence kwargs for this packet and advance
+        the counter, mirroring engine.run_scenario so live == offline on the wire.
+        These only change the bytes in stealth mode (covert overrides the same
+        fields with the marker), but threading them keeps both paths identical."""
+        o: dict = {}
+        if proto == "modbus":
+            o["modbus_tid"] = _seq["modbus_tid"]
+            _seq["modbus_tid"] = (_seq["modbus_tid"] + 1) & 0xFFFF
+        elif proto == "s7comm":
+            o["s7_pdu_ref"] = _seq["s7_pdu_ref"]
+            _seq["s7_pdu_ref"] = (_seq["s7_pdu_ref"] + 1) & 0xFFFF
+        elif proto == "dnp3":
+            o["dnp3_seq"] = _seq["dnp3_seq"]
+            _seq["dnp3_seq"] = (_seq["dnp3_seq"] + 1) & 0x0F
+        elif proto == "iec104":
+            o["iec104_seq"] = _seq["iec104_seq"]
+            _seq["iec104_seq"] = (_seq["iec104_seq"] + 1) & 0x7FFF
+        elif proto == "opcua":
+            o["sequence_number"] = _seq["opcua_sequence_number"]
+            o["request_id"]      = _seq["opcua_request_id"]
+            _seq["opcua_sequence_number"] = (_seq["opcua_sequence_number"] + 1) & 0xFFFFFF
+            _seq["opcua_request_id"]      = (_seq["opcua_request_id"] + 1) & 0xFFFF
+        return o
 
     for idx, step in enumerate(sc.get("steps", []), start=1):
         stype = (step.get("type") or "packet").strip().lower()
@@ -149,15 +201,17 @@ def send_scenario_live(
         style    = step.get("style", "auto")
         count    = int(step.get("count", 1))
         interval = parse_interval(step.get("interval", "0s"))
-        step_id  = f"{scenario_name}:{idx}:{proto}"
 
         if proto == "profinet_dcp":
             if not iface:
                 errors.append(f"step {idx}: profinet_dcp requires --iface (skipped)")
                 continue
             for _ in range(count):
-                marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
-                payload = profinet_dcp.build_payload(marker, style=style)
+                payload = profinet_dcp.build_payload(
+                    "" if no_marker else "x", style=style,
+                    marker_mode=_marker_mode,
+                    run_marker=run_id, pkt_index=_pkt_index[0])
+                _pkt_index[0] += 1
                 try:
                     _send_profinet_dcp(iface, payload)
                     sent += 1
@@ -172,9 +226,12 @@ def send_scenario_live(
                 errors.append(f"step {idx}: iec61850 requires --iface (skipped)")
                 continue
             for _ in range(count):
-                marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
                 opts = (step_options or {}).get(proto, {})
-                goose_frame = iec61850.build_payload(marker, style=style, **opts)
+                goose_frame = iec61850.build_payload(
+                    "" if no_marker else "x", style=style,
+                    marker_mode=_marker_mode,
+                    run_marker=run_id, pkt_index=_pkt_index[0], **opts)
+                _pkt_index[0] += 1
                 try:
                     _send_iec61850(iface, goose_frame)
                     sent += 1
@@ -189,9 +246,12 @@ def send_scenario_live(
             if proto in TCP_PROTOS:
                 port, builder = TCP_PROTOS[proto]
                 for _ in range(count):
-                    marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
-                    opts = (step_options or {}).get(proto, {})
-                    payload = builder(marker, style=style, **opts)
+                    opts = {**(step_options or {}).get(proto, {}), **_proto_seq_opts(proto)}
+                    payload = builder(
+                        "" if no_marker else "x", style=style,
+                        marker_mode=_marker_mode,
+                        run_marker=run_id, pkt_index=_pkt_index[0], **opts)
+                    _pkt_index[0] += 1
                     try:
                         _tcp_send(dst_ip, port, payload, timeout)
                         sent += 1
@@ -204,9 +264,12 @@ def send_scenario_live(
             elif proto in UDP_PROTOS:
                 port, builder = UDP_PROTOS[proto]
                 for _ in range(count):
-                    marker  = b'' if no_marker else build_marker(run_id, tech, step_id)
-                    opts = (step_options or {}).get(proto, {})
-                    payload = builder(marker, style=style, **opts)
+                    opts = {**(step_options or {}).get(proto, {}), **_proto_seq_opts(proto)}
+                    payload = builder(
+                        b"" if no_marker else b"x", style=style,
+                        marker_mode=_marker_mode,
+                        run_marker=run_id, pkt_index=_pkt_index[0], **opts)
+                    _pkt_index[0] += 1
                     try:
                         _udp_send(dst_ip, port, payload, timeout)
                         sent += 1

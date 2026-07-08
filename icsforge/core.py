@@ -62,10 +62,8 @@ def _extra_allowed_nets() -> list:
         cidr = cidr.strip()
         if not cidr:
             continue
-        try:
+        with suppress(ValueError):
             nets.append(ipaddress.ip_network(cidr, strict=False))
-        except ValueError:
-            pass  # ignore malformed entries
     return nets
 
 

@@ -1,8 +1,17 @@
 # ICSForge — Conference demo stack
 #
-# One command:   docker compose -f docker-compose.demo.yml up
+# Default (full demo, all 5 services):
+#   docker compose -f docker-compose.demo.yml up
 #
-# What you get:
+# Receiver-only (run on a remote host to receive ICSForge traffic from a
+# sender on a different network — useful for split-host architectures):
+#   docker compose -f docker-compose.demo.yml --profile receiver-only up
+#
+# Sender-only (run a sender against a separate receiver — e.g. against
+# real OT equipment listeners on the same network):
+#   docker compose -f docker-compose.demo.yml --profile sender up
+#
+# What you get with the default profile:
 #   Sender UI          http://localhost:8080   run scenarios & campaigns
 #   Receiver UI        http://localhost:9090   live receipt feed & matrix overlay
 #   Alert viewer UI    http://localhost:3000   live Suricata alerts colour-coded by technique
@@ -12,11 +21,22 @@
 # This is a conference-demo configuration. Traffic is confined to the
 # internal icsforge-net bridge (172.28.0.0/24). Suricata runs in promiscuous
 # mode on that bridge only. No traffic leaves the Docker host.
+#
+# Profiles defined:
+#   default        sender + receiver + suricata + rule-loader + viewer (full demo)
+#   sender         sender only (control plane / scenario engine)
+#   receiver       receiver service alone (with sender if available)
+#   receiver-only  receiver in stand-alone mode (no sender required)
+#   full           same as default — explicit alias
 
 services:
 
   # ── Sender: the control plane + scenario/campaign engine ──────────────
   sender:
+    profiles:
+      - default
+      - sender
+      - full
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -44,6 +64,11 @@ services:
 
   # ── Receiver: protocol sinks + receipt correlation + matrix overlay ───
   receiver:
+    profiles:
+      - default
+      - receiver
+      - receiver-only
+      - full
     build:
       context: .
       dockerfile: docker/Dockerfile.receiver
@@ -77,6 +102,10 @@ services:
     depends_on:
       sender:
         condition: service_healthy
+        # required: false makes this dependency soft — receiver can start
+        # without sender (e.g. in `--profile receiver-only` mode) and will
+        # simply have its callback POSTs fail until the sender comes up.
+        required: false
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/api/health', timeout=2)"]
       interval: 5s
@@ -86,6 +115,9 @@ services:
 
   # ── Suricata: loads ICSForge's own three-tier rules ───────────────────
   suricata:
+    profiles:
+      - default
+      - full
     image: jasonish/suricata:7.0
     volumes:
       - ./docker/suricata.yaml:/etc/suricata/suricata.yaml:ro
@@ -122,6 +154,9 @@ services:
   # We generate rules from the sender's detection module so they always
   # reflect the current scenario library.
   rule-loader:
+    profiles:
+      - default
+      - full
     image: icsforge/sender:demo
     volumes:
       - shared-rules:/out
@@ -138,6 +173,9 @@ services:
 
   # ── Alert viewer: live colour-coded Suricata feed ─────────────────────
   viewer:
+    profiles:
+      - default
+      - full
     build:
       context: .
       dockerfile: docker/Dockerfile.viewer

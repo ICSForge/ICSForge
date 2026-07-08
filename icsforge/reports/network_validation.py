@@ -69,19 +69,53 @@ def build_network_validation_report(
         exp = sorted(expected_by_run.get(run, set()))
         rec = received_by_run.get(run, [])
         rec_tech = sorted({x.get("technique") for x in rec if x.get("technique")})
+        # Test profile + expected alert are recorded on receipts (from the
+        # expectation the sender announced). Take the first non-empty value.
+        _profile = next((x.get("test_profile") for x in rec if x.get("test_profile")), "")
+        _exp_alert = next((x.get("expected_alert") for x in rec if x.get("expected_alert")), "")
+        delivered = sorted({x.get("technique") for x in rec if x.get("technique")} & set(exp))
         item = {
             "run_id": run,
+            "test_profile": _profile or "firewall",
             "expected_techniques": exp,
+            "expected_alert": _exp_alert,
             "received_packets": len(rec),
             "received_techniques_from_marker": rec_tech,
             # Delivery ratio: fraction of expected techniques confirmed by markers.
             # A technique is "delivered" if at least one receipt carries its ID.
-            "delivered_techniques": sorted({x.get("technique") for x in rec if x.get("technique")} & set(exp)),
+            "delivered_techniques": delivered,
             "delivery_ratio": (
                 round(len({x.get("technique") for x in rec if x.get("technique")} & set(exp)) / len(exp), 3)
                 if exp else (1.0 if len(rec) > 0 else 0.0)
             ),
         }
+        # Profile-aware interpretation so the report reads correctly per intent.
+        delivered_any = len(rec) > 0
+        if (_profile or "firewall") == "nsm":
+            if alerts_jsonl:
+                obs = set(observed_by_run.get(run, set()))
+                fired = bool(obs & set(exp)) if exp else bool(obs)
+                item["interpretation"] = (
+                    "NSM: traffic witnessed at the sink and the sensor raised the "
+                    "expected alert." if (delivered_any and fired) else
+                    "NSM: traffic witnessed at the sink but NO matching sensor alert "
+                    "— possible detection gap." if (delivered_any and not fired) else
+                    "NSM: traffic did not reach the sink — check the path/run."
+                )
+            else:
+                item["interpretation"] = (
+                    "NSM: traffic witnessed at the sink (provide --alerts to confirm "
+                    "the sensor fired)." if delivered_any else
+                    "NSM: traffic did not reach the sink — check the path/run."
+                )
+        else:  # firewall / ACL
+            item["interpretation"] = (
+                "Firewall/ACL: traffic TRAVERSED the boundary and reached the sink "
+                "— a rule allowed it; investigate the policy that permitted these "
+                "protocols." if delivered_any else
+                "Firewall/ACL: no traffic reached the sink — the boundary blocked it "
+                "(expected for a correctly-segmented path)."
+            )
         if alerts_jsonl:
             obs = sorted(observed_by_run.get(run, set()))
             item["observed_techniques"] = obs

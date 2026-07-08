@@ -169,7 +169,7 @@ def main():
     if args.tshark and not has_tshark:
         print("WARNING: --tshark requested but tshark not found. Struct-only mode.\n")
 
-    label = f"+ tshark" if use_tshark else "struct-only"
+    label = "+ tshark" if use_tshark else "struct-only"
     print(f"ICSForge PCAP Validation — {total} scenarios ({label})\n")
 
     for name, sc in sorted(scenarios.items()):
@@ -251,7 +251,7 @@ def main():
     print(f"\n{'=' * 60}")
     print(f"  {passed} passed, {failed} failed out of {total}")
     if fail_details:
-        print(f"\n  Failures:")
+        print("\n  Failures:")
         for d in fail_details:
             print(f"    ✗ {d}")
     if failed == 0:

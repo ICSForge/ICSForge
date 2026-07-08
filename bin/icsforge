@@ -5,12 +5,25 @@ Usage:
   ./bin/icsforge install
   ./bin/icsforge web [--host 0.0.0.0 --port 8080] [--unprivileged]
   ./bin/icsforge receiver [--host 0.0.0.0 --port 9090]
+  ./bin/icsforge viewer [--host 0.0.0.0 --port 3000] [--eve-path /path/to/eve.json]
+  ./bin/icsforge viewer-replay PCAP [PCAP...] [--port 3000]
+  ./bin/icsforge demo {up|down|fire CAMPAIGN}
   ./bin/icsforge selftest
   ./bin/icsforge doctor
 
 Ports:
   Sender   web UI defaults to :8080
   Receiver web UI defaults to :9090  (safe for single-host testing)
+  Viewer   alert UI defaults to :3000
+
+The "viewer-replay" mode runs Suricata against your PCAP(s) using
+ICSForge's three-tier rules and serves the resulting alerts at :3000.
+Useful when you don't want to bring up the full docker stack.
+
+The "demo" mode wraps `docker compose -f docker-compose.demo.yml`:
+  demo up                — bring up sender + receiver + Suricata + viewer
+  demo down              — tear it all down
+  demo fire CAMPAIGN     — run a campaign against the demo stack
 """
 
 import json
@@ -107,6 +120,104 @@ def cmd_receiver(args):
     subprocess.check_call(cmd, cwd=str(REPO), env=env)
 
 
+def cmd_viewer(args):
+    """Live Suricata EVE alert viewer (port 3000)."""
+    _ensure_venv()
+    host = "0.0.0.0"
+    port = "3000"
+    eve_path = "/var/log/suricata/eve.json"
+    if "--host" in args:
+        host = args[args.index("--host") + 1]
+    if "--port" in args:
+        port = args[args.index("--port") + 1]
+    if "--eve-path" in args:
+        eve_path = args[args.index("--eve-path") + 1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+    env["ICSFORGE_EVE_PATH"] = eve_path
+    cmd = [str(PY), "-m", "icsforge.cli", "viewer", "serve",
+           "--host", host, "--port", port, "--eve-path", eve_path]
+    subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
+
+def cmd_viewer_replay(args):
+    """Run Suricata against PCAP(s) then serve alerts at port 3000."""
+    _ensure_venv()
+    if not args or args[0].startswith("--"):
+        print("Usage: ./bin/icsforge viewer-replay PCAP [PCAP...] [--port 3000]")
+        sys.exit(2)
+    if not shutil.which("suricata"):
+        print("ERROR: suricata is not installed. Install it (apt install suricata)")
+        print("       or use the docker stack: docker compose -f docker-compose.demo.yml up")
+        sys.exit(2)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+    cmd = [str(PY), "-m", "icsforge.cli", "viewer", "replay"] + args
+    subprocess.check_call(cmd, cwd=str(REPO), env=env)
+
+
+def cmd_demo(args):
+    """Wrap docker-compose for the demo stack.
+
+    Usage:
+        ./bin/icsforge demo up                    # bring up demo stack
+        ./bin/icsforge demo down                  # tear down
+        ./bin/icsforge demo fire CAMPAIGN [-n N]  # run a campaign against the demo stack
+
+    Requires: docker + docker compose, plus the optional dependencies installed
+    by `./bin/icsforge install`.
+    """
+    if not args:
+        print("Usage: ./bin/icsforge demo {up|down|fire CAMPAIGN [-n N]}")
+        sys.exit(2)
+    if not shutil.which("docker"):
+        print("ERROR: docker is not installed. The demo stack runs in containers.")
+        sys.exit(2)
+    sub = args[0]
+    rest = args[1:]
+    compose_file = REPO / "docker-compose.demo.yml"
+    if not compose_file.exists():
+        print(f"ERROR: {compose_file} not found")
+        sys.exit(2)
+    if sub == "up":
+        # docker compose v2 syntax (subcommand) with v1 fallback
+        cmd = ["docker", "compose", "-f", str(compose_file), "up", "-d"] + rest
+        print(f"[*] {' '.join(cmd)}")
+        try:
+            subprocess.check_call(cmd, cwd=str(REPO))
+        except subprocess.CalledProcessError:
+            # fallback to docker-compose v1 hyphen
+            cmd = ["docker-compose", "-f", str(compose_file), "up", "-d"] + rest
+            subprocess.check_call(cmd, cwd=str(REPO))
+        print()
+        print("Demo stack is up:")
+        print("  Sender Web UI:    http://localhost:8080")
+        print("  Walk-up demo:     http://localhost:8080/demo")
+        print("  Receiver Web UI:  http://localhost:9090")
+        print("  Alert viewer:     http://localhost:3000")
+    elif sub == "down":
+        cmd = ["docker", "compose", "-f", str(compose_file), "down"] + rest
+        print(f"[*] {' '.join(cmd)}")
+        try:
+            subprocess.check_call(cmd, cwd=str(REPO))
+        except subprocess.CalledProcessError:
+            cmd = ["docker-compose", "-f", str(compose_file), "down"] + rest
+            subprocess.check_call(cmd, cwd=str(REPO))
+    elif sub == "fire":
+        if not rest:
+            print("Usage: ./bin/icsforge demo fire CAMPAIGN [-n N]")
+            sys.exit(2)
+        _ensure_venv()
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+        cmd = [str(PY), "-m", "icsforge.cli", "campaign", "run"] + rest
+        subprocess.check_call(cmd, cwd=str(REPO), env=env)
+    else:
+        print(f"Unknown demo subcommand: {sub}")
+        print("Usage: ./bin/icsforge demo {up|down|fire CAMPAIGN [-n N]}")
+        sys.exit(2)
+
+
 def cmd_selftest(args):
     _ensure_venv()
     env = os.environ.copy()
@@ -140,6 +251,9 @@ def main():
         "install": cmd_install,
         "web": cmd_web,
         "receiver": cmd_receiver,
+        "viewer": cmd_viewer,
+        "viewer-replay": cmd_viewer_replay,
+        "demo": cmd_demo,
         "selftest": cmd_selftest,
         "doctor": cmd_doctor,
     }

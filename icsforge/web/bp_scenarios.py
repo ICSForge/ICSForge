@@ -1,4 +1,5 @@
 """ICSForge scenarios blueprint — scenario listing, preview, send, offline generation."""
+import json
 import os
 import random as _rnd
 import re as _re
@@ -6,12 +7,11 @@ from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Blueprint, jsonify, request
 import yaml
+from flask import Blueprint, jsonify, request
 
 from icsforge.web.helpers import (
     MATRIX_SINGLETON_PACK,
-    _repo_root,
     _append_run_index,
     _canonical_scenarios_path,
     _is_safe_private_ip,
@@ -20,11 +20,12 @@ from icsforge.web.helpers import (
     _load_matrix,
     _load_yaml,
     _registry,
+    _repo_root,
+    announce_expectation,
     log,
     run_scenario,
     send_scenario_live,
 )
-
 
 # ── Input validation helpers ──────────────────────────────────────────────────
 
@@ -67,6 +68,29 @@ def _load_scenarios_cached() -> dict:
     doc = _load_yaml(path) or {}
     _PACK_CACHE.update({"path": path, "mtime": mtime, "doc": doc})
     return doc
+
+
+
+def _v19_to_v18_map() -> dict:
+    """Return the v19→v18 crosswalk for the 9 revoked-and-reissued techniques.
+
+    Scenarios are authored on stable v18 IDs. When the UI fires a v19
+    sub-technique tile (e.g. T1695.001), the ID must be translated back to its
+    v18 scenario key (T0805) before lookup. Shared by the variants and send
+    endpoints so the two can't drift apart. Best-effort: returns {} on any error.
+    """
+    try:
+        cw = json.loads(
+            Path(os.path.join(_repo_root(), "icsforge", "data", "mitre_v18_v19_crosswalk.json")).read_text(encoding="utf-8")
+        )
+        out = {}
+        for k, v in (cw.get("existing-techniques", {}) or {}).items():
+            nv = v.get("attack-v19-attack-id") if isinstance(v, dict) else None
+            if nv and "." in nv:
+                out[nv] = k
+        return out
+    except Exception:
+        return {}
 
 
 
@@ -146,8 +170,22 @@ def api_preview_payload():
     proto = step.get("proto")
     style = step.get("style", "auto")
     tech = step.get("technique", "")
-    no_marker = request.args.get("no_marker") in ("1","true","yes")
-    marker = "" if no_marker else f"ICSFORGE:PREVIEW:{name[:20]}:{tech}:"
+    # Three-way marker mode, defaulting to covert (the generator's default).
+    #   covert   -> marker woven into a protocol field, zero added bytes
+    #   explicit -> literal 13-byte 'ICSF' tag in the payload
+    #   stealth  -> no marker at all
+    # Back-compat: an old `no_marker=1` query param still maps to stealth.
+    mm = (request.args.get("marker_mode") or "").strip().lower()
+    if mm not in ("covert", "explicit", "stealth"):
+        mm = "stealth" if request.args.get("no_marker") in ("1", "true", "yes") else "covert"
+    # Thread the SAME parameters the engine passes so the preview is byte-faithful
+    # to what generate/send actually emit for this mode (see scenarios/engine.py).
+    _builder_mode = {"covert": "covert", "explicit": "explicit", "stealth": "none"}[mm]
+    # In every non-stealth mode the builder needs a truthy positional marker to
+    # activate marking; the real run_marker/pkt_index drive the covert field value.
+    from icsforge.protocols.covert_marker import explicit_marker
+    marker = "" if mm == "stealth" else explicit_marker("preview", proto)
+    _mk_kwargs = {"marker_mode": _builder_mode, "run_marker": "preview", "pkt_index": 0}
     try:
         from icsforge.protocols import bacnet, dnp3, enip, iec104, iec61850, modbus, mqtt, opcua, profinet_dcp, s7comm
         builders = {
@@ -170,9 +208,14 @@ def api_preview_payload():
         l2_protos = {"profinet_dcp", "iec61850"}
         if proto not in builders:
             return jsonify({"error": f"Unknown proto: {proto}"}), 400
-        # L2/raw-frame protos and UDP protos expect bytes marker
-        marker_b = marker.encode() if proto in ("profinet_dcp", "iec61850", "bacnet") else marker
-        data = builders[proto](marker_b, style=style)
+        # L2/raw-frame protos and UDP protos expect a bytes marker; the TCP
+        # protocols' builders accept str. `marker` may already be bytes (from
+        # explicit_marker) or "" (stealth) — normalise per target.
+        if proto in ("profinet_dcp", "iec61850", "bacnet"):
+            marker_b = marker if isinstance(marker, bytes) else marker.encode()
+        else:
+            marker_b = marker.decode("latin-1") if isinstance(marker, bytes) else marker
+        data = builders[proto](marker_b, style=style, **_mk_kwargs)
         width = 16
         lines = []
         for i in range(0, len(data), width):
@@ -184,6 +227,7 @@ def api_preview_payload():
             "proto": proto,
             "style": style,
             "technique": tech,
+            "marker_mode": mm,
             "port": ports.get(proto, 0),
             "transport": "L2/Ethernet" if proto in l2_protos else ("UDP" if proto in udp_protos else "TCP"),
             "length": len(data),
@@ -284,6 +328,15 @@ def api_send():
     iface = (data.get("iface") or "").strip() or None
     step_options = data.get("step_options") or None  # {proto: {key: val}}
     no_marker = bool(data.get("no_marker"))
+    explicit_marker = bool(data.get("explicit_marker"))
+    # Test profile (intent): "firewall" (default) or "nsm". Sets the stateful
+    # default; an explicit `stateful` in the request always wins. Never causes
+    # synthetic device responses (receiver stays a safe sink).
+    test_profile = (data.get("test_profile") or "firewall").strip().lower()
+    if test_profile not in ("firewall", "nsm"):
+        test_profile = "firewall"
+    from icsforge.scenarios.engine import profile_defaults as _profile_defaults
+    stateful = bool(data.get("stateful")) or _profile_defaults(test_profile).get("stateful", False)
     if not name:
         return jsonify({"error": "Scenario name missing"}), 400
     if not dst_ip:
@@ -297,6 +350,46 @@ def api_send():
 
     allow = [x.strip() for x in allowlist.split(",") if x.strip()] or [dst_ip]
 
+    # ── Pre-announce an expectation to the receiver (run_id binding) ──
+    #
+    # v0.74.0 covert-marker model: the on-wire signal is a keyed band byte
+    # (Modbus/S7comm/ENIP/OPC UA/BACnet) or a compact 'ICSF' hash marker
+    # (DNP3/MQTT) — NEITHER carries the full run_id inline. IEC-104 and stealth
+    # (--no-marker) carry no marker at all. In every case the receiver needs an
+    # expectation to bind observed traffic back to THIS run_id/scenario/step,
+    # so we always pre-announce one (it is harmless for marker-carrying
+    # protocols and required for correlation). We pre-generate the run_id, ask
+    # the receiver to "expect" matching-protocol traffic during the TTL window,
+    # and pass the same run_id into send_scenario_live.
+    pre_run_id = ""
+    expected_protos: list[str] = []
+    sc_doc = {}
+    try:
+        sc_doc = (_load_yaml(pack) or {}).get("scenarios", {}).get(name) or {}
+        for st in sc_doc.get("steps", []):
+            p = (st.get("proto") or "").strip()
+            if p and p not in expected_protos:
+                expected_protos.append(p)
+    except Exception:
+        pass
+
+    from icsforge.live.sender import generate_run_id as _gen_run_id
+    pre_run_id = _gen_run_id()
+    try:
+        announce_expectation(
+            run_id=pre_run_id,
+            scenario=name,
+            technique=(sc_doc.get("technique") if isinstance(sc_doc, dict) else "") or "",
+            steps=len(sc_doc.get("steps", []) or []) if isinstance(sc_doc, dict) else 1,
+            ttl_sec=300.0,
+            protos=expected_protos or None,
+            test_profile=test_profile,
+            expected_alert=(sc_doc.get("technique") if isinstance(sc_doc, dict) else "") or "",
+        )
+    except Exception as exc:
+        log.debug("expectation announce failed: %s", exc)
+    # ─────────────────────────────────────────────────────────────────────
+
     try:
         res = send_scenario_live(
             scenario_file=pack,
@@ -308,6 +401,8 @@ def api_send():
             timeout=timeout,
             step_options=step_options,
             no_marker=no_marker,
+            explicit_marker=explicit_marker,
+            run_id=pre_run_id or None,
         )
 
         # Create ground-truth artifacts (events jsonl + optional pcap)
@@ -320,6 +415,8 @@ def api_send():
             run_id=res["run_id"],
             build_pcap=also_build_pcap,
             no_marker=no_marker,
+            explicit_marker=explicit_marker,
+            stateful=stateful,
             resolve_mac=True,   # live send: try ARP cache for realistic dst MAC
         )
 
@@ -376,10 +473,23 @@ def api_packs():
 # ── Technique variants
 @bp.route("/api/technique/variants")
 def api_technique_variants():
-    """Return all scenario variants for a technique, derived live from scenarios.yml."""
+    """Return all scenario variants for a technique, derived live from scenarios.yml.
+
+    Accepts either a v18 ID or a v19 ID. Scenarios are authored on v18 IDs, so a
+    v19 sub-technique ID (e.g. T1692.001) is translated back to its v18 ID
+    (T0855) via the official crosswalk before matching.
+    """
     technique = (request.args.get("technique") or "").strip()
     if not technique:
         return jsonify({"error": "technique required"}), 400
+    # Preserve the originally requested ID so we can also match scenarios by their
+    # `technique_v19` annotation (used for v19 sub-techniques that granularize an
+    # existing technique, e.g. T0846.001 Port Scan, T0843.002 Online Edit).
+    requested_v19 = technique
+    # Translate a revoked->sub v19 ID back to the v18 ID the scenarios use.
+    v19_to_v18 = _v19_to_v18_map()
+    if technique in v19_to_v18:
+        technique = v19_to_v18[technique]
     try:
         doc = _load_scenarios_cached()
         scenarios = doc.get("scenarios") or {}
@@ -389,8 +499,10 @@ def api_technique_variants():
             # Skip chain/campaign scenarios — they cover multiple techniques
             if name.startswith("CHAIN__"):
                 continue
-            # Match scenarios whose top-level technique == requested technique
-            if sc.get("technique") != technique:
+            # Match if the scenario's top-level technique == the resolved v18 ID,
+            # OR its v19 annotation == the originally requested v19 (sub-)technique.
+            ann = sc.get("technique_v19")
+            if sc.get("technique") != technique and not (ann and ann == requested_v19):
                 continue
             # Derive variant id: strip the "T0XXX__" prefix from scenario name
             var_id = name[len(prefix):] if name.startswith(prefix) else name
@@ -417,6 +529,17 @@ def api_technique_send():
     data = request.get_json(force=True) or {}
     technique = (data.get("technique") or "").strip()
     variant = (data.get("variant") or "").strip()
+    # The matrix can fire a v19 sub-technique tile (e.g. T1695.001). Scenarios are
+    # authored on stable v18 IDs (T0805), so translate a revoked->sub v19 ID back
+    # to its v18 key before any scenario lookup — same resolution the variants
+    # endpoint uses. Without this the lookup below fails with "not supported".
+    _v19_to_v18 = _v19_to_v18_map()
+    if technique in _v19_to_v18:
+        technique = _v19_to_v18[technique]
+    elif "." in technique:
+        # Annotation-based v19 sub (e.g. T0846.001 Port Scan): the parent ID is
+        # unchanged from v18, scenarios are keyed on the parent. Strip to parent.
+        technique = technique.split(".", 1)[0]
     dst_ip = (data.get("dst_ip") or "").strip()
     also_build_pcap = bool(data.get("also_build_pcap"))
     no_marker = bool(data.get("no_marker"))
@@ -437,6 +560,12 @@ def api_technique_send():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     no_marker = bool(data.get("no_marker"))
+    explicit_marker = bool(data.get("explicit_marker"))
+    test_profile = (data.get("test_profile") or "firewall").strip().lower()
+    if test_profile not in ("firewall", "nsm"):
+        test_profile = "firewall"
+    from icsforge.scenarios.engine import profile_defaults as _profile_defaults
+    stateful = bool(data.get("stateful")) or _profile_defaults(test_profile).get("stateful", False)
 
     if not technique:
         return jsonify({"error": "technique required"}), 400
@@ -448,15 +577,40 @@ def api_technique_send():
             "ICSForge only sends to RFC1918, loopback, link-local, and TEST-NET ranges."
         )}), 403
 
-    scenario_name = technique if not variant else f"{technique}__{variant}"
+    # The variant value may be a bare suffix (e.g. "unauth_command__modbus") or
+    # already a full scenario key (e.g. "T0846__remote_sys_discovery__dnp3_probe"),
+    # depending on which matrix path produced it. Handle both without doubling
+    # the technique prefix.
+    if not variant:
+        scenario_name = technique
+    elif variant.startswith(technique + "__") or variant.startswith("T0") or variant.startswith("T1") or variant.startswith("CHAIN__"):
+        scenario_name = variant
+    else:
+        scenario_name = f"{technique}__{variant}"
 
     try:
         pack = yaml.safe_load(Path(MATRIX_SINGLETON_PACK).read_text(encoding="utf-8")) or {}
-        if scenario_name not in (pack.get("scenarios") or {}):
-            if scenario_name != technique and technique in (pack.get("scenarios") or {}):
+        scenarios = pack.get("scenarios") or {}
+        if scenario_name not in scenarios:
+            if scenario_name != technique and technique in scenarios:
+                # A bare technique key exists — use it.
                 scenario_name = technique
             else:
-                return jsonify({"error": f"Technique {technique} is not supported for network simulation in this build."}), 400
+                # No exact match. Find this technique's variants.
+                variants = sorted(k for k in scenarios if k.startswith(technique + "__"))
+                if not variants:
+                    return jsonify({"error": (
+                        f"Technique {technique} has no runnable scenario in this build. "
+                        "It may be host-only or out of scope for network simulation."
+                    )}), 400
+                if len(variants) == 1:
+                    # Unambiguous — auto-select the only variant.
+                    scenario_name = variants[0]
+                else:
+                    # Ambiguous — the caller must pick a variant.
+                    return jsonify({"error": (
+                        f"Technique {technique} has {len(variants)} variants — select one before sending."
+                    ), "variants_available": len(variants)}), 400
     except Exception:
         return jsonify({"error": "Matrix scenario pack missing"}), 500
 
@@ -470,6 +624,7 @@ def api_technique_send():
             receiver_allowlist=([x.strip() for x in allowlist.split(',') if x.strip()] or [dst_ip]),
             timeout=timeout,
             no_marker=no_marker,
+            explicit_marker=explicit_marker,
         )
 
         gt = run_scenario(
@@ -481,6 +636,7 @@ def api_technique_send():
             run_id=res["run_id"],
             build_pcap=also_build_pcap,
             no_marker=no_marker,
+            stateful=stateful,
             resolve_mac=True,   # live send: try ARP cache for realistic dst MAC
         )
 
@@ -531,6 +687,12 @@ def api_generate_offline():
     build_pcap = bool(data.get("build_pcap"))
     run_id = (data.get("run_id") or "").strip() or None
     no_marker = bool(data.get("no_marker"))
+    explicit_marker = bool(data.get("explicit_marker"))
+    test_profile = (data.get("test_profile") or "firewall").strip().lower()
+    if test_profile not in ("firewall", "nsm"):
+        test_profile = "firewall"
+    from icsforge.scenarios.engine import profile_defaults as _profile_defaults
+    stateful = bool(data.get("stateful")) or _profile_defaults(test_profile).get("stateful", False)
     if not name:
         return jsonify({"error": "Scenario name missing"}), 400
 
@@ -548,7 +710,8 @@ def api_generate_offline():
     try:
         gt = run_scenario(pack, name, outdir, dst_ip=dst_ip, src_ip=src_ip,
                           run_id=run_id, build_pcap=build_pcap, skip_intervals=True,
-                          no_marker=no_marker)
+                          no_marker=no_marker, explicit_marker=explicit_marker,
+                          stateful=stateful)
         final_run_id = gt.get("run_id") or run_id
         entry = {"run_id": final_run_id, "scenario": name, "pack": pack,
                  "events": gt.get("events"), "pcap": gt.get("pcap"),

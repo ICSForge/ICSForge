@@ -126,15 +126,63 @@
         <input id="confirm" type="checkbox" style="display:none">
       </div>
       <div style="margin-top:10px">
+        <input id="test_profile" type="hidden" value="firewall">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Test profile</span>
+          <span id="profile_help" tabindex="0" title="" style="cursor:help;width:16px;height:16px;border-radius:50%;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);user-select:none">?</span>
+        </div>
+        <div id="profile_seg" role="radiogroup" aria-label="Test profile"
+          style="display:flex;border:2px solid var(--border);border-radius:10px;overflow:hidden;font-family:var(--sans)">
+          <button type="button" data-profile="firewall" onclick="setTestProfile('firewall')"
+            style="flex:1;padding:8px 6px;border:0;cursor:pointer;font-size:11px;font-weight:700;
+              letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .15s">
+            Firewall / ACL <span style="font-weight:400;text-transform:none;opacity:.7">· default</span>
+          </button>
+          <button type="button" data-profile="nsm" onclick="setTestProfile('nsm')"
+            style="flex:1;padding:8px 6px;border:0;border-left:1px solid var(--border);cursor:pointer;font-size:11px;
+              font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .15s">
+            NSM
+          </button>
+        </div>
+        <div id="profile_desc" style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.4"></div>
+      </div>
+      <div style="margin-top:10px">
         <input id="stealth_mode" type="checkbox" style="display:none">
-        <button id="btn_stealth" type="button" onclick="toggleStealth()"
-          title="Omit ICSForge correlation tags from payloads. Traffic is bit-for-bit identical to real device traffic."
+        <input id="marker_mode" type="hidden" value="covert">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Marker mode</span>
+          <span id="marker_help" tabindex="0" title="" style="cursor:help;width:16px;height:16px;border-radius:50%;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);user-select:none">?</span>
+        </div>
+        <div id="marker_seg" role="radiogroup" aria-label="Marker mode"
+          style="display:flex;border:2px solid var(--border);border-radius:10px;overflow:hidden;font-family:var(--sans)">
+          <button type="button" data-mode="covert" onclick="setMarkerMode('covert')"
+            style="flex:1;padding:8px 6px;border:0;cursor:pointer;font-size:11px;font-weight:700;
+              letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .15s">
+            Covert <span style="font-weight:400;text-transform:none;opacity:.7">· default</span>
+          </button>
+          <button type="button" data-mode="explicit" onclick="setMarkerMode('explicit')"
+            style="flex:1;padding:8px 6px;border:0;border-left:1px solid var(--border);cursor:pointer;font-size:11px;
+              font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .15s">
+            Explicit
+          </button>
+          <button type="button" data-mode="stealth" onclick="setMarkerMode('stealth')"
+            style="flex:1;padding:8px 6px;border:0;border-left:1px solid var(--border);cursor:pointer;font-size:11px;
+              font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .15s">
+            Stealth
+          </button>
+        </div>
+        <div id="marker_desc" style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.4"></div>
+      </div>
+      <div style="margin-top:10px">
+        <input id="stateful_mode" type="checkbox" style="display:none">
+        <button id="btn_stateful" type="button" onclick="toggleStateful()"
+          title="Emit a full TCP conversation (SYN/SYN-ACK/ACK handshake, per-segment ACKs, FIN/ACK teardown) so the PCAP survives stream reassembly and exercises stateful IDS engines. Affects the offline PCAP artifact."
           style="width:100%;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:700;
             letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:2px solid var(--border);
             background:var(--panel2);color:var(--muted);text-align:left;display:flex;align-items:center;
             gap:10px;transition:all .15s;font-family:var(--sans)">
-          <span id="stealth_icon" style="font-size:16px;width:22px;text-align:center;flex-shrink:0">○</span>
-          <span>Stealth mode — real traffic, no synthetic tags</span>
+          <span id="stateful_icon" style="font-size:16px;width:22px;text-align:center;flex-shrink:0">○</span>
+          <span>Stateful TCP — full handshake &amp; teardown (for stream-reassembly IDS)</span>
         </button>
       </div>
       <div class="row" style="margin-top:12px">
@@ -307,7 +355,7 @@ function toggleConfirm(){
   if(cb.checked){btn.style.borderColor="var(--good)";btn.style.background="rgba(0,230,138,.08)";btn.style.color="var(--good)";ico.textContent="✓";}
   else{btn.style.borderColor="var(--border)";btn.style.background="var(--panel2)";btn.style.color="var(--muted)";ico.textContent="○";}
 }
-// toggleStealth() is defined in sender.js (needs closure access to selectedName/hexStepIdx)
+// setMarkerMode() / toggleStateful() are defined in sender.js (need closure access to selectedName/hexStepIdx)
 </script>
 <script src="/static/js/sender.js"></script>
 {% endblock %}

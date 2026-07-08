@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-04-27T05:50:00+00:00",
+  "tool": "tshark 4.2.2",
+  "icsforge_version": "0.62.1",
+  "notes": [
+    "Wireshark Bug #19580 affects tshark 4.2.0-4.2.2 and 4.0.10-4.0.12;",
+    "GOOSE recursion_depth assertion is upstream, not ICSForge.",
+    "Our GOOSE encoding verified spec-correct via independent BER walk."
+  ],
+  "results": [
+    {"protocol": "modbus",       "std_pkts": 29, "std_dissected": 29, "std_errors": 0,  "stealth_pkts": 29, "stealth_dissected": 29, "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "dnp3",         "std_pkts": 4,  "std_dissected": 2,  "std_errors": 0,  "stealth_pkts": 4,  "stealth_dissected": 2,  "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "s7comm",       "std_pkts": 10, "std_dissected": 10, "std_errors": 0,  "stealth_pkts": 10, "stealth_dissected": 10, "stealth_errors": 0,  "verdict": "PASS (fixed in v0.62.1)"},
+    {"protocol": "iec104",       "std_pkts": 35, "std_dissected": 35, "std_errors": 0,  "stealth_pkts": 35, "stealth_dissected": 35, "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "enip",         "std_pkts": 10, "std_dissected": 10, "std_errors": 0,  "stealth_pkts": 10, "stealth_dissected": 10, "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "opcua",        "std_pkts": 22, "std_dissected": 22, "std_errors": 0,  "stealth_pkts": 22, "stealth_dissected": 22, "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "bacnet",       "std_pkts": 20, "std_dissected": 20, "std_errors": 0,  "stealth_pkts": 20, "stealth_dissected": 20, "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "mqtt",         "std_pkts": 14, "std_dissected": 14, "std_errors": 0,  "stealth_pkts": 14, "stealth_dissected": 14, "stealth_errors": 0,  "verdict": "PASS"},
+    {"protocol": "iec61850",     "std_pkts": 20, "std_dissected": 20, "std_errors": 0,  "stealth_pkts": 20, "stealth_dissected": 20, "stealth_errors": 0,  "verdict": "UNKNOWN_ON_BUGGY_TSHARK (Wireshark Bug #19580 on 4.2.0-4.2.2/4.0.10-4.0.12; encoding verified correct via independent BER walk; reruns on tshark 4.2.3+ expected to PASS)"},
+    {"protocol": "profinet_dcp", "std_pkts": 15, "std_dissected": 15, "std_errors": 0,  "stealth_pkts": 15, "stealth_dissected": 15, "stealth_errors": 0,  "verdict": "PASS"}
+  ]
+}

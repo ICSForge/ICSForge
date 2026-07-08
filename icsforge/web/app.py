@@ -19,6 +19,7 @@ from contextlib import suppress
 from datetime import timedelta
 from pathlib import Path
 
+import yaml
 from flask import (
     Blueprint,
     Flask,
@@ -27,7 +28,6 @@ from flask import (
     request,
     url_for,
 )
-import yaml
 
 from icsforge import __version__
 from icsforge.log import configure as configure_logging
@@ -206,24 +206,90 @@ def tools():
 
 @web.route("/matrix")
 def matrix():
-    mat = _load_matrix()
+    # Version toggle: ?version=v19 picks the v19 matrix; default is v18 for compatibility
+    version = request.args.get("version", "v18").strip().lower()
+    if version not in ("v18", "v19"):
+        version = "v18"
+    mat = _load_matrix(version=version)
     support = {}
     with suppress(Exception):
         support = json.loads(
             Path(os.path.join(_repo_root(), "icsforge", "data", "technique_support.json")).read_text(encoding="utf-8")
         )
+
+    # v18->v19 crosswalk: the 9 ICS techniques that became sub-techniques in v19.
+    # Scenarios are authored on stable v18 IDs; for the v19 view we translate each
+    # covered v18 ID forward through the official MITRE crosswalk. Techniques whose
+    # ID did not change in v19 map to themselves.
+    v18_to_v19 = {}
+    if version == "v19":
+        with suppress(Exception):
+            _cw = json.loads(
+                Path(os.path.join(_repo_root(), "icsforge", "data", "mitre_v18_v19_crosswalk.json")).read_text(encoding="utf-8")
+            )
+            for _k, _v in (_cw.get("existing-techniques", {}) or {}).items():
+                _nv = _v.get("attack-v19-attack-id") if isinstance(_v, dict) else None
+                if _nv and "." in _nv:
+                    v18_to_v19[_k] = _nv
+
+    # Build "covered" set of technique IDs in the requested matrix's numbering.
+    #
+    # v19 coverage comes from two complementary sources:
+    #   1. The scenario-level `technique_v19` annotation, which precisely tags the
+    #      NEW sub-techniques that v19 introduced by granularizing an existing
+    #      technique (e.g. T0843 Program Download -> .001 Download All / .002
+    #      Online Edit / .003 Program Append; T0846 -> Port/Broadcast/Multicast
+    #      Discovery). MITRE did not revoke the parent, so only the author knows
+    #      which sub a given scenario exercises — hence the annotation.
+    #   2. The official crosswalk, for the 9 techniques MITRE revoked-and-replaced
+    #      as sub-techniques (e.g. T0855 -> T1692.001), where the v18 ID no longer
+    #      exists in v19.
     covered = set()
+
+    def _add_v19(tid):
+        covered.add(tid)
+        if "." in tid:  # sub-technique: light up the parent tile too
+            covered.add(tid.split(".", 1)[0])
+
     try:
         for pack_path in _list_packs():
             doc = _load_yaml(pack_path) or {}
             for sc in (doc.get("scenarios") or {}).values():
+                # Scenario-level v19 annotation (precise sub-technique), if present.
+                ann_v19 = sc.get("technique_v19") if version == "v19" else None
                 for step in sc.get("steps", []):
-                    tid = step.get("technique")
-                    if tid:
-                        covered.add(tid)
+                    tid_v18 = step.get("technique")
+                    if not tid_v18:
+                        continue
+                    if version == "v19":
+                        if ann_v19:
+                            _add_v19(ann_v19)
+                        # Crosswalk-mapped (revoked->sub) or unchanged ID.
+                        _add_v19(v18_to_v19.get(tid_v18, tid_v18))
+                    else:
+                        covered.add(tid_v18)
     except Exception:
         pass
-    precursor = set(t for t in covered if support.get(t, {}).get("precursor") and not support.get(t, {}).get("runnable"))
+    # Resolve the support record for a covered ID. Support data is keyed on v18
+    # IDs, so in the v19 view translate sub-technique IDs back via the crosswalk;
+    # also fall back to the parent technique's record.
+    v19_to_v18 = {v: k for k, v in v18_to_v19.items()} if version == "v19" else {}
+
+    def _support_for(tid):
+        rec = support.get(tid)
+        if rec:
+            return rec
+        if tid in v19_to_v18:
+            rec = support.get(v19_to_v18[tid])
+            if rec:
+                return rec
+        if "." in tid:  # sub-technique: fall back to parent's record
+            rec = support.get(v19_to_v18.get(tid.split(".", 1)[0], tid.split(".", 1)[0]))
+            if rec:
+                return rec
+        return {}
+
+    precursor = set(t for t in covered if _support_for(t).get("precursor") and not _support_for(t).get("runnable"))
     runnable  = covered - precursor
     status = {}
     for tac in mat.get("tactics", []):
@@ -237,13 +303,14 @@ def matrix():
     return render_template(
         "matrix.html",
         title="ATT&CK Matrix",
-        subtitle="Interactive ATT&CK v18 for ICS",
+        subtitle=f"Interactive ATT&CK {'v19' if version == 'v19' else 'v18'} for ICS",
         env_label="MATRIX",
         version=__version__,
         active_tab=True,
         matrix=mat,
         status=status,
         supported=supported,
+        matrix_version=version,
     )
 
 
@@ -369,7 +436,8 @@ def create_app() -> Flask:
         _sk_path = os.path.join(os.path.expanduser("~"), ".icsforge", "secret_key")
         try:
             if os.path.exists(_sk_path):
-                _sk = open(_sk_path).read().strip()
+                with open(_sk_path) as _rf:
+                    _sk = _rf.read().strip()
             if not _sk:
                 _sk = secrets.token_hex(32)
                 os.makedirs(os.path.dirname(_sk_path), exist_ok=True)
@@ -449,7 +517,8 @@ def create_app() -> Flask:
     # ── CSRF protection: validate on all state-mutating requests ────────────
     @app.before_request
     def _csrf_protect():
-        from flask import abort, session, request as req
+        from flask import abort, session
+        from flask import request as req
         if req.method in ("GET", "HEAD", "OPTIONS"):
             return
         # Skip CSRF for public API paths (callback, health, static)

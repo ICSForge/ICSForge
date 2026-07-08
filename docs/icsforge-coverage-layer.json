@@ -1,0 +1,1522 @@
+{
+  "name": "ICSForge 0.77.5 \u2014 MITRE ATT&CK ICS Coverage",
+  "versions": {
+    "attack": "18",
+    "navigator": "5.1.0",
+    "layer": "4.5"
+  },
+  "domain": "ics-attack",
+  "description": "ICSForge v0.77.5 coverage of MITRE ATT&CK for ICS. Covers 77 of 83 techniques (92.8%). Color: green=10/10 protocols, yellow=5-9, orange=1-4, grey=out of scope. See https://github.com/ICSForge/ICSForge for details.",
+  "filters": {
+    "platforms": [
+      "Windows",
+      "Linux",
+      "Embedded",
+      "Field Controller/RTU/PLC/IED",
+      "Safety Instrumented System/Protection Relay",
+      "Control Server",
+      "Data Historian",
+      "Engineering Workstation",
+      "Human-Machine Interface",
+      "Input/Output Server"
+    ]
+  },
+  "sorting": 0,
+  "layout": {
+    "layout": "side",
+    "aggregateFunction": "average",
+    "showID": true,
+    "showName": true,
+    "showAggregateScores": false,
+    "countUnscored": false
+  },
+  "hideDisabled": false,
+  "techniques": [
+    {
+      "techniqueID": "T0800",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 10 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0801",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 11 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0802",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 10 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0803",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 11 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0804",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 11 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0805",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 1/10 protocols: Modbus/TCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0806",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 10 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0807",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 2/10 protocols: DNP3, OPC UA",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0809",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 8 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "8"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0811",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 13 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0812",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 10 scenario(s), 6/10 protocols: DNP3, EtherNet/IP, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "6/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0813",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0814",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 14 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "14"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0815",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0816",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 9 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "9"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0817",
+      "score": 0,
+      "color": "#aaaaaa",
+      "comment": "ICSForge: not covered (out of scope or precursor)",
+      "enabled": false,
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0819",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0820",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 2/10 protocols: IEC 61850 GOOSE, Modbus/TCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0821",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 10 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0822",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 9 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "9"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0823",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 1 scenario(s), 1/10 protocols: EtherNet/IP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "1"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0826",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0827",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 8 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "8"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0828",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0829",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0830",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 13 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0831",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 14 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "14"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0832",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 13 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0834",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 2/10 protocols: OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0835",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 12 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0836",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 11 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0837",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 4 scenario(s), 2/10 protocols: IEC-104, Modbus/TCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "4"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0838",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 10 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0839",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 13 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0840",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 16 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "16"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0842",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 1 scenario(s), 1/10 protocols: PROFINET DCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "1"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0843",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 10 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0845",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 7 scenario(s), 6/10 protocols: BACnet/IP, DNP3, EtherNet/IP, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "6/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "7"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0846",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 11 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0847",
+      "score": 0,
+      "color": "#aaaaaa",
+      "comment": "ICSForge: not covered (out of scope or precursor)",
+      "enabled": false,
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0848",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 11 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0849",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 10 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0851",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 1 scenario(s), 1/10 protocols: S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "1"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0852",
+      "score": 0,
+      "color": "#aaaaaa",
+      "comment": "ICSForge: not covered (out of scope or precursor)",
+      "enabled": false,
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0853",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 3/10 protocols: DNP3, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "3/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0855",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 18 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "18"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0856",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 16 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "16"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0857",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 11 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0858",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 16 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "16"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0859",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 10 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "10"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0860",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 2/10 protocols: EtherNet/IP, PROFINET DCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0861",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0862",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 2/10 protocols: EtherNet/IP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0863",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 2/10 protocols: EtherNet/IP, OPC UA",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0864",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 2/10 protocols: EtherNet/IP, PROFINET DCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0865",
+      "score": 0,
+      "color": "#aaaaaa",
+      "comment": "ICSForge: not covered (out of scope or precursor)",
+      "enabled": false,
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0866",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0867",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 9 scenario(s), 6/10 protocols: BACnet/IP, DNP3, EtherNet/IP, MQTT, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "6/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "9"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0868",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 13 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0869",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 11 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0871",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 1 scenario(s), 1/10 protocols: OPC UA",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "1"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0872",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 4 scenario(s), 3/10 protocols: DNP3, IEC-104, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "3/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "4"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0873",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 1 scenario(s), 1/10 protocols: S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "1"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0874",
+      "score": 0,
+      "color": "#aaaaaa",
+      "comment": "ICSForge: not covered (out of scope or precursor)",
+      "enabled": false,
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0877",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 11 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0878",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 11 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0879",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 1 scenario(s), 1/10 protocols: IEC-104",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "1/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "1"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0880",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 12 scenario(s), 9/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "9/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0881",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 11 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "11"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0882",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 13 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0883",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 5 scenario(s), 8/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC-104, MQTT, Modbus/TCP, OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "8/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "5"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0884",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 2/10 protocols: Modbus/TCP, OPC UA",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0885",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 12 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "12"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0886",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 15 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "15"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0887",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 2 scenario(s), 2/10 protocols: EtherNet/IP, PROFINET DCP",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "2"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0888",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 18 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "18"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0889",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 14 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "14"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0890",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 2/10 protocols: OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0891",
+      "score": 100,
+      "color": "#2ecc40",
+      "comment": "ICSForge: 13 scenario(s), 10/10 protocols: BACnet/IP, DNP3, EtherNet/IP, IEC 61850 GOOSE, IEC-104, MQTT, Modbus/TCP, OPC UA, PROFINET DCP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "10/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "13"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0892",
+      "score": 75,
+      "color": "#ffdc00",
+      "comment": "ICSForge: 8 scenario(s), 6/10 protocols: BACnet/IP, DNP3, EtherNet/IP, MQTT, Modbus/TCP, OPC UA",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "6/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "8"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0893",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 2/10 protocols: OPC UA, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0894",
+      "score": 0,
+      "color": "#aaaaaa",
+      "comment": "ICSForge: not covered (out of scope or precursor)",
+      "enabled": false,
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T0895",
+      "score": 50,
+      "color": "#ff851b",
+      "comment": "ICSForge: 3 scenario(s), 2/10 protocols: EtherNet/IP, S7comm",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Protocols",
+          "value": "2/10"
+        },
+        {
+          "name": "Scenarios",
+          "value": "3"
+        }
+      ],
+      "showSubtechniques": false
+    }
+  ],
+  "gradient": {
+    "colors": [
+      "#ff851b",
+      "#ffdc00",
+      "#2ecc40"
+    ],
+    "minValue": 0,
+    "maxValue": 100
+  },
+  "legendItems": [
+    {
+      "label": "10/10 protocols",
+      "color": "#2ecc40"
+    },
+    {
+      "label": "5-9 protocols",
+      "color": "#ffdc00"
+    },
+    {
+      "label": "1-4 protocols",
+      "color": "#ff851b"
+    },
+    {
+      "label": "Not covered",
+      "color": "#aaaaaa"
+    }
+  ],
+  "metadata": [
+    {
+      "name": "ICSForge version",
+      "value": "0.77.5"
+    },
+    {
+      "name": "Total scenarios",
+      "value": "627"
+    },
+    {
+      "name": "Distinct techniques",
+      "value": "77"
+    },
+    {
+      "name": "MITRE coverage",
+      "value": "92.8%"
+    },
+    {
+      "name": "Source",
+      "value": "https://github.com/ICSForge/ICSForge"
+    }
+  ],
+  "showTacticRowBackground": false,
+  "selectVisibleTechniques": false,
+  "selectSubtechniquesWithParent": false
+}

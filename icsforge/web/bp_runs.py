@@ -16,7 +16,6 @@ from icsforge.web.helpers import (
     _bin_receipts,
     _default_receipts_path,
     _export_path,
-    _is_safe_private_ip,
     _live_receipts,
     _load_run_index,
     _read_json_lines,
@@ -259,8 +258,8 @@ def api_pcap_replay():
     if not real.startswith(allowed_out):
         return jsonify({"error": "pcap_path must be inside out/"}), 400
     # IP check before path check so policy errors surface regardless of file state
-    from icsforge.web.helpers import _is_safe_private_ip as _safe
     import icsforge.web.helpers as _h_mod
+    from icsforge.web.helpers import _is_safe_private_ip as _safe
     if not _safe(dst_ip) and not _h_mod._replay_allow_public:
         return jsonify({"error": (
             f"Replay to {dst_ip!r} blocked: public IPs are not allowed. "
@@ -279,7 +278,53 @@ def api_pcap_replay():
         return jsonify({"error": str(exc)}), 500
 
 
-# ── Run tag
+@bp.route("/api/pcap/peek-dst", methods=["POST"])
+def api_pcap_peek_dst():
+    """Return the destination IP baked into a PCAP's first IPv4 packet.
+
+    Lets the Replay UI pre-fill the Destination IP with what the PCAP was
+    generated against, so "replay" defaults to re-running what was created.
+    Same out/-path safety guard as replay; read-only (sends nothing).
+    """
+    import socket
+    import struct
+    data = request.get_json(force=True) or {}
+    pcap_path = (data.get("pcap_path") or "").strip()
+    if not pcap_path:
+        return jsonify({"error": "pcap_path required"}), 400
+    rr = _repo_root()
+    if not os.path.isabs(pcap_path):
+        pcap_path = os.path.join(rr, pcap_path)
+    real = os.path.realpath(pcap_path)
+    allowed_out = os.path.realpath(os.path.join(rr, "out"))
+    if not real.startswith(allowed_out):
+        return jsonify({"error": "pcap_path must be inside out/"}), 400
+    if not os.path.exists(real):
+        return jsonify({"error": "pcap not found"}), 404
+    try:
+        with open(real, "rb") as f:
+            gh = f.read(24)
+            if len(gh) < 24:
+                return jsonify({"dst_ip": None, "note": "empty or truncated pcap"})
+            magic = struct.unpack_from("<I", gh)[0]
+            endian = "<" if magic in (0xa1b2c3d4, 0xa1b23c4d) else ">"
+            while True:
+                ph = f.read(16)
+                if len(ph) < 16:
+                    break
+                _, _, incl_len, _ = struct.unpack(f"{endian}IIII", ph)
+                raw = f.read(incl_len)
+                if len(raw) < incl_len or len(raw) < 34:
+                    continue
+                if struct.unpack(">H", raw[12:14])[0] != 0x0800:  # IPv4 only
+                    continue
+                dst = socket.inet_ntoa(raw[30:34])
+                src = socket.inet_ntoa(raw[26:30])
+                return jsonify({"dst_ip": dst, "src_ip": src})
+        # No IPv4 packet found (e.g. all-L2 GOOSE/PROFINET capture)
+        return jsonify({"dst_ip": None, "note": "no IPv4 packet in pcap (L2-only?)"})
+    except (OSError, struct.error) as exc:
+        return jsonify({"error": f"peek failed: {exc}"}), 500
 @bp.route("/api/run/tag", methods=["POST"])
 def api_run_tag():
     data = request.get_json(force=True) or {}
@@ -556,11 +601,22 @@ def api_correlate_run():
 # ── PCAP file download
 @bp.route("/api/pcap/<path:fname>")
 def api_download_pcap(fname):
-    base = Path(__file__).resolve().parents[2] / "pcaps"
-    p = (base / fname).resolve()
-    if not p.exists() or not str(p).startswith(str(base)):
-        return {"error": "pcap not found"}, 404
-    return send_file(str(p), as_attachment=True, download_name=p.name)
+    # Generated PCAPs are written under <repo>/out/pcaps/ (the default outdir).
+    # The previous implementation looked in a non-existent top-level <repo>/pcaps/
+    # directory, so every request 404'd. Search the real output location first,
+    # then fall back to the legacy top-level dir for backward compatibility.
+    rr = _repo_root()
+    candidates = [
+        Path(rr) / "out" / "pcaps",
+        Path(rr) / "pcaps",
+    ]
+    for base in candidates:
+        base = base.resolve()
+        p = (base / fname).resolve()
+        # Path-traversal guard: resolved path must stay inside the base dir.
+        if p.exists() and str(p).startswith(str(base) + os.sep):
+            return send_file(str(p), as_attachment=True, download_name=p.name)
+    return {"error": "pcap not found"}, 404
 
 
 _CAMPAIGNS_BUILTIN = os.path.join(os.path.dirname(__file__), "..", "campaigns", "builtin.yml")

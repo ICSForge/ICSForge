@@ -9,8 +9,8 @@ authors:
 repository-code: "https://github.com/ICSForge/ICSForge"
 url: "https://www.icsforge.nl"
 license: GPL-3.0-or-later
-version: 0.62.0
-date-released: "2026-04-17"
+version: 0.77.7
+date-released: "2026-07-08"
 keywords:
   - ics
   - ot

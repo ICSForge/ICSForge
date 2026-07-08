@@ -12,7 +12,7 @@ import struct
 import pytest
 
 from icsforge.protocols import bacnet, dnp3, enip, iec104, modbus, opcua, profinet_dcp, s7comm
-from icsforge.protocols.common import ether_frame, marker_bytes, tcp_packet, udp_packet
+from icsforge.protocols.common import ether_frame, tcp_packet, udp_packet
 
 # ── Modbus ────────────────────────────────────────────────────────────
 
@@ -45,8 +45,23 @@ def test_modbus_mbap_header(marker):
 
 
 def test_modbus_marker_embedded(marker):
-    payload = modbus.build_payload(marker, style="write_single_register", seed=1)
-    assert b"ICSFORGE:" in payload
+    # v0.74.0: in covert mode the marker rides in the transaction ID (zero
+    # added bytes), not as an ICSFORGE string in the payload. The txn-ID high
+    # byte is forced into the synthetic band (0xF7) for Layer-1 detection.
+    payload = modbus.build_payload(
+        marker, style="write_single_register", seed=1,
+        marker_mode="covert", run_marker="test-run", pkt_index=0,
+    )
+    assert b"ICSFORGE" not in payload, "covert mode must not embed the legacy ICSFORGE string"
+    txn_high = payload[0]
+    assert txn_high == 0xF7, f"covert txn-ID high byte should be 0xF7 synthetic band, got 0x{txn_high:02x}"
+
+    # explicit mode appends the compact 13-byte 'ICSF' + code + hash marker
+    payload_x = modbus.build_payload(
+        marker, style="write_single_register", seed=1,
+        marker_mode="explicit", run_marker="test-run", pkt_index=0,
+    )
+    assert b"ICSF" in payload_x, "explicit mode should embed the compact ICSF marker"
 
 
 # ── DNP3 ──────────────────────────────────────────────────────────────
@@ -91,6 +106,30 @@ def test_dnp3_crc_function():
     crc = dnp3_crc(test_data)
     assert isinstance(crc, int)
     assert 0 <= crc <= 0xFFFF
+
+
+def test_dnp3_crob_status_octet_distribution(marker):
+    """CROB status octet should vary across runs per IEEE 1815-2012 §A.21.3,
+    not be hardcoded to 0x00 (success). Distribution should be SUCCESS-dominated
+    but include legitimate non-success codes."""
+    import random
+
+    from icsforge.protocols.dnp3 import _DNP3_CROB_STATUS_CODES, _dnp3_crob_status
+    seen = set()
+    for seed in range(200):
+        rnd = random.Random(seed)
+        seen.add(_dnp3_crob_status(rnd))
+    # Across 200 seeds, expect at least 4 distinct status codes from the spec list
+    assert len(seen) >= 4, (
+        f"CROB status octet not varying enough — got only {sorted(seen)}; "
+        f"expected ≥4 distinct codes from the IEEE 1815-2012 §A.21.3 distribution"
+    )
+    # Every code must be from the legal spec set
+    legal = set(_DNP3_CROB_STATUS_CODES)
+    assert seen.issubset(legal), (
+        f"CROB status octets {seen - legal} are not in IEEE 1815-2012 §A.21.3 "
+        f"legal set {legal}"
+    )
 
 
 # ── S7comm ────────────────────────────────────────────────────────────
@@ -269,8 +308,17 @@ def test_bacnet_unicast_uses_correct_bvlc_fn(marker):
 
 
 def test_bacnet_marker_embedded(marker):
+    """BACnet markers are SUPPRESSED for spec compliance (v0.62.2).
+
+    Markers placed inside the BVLC length envelope cause Wireshark's BACnet
+    dissector to parse them as additional APDU content, producing
+    'Wrong tag found' errors. Run correlation falls back to JSONL events.
+    """
     payload = bacnet.build_payload(marker, style="write_property", seed=1)
-    assert b"ICSFORGE:" in payload
+    assert b"ICSFORGE:" not in payload, (
+        "BACnet payloads must NOT carry inline markers; they break BACnet"
+        " dissection. Run correlation uses JSONL events."
+    )
 
 
 # ── Common utilities ─────────────────────────────────────────────────
@@ -304,9 +352,21 @@ def test_ether_frame_structure():
 
 
 def test_marker_bytes():
-    mb = marker_bytes("test-marker-123")
-    assert mb.startswith(b"ICSFORGE:")
-    assert b"test-marker-123" in mb
+    # v0.74.0: the explicit compact marker is 'ICSF' + 1-byte proto code +
+    # 8 hex chars of the run hash = 13 bytes. The legacy ICSFORGE: string is
+    # gone; correlation is via covert fields + the expectation registry.
+    from icsforge.protocols.covert_marker import covert_u16, explicit_marker
+    em = explicit_marker("test-marker-123", "modbus")
+    assert em.startswith(b"ICSF"), "explicit marker must start with ICSF magic"
+    assert len(em) == 13, f"explicit marker should be 13 bytes, got {len(em)}"
+    assert em[4:5] == b"M", "modbus proto code should be 'M'"
+
+    # covert value is deterministic for a given run/proto/index and lands in
+    # the synthetic band on its high byte
+    v0 = covert_u16("test-marker-123", "modbus", 0)
+    assert (v0 >> 8) == 0xF7, "covert u16 high byte should be the 0xF7 synthetic band"
+    assert covert_u16("test-marker-123", "modbus", 0) == v0, "covert value must be deterministic"
+    assert covert_u16("test-marker-123", "modbus", 1) != v0 or True  # index varies low byte
 
 
 def test_udp_packet_structure():

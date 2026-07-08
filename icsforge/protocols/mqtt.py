@@ -11,7 +11,8 @@
 import random
 import struct
 
-from .common import marker_bytes
+from .common import marker_bytes  # noqa: F401
+from .covert_marker import explicit_marker
 
 # ── Packet types (§2.1.2) ───────────────────────────────────────────
 CONNECT     = 1
@@ -182,7 +183,26 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
     after framing so the receiver can correlate it.
     """
     rnd = random.Random(seed) if seed is not None else random.Random()
-    mb = marker_bytes(marker)
+    _mode = kwargs.get("marker_mode", "covert" if marker else "none")
+    _run = kwargs.get("run_marker", "offline")
+    _idx = int(kwargs.get("pkt_index", 0))
+    # MQTT marker strategy: unlike Modbus/S7/ENIP/OPC-UA, MQTT has no single
+    # arbitrary fixed-width field present on every packet type (PINGREQ and
+    # DISCONNECT carry no fields at all; client_id is CONNECT-only; packet
+    # identifiers exist only on SUBSCRIBE / QoS>0 PUBLISH). Client IDs are also
+    # UTF-8 strings, so a raw binary band byte can't ride there cleanly.
+    # Therefore MQTT uses the compact 13-byte explicit 'ICSF'+code+hash marker
+    # in BOTH covert and explicit modes — appended to PUBLISH payloads (which
+    # are arbitrary application data, so this is realistic) and carried as a
+    # client_id suffix on CONNECT. This keeps Layer-1 detection at 100% via the
+    # 'ICSF' content match. no_marker mode emits nothing.
+    if _mode == "none" or not marker:
+        mb = b""
+        _covert_cid_suffix = ""
+    else:
+        mb = explicit_marker(_run, "mqtt")
+        # CONNECT client_id suffix: hex of the compact marker tail (realistic).
+        _covert_cid_suffix = mb.decode("ascii", errors="replace")
 
     client_ids = [
         "icsforge-plc01", "scada-hmi-03", "mes-gateway", "bms-ctrl",
@@ -192,21 +212,21 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
 
     # ── CONNECT variants ────────────────────────────────────────────
     if style in ("auto", "connect"):
-        # Embed marker in client_id — valid MQTT field, won't corrupt framing
-        marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+        # Covert marker rides as a compact hex suffix on the (realistic) client_id.
+        marker_str = _covert_cid_suffix or (mb.decode("utf-8", errors="replace") if mb else "")
         cid_marked = cid + ("-" + marker_str if marker_str else "")
         return _connect(cid_marked, keep_alive=rnd.randint(30, 120))
 
     if style == "connect_creds":
         users = ["admin", "operator", "engineer", "scada", "root", "mqtt"]
         pwds = ["admin", "password", "1234", "scada", "", "operator123"]
-        marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+        marker_str = _covert_cid_suffix or (mb.decode("utf-8", errors="replace") if mb else "")
         cid_marked = cid + ("-" + marker_str if marker_str else "")
         return _connect(cid_marked, username=rnd.choice(users),
                         password=rnd.choice(pwds), keep_alive=30)
 
     if style == "connect_anonymous":
-        marker_str = mb.decode("utf-8", errors="replace") if mb else ""
+        marker_str = _covert_cid_suffix or (mb.decode("utf-8", errors="replace") if mb else "")
         cid_marked = cid + ("-" + marker_str if marker_str else "")
         return _connect(cid_marked, username="", password="", clean=True)
 
@@ -228,7 +248,7 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
             b'{"cmd":"open","position":100}',
             b'{"cmd":"override","mode":"manual"}',
         ]
-        return _publish(topic, rnd.choice(cmds) + b" " + mb, qos=QOS_1, rnd=rnd)
+        return _publish(topic, rnd.choice(cmds) + (b" " + mb if mb else b""), qos=QOS_1, rnd=rnd)
 
     if style == "publish_setpoint":
         topic = rnd.choice(ACTUATOR_TOPICS)
@@ -238,7 +258,7 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
             b'{"speed_rpm":9999}',
             b'{"level_target":0,"override":true}',
         ]
-        return _publish(topic, rnd.choice(sps) + b" " + mb,
+        return _publish(topic, rnd.choice(sps) + (b" " + mb if mb else b""),
                         qos=QOS_1, retain=True, rnd=rnd)
 
     if style == "publish_telemetry":
@@ -249,17 +269,17 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
             b'{"flow":125.3,"unit":"gpm"}',
             b'{"level":85.2,"unit":"percent"}',
         ]
-        return _publish(topic, rnd.choice(vals) + b" " + mb, qos=QOS_0, rnd=rnd)
+        return _publish(topic, rnd.choice(vals) + (b" " + mb if mb else b""), qos=QOS_0, rnd=rnd)
 
     if style == "publish_firmware":
         topic = rnd.choice(CONFIG_TOPICS).replace("config", "firmware")
         fw_hdr = struct.pack(">4sHH", b"FWUP", 2, 0)
         padding = bytes(rnd.getrandbits(8) for _ in range(rnd.randint(64, 256)))
-        return _publish(topic, fw_hdr + padding + mb, qos=QOS_2, rnd=rnd)
+        return _publish(topic, fw_hdr + padding + (mb if mb else b""), qos=QOS_2, rnd=rnd)
 
     if style == "publish_dos":
         blob = bytes(rnd.getrandbits(8) for _ in range(rnd.randint(2048, 4096)))
-        return _publish("factory/broadcast/all", blob + mb, qos=QOS_0, rnd=rnd)
+        return _publish("factory/broadcast/all", blob + (mb if mb else b""), qos=QOS_0, rnd=rnd)
 
     if style == "publish_alarm":
         topic = rnd.choice(ALARM_TOPICS)
@@ -268,7 +288,7 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
             b'{"trip":false,"bypass":true}',
             b'{"suppress":true,"duration":3600}',
         ]
-        return _publish(topic, rnd.choice(msgs) + b" " + mb, qos=QOS_1, rnd=rnd)
+        return _publish(topic, rnd.choice(msgs) + (b" " + mb if mb else b""), qos=QOS_1, rnd=rnd)
 
     if style == "publish_config":
         topic = rnd.choice(CONFIG_TOPICS)
@@ -278,7 +298,7 @@ def build_payload(marker: str, style: str = "auto", seed: int = None, **kwargs) 
             b'{"alarm_threshold":99999}',
             b'{"reporting_enabled":false}',
         ]
-        return _publish(topic, rnd.choice(cfgs) + b" " + mb,
+        return _publish(topic, rnd.choice(cfgs) + (b" " + mb if mb else b""),
                         qos=QOS_1, retain=True, rnd=rnd)
 
     # ── SUBSCRIBE variants ──────────────────────────────────────────

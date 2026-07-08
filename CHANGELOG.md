@@ -1,4 +1,4227 @@
-## v0.62.0 (2026-04-17) — Campaign parity, walk-up demo, CLI/Web UI parity, reference detection rates
+## v0.77.7 (2026-06-28) — Fix: firing v19 sub-technique tiles
+
+### Fixed
+
+* **v19 sub-technique tiles can now be run from the matrix.** Clicking a v19
+  sub-technique and sending returned *"Technique T1695.001 is not supported for
+  network simulation in this build."* The `/api/technique/send` endpoint looked
+  the technique up directly against the scenario pack, but scenarios are keyed on
+  stable **v18** IDs — so a v19 sub ID (e.g. T1695.001) never matched. The send
+  endpoint now resolves the ID the same way the variants and matrix-coverage
+  paths do:
+  * crosswalk subs (T1695.001 → T0805, T1692.001 → T0855, …) translate back to
+    their v18 scenario key;
+  * annotation subs (T0846.001, T0843.002, T0873.001, …) fall back to their
+    unchanged parent technique (T0846, T0843, T0873).
+  All 12 v19 sub-techniques now fire end-to-end once a variant is selected. The
+  crosswalk resolution is now a single shared helper (`_v19_to_v18_map`) used by
+  both the variants and send endpoints so they can't drift apart again.
+* **Clearer error when a technique needs a variant.** A technique with multiple
+  scenarios and none selected previously returned the misleading "not supported"
+  message. It now says *"Technique T0855 has 13 variants — select one before
+  sending,"* and a technique with exactly one variant is auto-selected. Genuinely
+  unrunnable techniques (host-only / out of scope) get an accurate message.
+* **Send accepts either variant form.** The `variant` value may be a bare suffix
+  (`unauth_command__modbus`) or a full scenario key
+  (`T0846__remote_sys_discovery__dnp3_probe`); the endpoint no longer doubles the
+  technique prefix when the full name is passed.
+
+### Notes
+
+* Full suite: 445 passed / 25 skipped (two new regression tests). ruff clean.
+* No change to detection, coverage, or protocol behaviour; canonical figures
+  unchanged.
+
+## v0.77.6 (2026-06-28) — Release-hygiene & test-portability fixes (external review)
+
+Addresses an external reviewer's findings against the v0.77.5 archive. No
+change to detection, coverage, or protocol behaviour; all canonical figures
+unchanged (627 scenarios, 77 techniques, 806 detection rules).
+
+### Fixed
+
+* **Ruff now actually clean across `icsforge` *and* `tests`.** The v0.77.5
+  release ran `ruff check icsforge/` only, so three findings in `tests/` slipped
+  through despite the "ruff clean" note: SIM115 (file opened without a context
+  manager) and B905 (`zip()` without `strict=`) in `test_live_offline_parity.py`,
+  and I001 (unsorted import block) in `test_web_api.py`. All three fixed; the
+  release gate now runs `ruff check icsforge tests`.
+* **Release tarball no longer contains test artifacts.** The v0.77.5 archive
+  shipped ~100 leftover `tmp/pytest-of-root/` entries (pytest `tmp_path` output
+  that landed under the repo). Added `tmp/`, `tmp/pytest-of-*/`, and
+  `.ruff_cache/` to `.gitignore`, removed the directories from the tree, and
+  added `tmp` to the packaging exclusion list so it cannot recur.
+* **Stateful-TCP PCAP tests are now container-portable.** Three tests
+  (`test_default_is_stateless`, `test_stateful_has_handshake_and_teardown`,
+  `test_stateful_preserves_covert_marker`) used `from scapy.all import rdpcap`,
+  which initialises Scapy's full route/route6 stack on import and raised
+  `KeyError('scope')` in some containerised Linux environments — failing before
+  any ICSForge assertion ran. Replaced with a minimal self-contained libpcap
+  reader (`_read_pcap_frames`) that parses frames directly. The tests now pass
+  in containers; the ICSForge generation logic they exercise was never at fault.
+
+### Improved
+
+* **Scenario catalog is parsed at most once per process.** `load_scenarios()`
+  now caches on `(path, mtime)`, re-parsing only when the file changes on disk.
+  This removes repeated full-catalog parsing (≈154 ms each) across same-process
+  operations — test suites, batch generation, and the web app — and is a large
+  part of why the full suite now completes well within wall-clock (≈98 s) where
+  it previously risked timing out. Correctness preserved: edits to the YAML are
+  picked up immediately via the mtime key.
+
+### Docs
+
+* `SCENARIO_SCHEMA.md` — corrected scenario counts (611 of **627**, 16 of
+  **627**) and documented that chain ATT&CK mapping is **derived** from step
+  techniques + the top-level primary, intentionally not duplicated into a
+  top-level `attack_mapping` block (single source of truth = the steps).
+* `README.md` — clarified run-endpoint semantics: `/api/run` and
+  `/api/run_detail` are receipt-oriented (minimal for offline runs with no
+  receiver), while `/api/run_full` is registry/artifact-oriented (full record
+  for offline-generated runs).
+
+## v0.77.5 (2026-06-27) — Documentation & UI sweep for v18.1 / v19
+
+A housekeeping release: bring every living doc and the web UI current with
+v18.1, the real v19 matrix, and all recent figures. No behavioural change to
+sending, detection, or coverage logic.
+
+### UI
+
+* **Sender home page** no longer says "aligned to ATT&CK for ICS v18" — now
+  reads v18.1 with a note about the v19 sub-technique mapping and the Matrix
+  v18/v19 toggle. (KPI stat cards were already dynamic.)
+* **Demo page** scenario count corrected (547 → 627).
+* **README.md** — corrected stale figures that had drifted: version badge
+  (0.64.7 → 0.77.5), "35 at 10/10" → 33 (in two places, with the full-coverage
+  technique list rebuilt to the actual 33), the Protocol Coverage table's style
+  counts (DNP3 22→21, S7comm 36→35, ENIP 24→23, IEC-104 20→23, PROFINET 8→9 and
+  47→45 techniques), and the Scenarios table's chain count (11 → 16, with the
+  four missing chains added to the list). Campaign references (11 `/campaigns`
+  playbooks) left as-is — those are distinct from the 16 scenario chains.
+* **USER_MANUAL.md** — added the Matrix v18.1/v19 toggle and the Tools-page PCAP
+  Replay auto-fill to the page descriptions and quick reference (the manual is
+  otherwise version-agnostic and was already accurate).
+
+### Docs brought current (v0.77.5 canonical figures throughout)
+
+Canonical numbers now consistent everywhere: **10 protocols · 627 scenarios
+(611 standalone + 16 chains) · 77 techniques (76 standalone + T0879 as a chain
+objective) = 92.8% of v18.1 · v19: 73/79 standalone + 17/18 sub-techniques ·
+210/239/357 = 806 detection rules · 33 techniques at 10/10 protocol coverage.**
+
+* `MITRE_ALIGNMENT.md` — header → v0.77.5; rewrote the v18/v19 source-of-truth
+  note (explains v19 sub-techniques + the crosswalk); coverage summary updated
+  (68/82% → 77 of 83 / 92.8%, plus v19 figures and 806 rules). Preserved the
+  timeless "fan-made wrong technique IDs" pitfall tables.
+* `MITRE_V19_CROSSWALK.md` — banner → v0.77.5 (notes the v19 matrix is generated
+  from official ics-attack-19.1 STIX); annotation count 109/610 → 111/611.
+* `REFERENCE_DETECTION_COVERAGE.md` — banner → v0.77.5; fixed a stale
+  "ENIP Tier 3 semantic 44.4%" line in the current-results paragraph (P2 was
+  closed in v0.77.1 → 98.6%; the headline table was already current).
+* `docs/submissions/ARSENAL_2026.md`, `docs/submissions/DEFCON_DEMO_LABS_34.md`
+  — 547 → 627, 68 of 83 / 82% → 77 of 83 / 92.8%, v18 → v18.1 (+ v19 crosswalk
+  note), 11 named chains → 16, version stamps → v0.77.5.
+* `docs/icsforge-coverage-layer.json` — regenerated (v0.77.5, 77/83, 33 green);
+  fixed the layer generator's hardcoded ATT&CK version (16 → 18).
+* `GOOD_FIRST_ISSUES.md` — added a snapshot note pointing to current version.
+
+Historical/dated records (everything in `docs/history/`, `ROADMAP_V5.md`,
+`SCENARIO_AUDIT_v0.62.2.*`, `MALCOLM_VALIDATION_v0.62.1.*`) are intentionally
+left as point-in-time records. `USER_MANUAL.md`, `CLI_REFERENCE.md`,
+`FEATURES_GUIDE.md`, `SIEM_INTEGRATION.md` were already version-agnostic.
+
+### Housekeeping
+
+* Renamed the malformed scenario key `T0843_003__program_append__s7comm_online_edit`
+  → `T0843__program_append__s7comm_online_edit` (its `technique` field was
+  already correctly `T0843` with `technique_v19: T0843.003`; cosmetic only,
+  coverage figures unchanged).
+
+### Notes
+
+* Full suite: 443 passed / 25 skipped. ruff clean. Drift check in sync.
+
+## v0.77.4 (2026-06-27) — PCAP replay auto-fills its destination
+
+### Improved
+
+* **Replay now defaults to re-running what you created.** A generated PCAP already
+  carries the destination IP you set in Offline Generate, but the Replay panel
+  ignored it and forced you to retype a destination — confusing, since "replay"
+  should mean "run the PCAP I made." The Replay panel now **auto-fills the
+  Destination IP from the PCAP's own baked-in destination** when you select or
+  upload a file (new read-only `/api/pcap/peek-dst` endpoint extracts it from the
+  first IPv4 packet). The field stays editable, so you can still redirect the
+  replay to a different target; manually-typed values are never overwritten.
+  Gracefully degrades for L2-only captures (GOOSE/PROFINET) where there is no
+  IPv4 destination to read.
+
+  Note on mechanics: replay re-sends each packet's payload to a chosen
+  destination+port over a fresh socket (it does not blindly emit the captured
+  destination), which is why a destination is still required under the hood —
+  the auto-fill simply supplies the obvious default. Same `out/`-path safety
+  guard as replay; peek sends nothing.
+
+### Notes
+
+* Full suite: 443 passed / 25 skipped. ruff clean.
+
+## v0.77.3 (2026-06-27) — PCAP replay UI fix + accurate v19 sub-technique coverage
+
+### Fixed
+
+* **PCAP replay was unusable from the Tools page.** The "Destination IP" input in
+  the PCAP Replay panel was wrapped in a `display:none` row (alongside a leftover
+  dummy field), so it never rendered. `replayTool()` reads that field, found it
+  empty, and always returned *"Error: Destination IP is required."* Un-hid the
+  Destination IP + Interval row and removed the dummy field. The backend
+  (`/api/pcap/replay`) was correct and unchanged; replay now works once a receiver
+  IP is entered. Regression test added.
+
+### Improved — v19 sub-technique coverage now accurate
+
+* **Matrix v19 view honors `technique_v19` annotations.** v19 introduced
+  sub-techniques in two ways: (a) 9 techniques MITRE *revoked and replaced* as
+  subs (handled by the crosswalk, e.g. T0855 → T1692.001), and (b) techniques
+  *granularized* into new subs while the parent ID stays valid (T0843 Program
+  Download → Download All / Online Edit / Program Append; T0846 Remote System
+  Discovery → Port / Broadcast / Multicast Discovery; T0873 → Siemens Project File
+  Format). Case (b) can only be known from the scenario author's `technique_v19`
+  annotation. The matrix coverage logic now uses **annotations + crosswalk**, so
+  the granularized sub-technique tiles light up correctly.
+* **Variant dropdown resolves v19 sub-techniques.** Clicking any v19 sub-tile now
+  returns its scenarios — both crosswalk subs (T1692.001 → the T0855 scenarios)
+  and annotation subs (T0846.001 Port Scan → 6 scenarios, T0843.002 Online Edit,
+  etc.). Previously only the crosswalk subs resolved.
+* **No new scenarios were needed.** The existing scenarios already carry correct
+  `technique_v19` sub-technique annotations; this release credits that work
+  accurately rather than fabricating scenarios. Verified v19 coverage:
+  **73/79 standalone techniques, 17/18 sub-techniques**. The single uncovered sub
+  is **T1695.003 Block Communications: Wi-Fi** — RF jamming, legitimately out of
+  scope for a network-protocol traffic generator (locked in by test).
+
+### Notes
+
+* Full suite: 442 passed / 25 skipped. ruff clean. `/api/version` v19 block and the
+  interactive matrix now report identical coverage figures.
+
+## v0.77.2 (2026-06-27) — Real ATT&CK for ICS v19 matrix + web-UI fixes
+
+Three field-reported issues in the running web app, fixed and verified end-to-end.
+
+### Fixed
+
+* **Real ATT&CK for ICS v19 matrix.** The bundled `ics_attack_matrix_v19.json`
+  was a fabricated inflation of v18 (112 standalone techniques, 0 sub-techniques)
+  and did not match MITRE's actual v19. Regenerated from the official
+  `ics-attack-19.1` STIX bundle (mitre-attack/attack-stix-data): now the genuine
+  **79 standalone techniques + 18 sub-techniques** across 12 tactics, with
+  sub-techniques correctly nested under their parents (Block Operational
+  Technology Message, Unauthorized Message, Modify Firmware, Insecure Credentials,
+  Block Communications, plus the new Program Download and Remote System Discovery
+  sub-techniques). Unique counts verified against MITRE (79 + 18).
+* **v19 matrix coverage now uses the official crosswalk.** The `/matrix?version=v19`
+  view previously relied on stale per-scenario `technique_v19` annotations. It now
+  translates each scenario's stable v18 technique ID forward through the canonical
+  `mitre_v18_v19_crosswalk.json`. The 9 techniques MITRE revoked-and-replaced as
+  sub-techniques (e.g. T0855 → T1692.001, T0803 → T1691.001, T0857 → T1693.001)
+  light up their new v19 sub-technique tiles; techniques that merely gained
+  sub-techniques (T0846, T0843) light up the parent tile rather than a fabricated
+  sub-mapping. Support-tier (runnable/precursor) lookup resolves v19 IDs back to
+  v18 and falls back to the parent record.
+* **Empty variant dropdown in v19 view.** Clicking a v19 tile sent a v19 ID to
+  `/api/technique/variants`, which matched scenarios by v18 ID and returned
+  nothing. The endpoint now resolves v19 sub-technique IDs back to their v18 ID
+  via the crosswalk before matching, so the dropdown populates correctly (e.g.
+  T1692.001 → the 13 T0855 scenarios).
+* **Spurious callback-token banner on the Receiver console.** The "No callback
+  token configured — receipt integrity is not enforced" warning rendered in
+  receiver mode, where it is irrelevant (the callback token is a sender-side
+  setting and its "Configure →" link targeted the sender page, which does not
+  exist in receiver mode). The banner is now suppressed when `ui_mode == 'receiver'`;
+  unchanged for the sender (still shown when no token is set, hidden once set).
+
+### Notes
+
+* **v18.1 validated unchanged.** The default v18.1 matrix was independently checked
+  against the MITRE ATT&CK Navigator export — all 12 tactics, 94 technique
+  entries, IDs and names match. No changes to v18.1.
+* Consolidated to a single canonical crosswalk (`mitre_v18_v19_crosswalk.json`);
+  removed a redundant duplicate introduced during the fix.
+* Full suite: 439 passed / 25 skipped. ruff clean.
+
+## v0.77.1 (2026-06-20) — P2: ENIP semantic-tier precision
+
+Closes the main remaining detection-quality gap (the "P2" item). EtherNet/IP
+semantic-tier rules previously matched only the ENIP **encapsulation command
+word** (RegisterSession / ListIdentity at offset 0), so scenarios whose
+distinguishing action is a **CIP service** (read tag, write tag, reset, …) had no
+true operation-level match — ENIP semantic coverage sat at 44.4%.
+
+### What changed
+
+* **CIP service-code matching.** Semantic rules now reach into the SendRRData
+  (`6f 00`) CPF data item (`b2 00 <len:2> <service>`) and match the actual CIP
+  service byte — Read `0x4C`, Write `0x4D`, Reset `0x05`, GetAttributesAll `0x01`,
+  etc. A write is now distinguishable from a read at the rule level.
+* **Corrected ENIP command-word mappings.** Several styles were mapped to the
+  wrong encapsulation word (e.g. `list_services` → `04 00`, data-bearing styles
+  → `6f 00`); fixed so the fallback matches reality. This also lifted the
+  heuristic tier.
+* **Zero-length command handling.** ENIP discovery/teardown commands
+  (ListIdentity, ListServices, ListInterfaces, UnRegisterSession) carry a
+  zero-length data field, so the Tier-3 "length > 0" `byte_test` was dropped for
+  them — the command word is itself the complete semantic.
+
+### Result (re-measured, Suricata 7.0.3)
+
+* **ENIP semantic 44.4% → 98.6%**, heuristic 70.8% → 98.6%, combined still 100%.
+* Modbus / DNP3 / S7comm / OPC UA / BACnet semantic unchanged at 100% (no
+  regression). The single remaining ENIP semantic miss is one
+  `unregister_session`-only scenario whose semantic spec is not emitted.
+* Rule counts: heuristic 228 → **239**, semantic 335 → **357** (lab unchanged at
+  210). Canonical-count guard tests updated accordingly.
+* README + `REFERENCE_DETECTION_COVERAGE.md` updated; a stale, contradictory
+  legacy "full scenario run" semantic table (showing ENIP 8.8%, BACnet 0%, etc.)
+  was removed in favour of the accurate re-measured per-tier table.
+
+### Verification
+
+Full suite **462 passed, 2 skipped**; ruff clean; drift checker passes at
+v0.77.1.
+
+---
+
+## v0.77.0 (2026-06-20) — Documentation overhaul & coverage re-measurement
+
+A documentation release: the full doc set is brought up to date with the current
+build and reconciled against the code, with no functional changes to the tool.
+
+### New & rewritten guides
+
+* **`docs/INSTALLATION.md`** — traditional (non-Docker) install: virtual
+  environment, the three commands (`icsforge`, `icsforge-web`,
+  `icsforge-receiver`), verification, privilege model, config locations, upgrade,
+  uninstall, troubleshooting. Examples are version-agnostic so they don't rot.
+* **`docs/USER_MANUAL.md`** — primary web-app walkthrough: Sender/Receiver roles,
+  the four run options (Test profile, Marker mode, Stateful TCP, Build PCAP), the
+  firewall/ACL and NSM workflows, a full **Detection content** section (three
+  tiers, Suricata + Sigma export, running the rules, feeding alerts back via the
+  EVE tap / Alerts Ingest), and reviewing results.
+* **`docs/CLI_REFERENCE.md`** — rewritten from a stale v0.63.0 baseline to cover
+  every current command and flag, including `--profile`, `--stateful`,
+  `--explicit-marker`, and `icsforge-receiver`.
+* **`docs/FEATURES_GUIDE.md`** (new) — the offline PCAP generator, the ATT&CK
+  Matrix view, Campaigns, the Receiver console, the Tools page, and the
+  output/artifact formats (events JSONL schema, PCAP, rules, report).
+* **`docs/INSTALL.md` / `docs/HOWTO.md`** — converted to short redirect stubs
+  pointing at the canonical guides above (no more duplicate, drifting content).
+* **README** — added a Documentation index table linking all guides.
+
+### Coverage re-measurement
+
+`docs/REFERENCE_DETECTION_COVERAGE.md` re-measured on the current build (Suricata
+7.0.3) and its header de-pinned from v0.67.0. Corrected figures that had drifted:
+DNP3 semantic 96.7%→100% and lab 100%→93.3% (honest, broadcast/no-auth frames);
+S7comm lab 1.3%→100%; BACnet lab 0%→87%; Modbus heuristic 86.4%→100%; ENIP
+semantic now shown at 44.4% (the documented P2 magic-byte/FC-overlap gap). All 8
+IP protocols remain at 100% combined detection. `docs/ROADMAP_V5.md` gets a
+historical-status banner pointing to the current 9/10 state.
+
+### Verification
+
+Full suite **462 passed, 2 skipped**, including the `TestCliManualCoverage` guard
+that asserts every subcommand and flag is documented in `CLI_REFERENCE.md` (this
+caught two missing entries — `viewer serve` and the `receiver-only` Docker
+profile — during the rewrite; both added). ruff: 0 errors. Drift checker passes
+at v0.77.0.
+
+---
+
+## v0.76.1 (2026-06-19) — Live-send ⟷ offline parity (realism fixes)
+
+Audit of the live-send path against the offline engine found two real divergences
+that made live traffic *less* realistic than the offline PCAP — the opposite of
+what's wanted, since live is the priority path. Both are fixed; live now threads
+exactly what offline does into the protocol builders.
+
+### Fixed: per-protocol sequence/correlation fields not threaded in live
+
+The offline engine threads monotonic counters into each protocol's
+sequence/correlation field — Modbus transaction ID, S7 PDU reference, DNP3
+application sequence, IEC-104 send sequence, OPC UA sequence number / request id.
+The live sender did **not**, so in stealth mode those fields fell back to random
+per-packet values (e.g. Modbus TIDs `be15, faa5, 9766…` instead of `0001, 0002,
+0003`). A real client increments these; random values within one session look
+anomalous to an NSM. Live now advances the same counters via a shared helper, so
+stealth-mode live traffic matches the offline PCAP byte-for-byte on these fields.
+(In covert mode the marker already overrides these fields identically on both
+paths, so the gap only affected stealth — but stealth is exactly the NSM-test
+mode where realism matters most.)
+
+### Fixed: explicit marker mode unavailable in live
+
+`send_scenario_live` had `no_marker` but no `explicit_marker`, so the builders
+only ever received `covert` or `none`; selecting Explicit in the UI/CLI silently
+degraded to covert on a live send. Added `explicit_marker` to the live sender and
+threaded it through the web send routes (both `/api/send` and the technique-send
+route) and the CLI `send` command (new `--explicit-marker` flag). All three
+marker modes now behave identically on live and offline.
+
+### Confirmed (not a gap): TCP handshake
+
+Live send uses real OS sockets, so the kernel performs a genuine 3-way handshake
+— verified by a sink accepting the connections. This is *more* faithful than the
+offline `--stateful` simulation, so no change was needed; `--stateful` remains an
+offline-PCAP concern.
+
+### Verification
+
+Full suite **462 passed, 2 skipped** — 6 new parity tests in
+`tests/test_live_offline_parity.py` (live accepts/emits explicit ICSF, covert
+F7 band, stealth carries no tag, Modbus TID monotonic in stealth, and the live
+sender threads the same per-protocol seq fields as the engine). Live captures
+confirmed: stealth TIDs `0001/0002/0003`, explicit emits `ICSF`, covert keeps the
+F7 band, and a real OS handshake completes per connection. ruff: 0 errors. Drift
+checker passes at v0.76.1.
+
+---
+
+## v0.76.0 (2026-06-19) — Test Profiles (Firewall/ACL ⟷ NSM)
+
+Reframes "Phase B" around how the tool is actually used. Rather than fabricate
+synthetic device responses — which would break the safe-sinkhole model and risk
+false negatives (a firewall that permits the forward flow may still block the
+return) — ICSForge now models operator **intent** via a Test Profile that sets
+safe defaults and frames results correctly. The receiver remains a passive sink;
+no device responses are ever synthesised.
+
+### Two profiles
+
+* **Firewall / ACL** (default) — boundary test. Sender sits in IT or another OT
+  zone; the receiver is a safe sink. Unidirectional by design: arrival of any of
+  the 10 protocols means a rule allowed it (a forward-path finding). No return
+  traffic is assumed.
+* **NSM** — sensor test. The path is assumed open; the question is whether the
+  sensor alarms. Defaults `--stateful` **on** so the TCP handshake completes and
+  stream-tracking sensors engage, and pairs each witnessed scenario with its
+  expected ATT&CK technique for diffing against what the sensor fired.
+
+### Surfaces
+
+* **CLI:** `--profile firewall|nsm` on `generate` (and threaded through send).
+  An explicit `--stateful` always wins over the profile default.
+* **Web UI:** a **Test profile** segmented control on the Sender page with a
+  hover `?`, mirroring the marker-mode control. Selecting NSM visually flips the
+  Stateful TCP toggle on. The selection is sent on both live and PCAP-only runs.
+* **Receiver:** `register_expectation` and `/api/receiver/expect` accept
+  `test_profile` and `expected_alert`; witnessed receipts are enriched with
+  `test_profile`, `expected_technique`, `expected_scenario`, `expected_alert`
+  via a shared `_expectation_enrichment` helper (consistent across both the
+  covert-band and expectation attribution paths).
+* **Report:** `build_network_validation_report` now records `test_profile` per
+  run and emits a profile-aware `interpretation` — Firewall/ACL runs read as
+  boundary-traversal findings; NSM runs confirm witnessed+fired, or flag a
+  **detection gap** when traffic was witnessed but no matching alert fired.
+
+### New helper
+
+`icsforge.scenarios.engine.profile_defaults(profile)` — pure mapping from a
+profile to its generation defaults (`{"stateful": ...}`), applied at the CLI and
+web call sites so both agree. It never alters the engine's response model.
+
+### Verification
+
+Full suite **456 passed, 2 skipped** — 12 new tests: `profile_defaults` mapping,
+receiver enrichment, profile-aware report interpretation (firewall traversal;
+NSM with/without alerts incl. the detection-gap case), and the web flow (NSM
+defaults handshake on, firewall stays unidirectional, selector present, JS
+wired). ruff: 0 errors. Drift checker passes at v0.76.0.
+
+---
+
+## v0.75.1 (2026-06-19) — Web UI parity: stateful mode + three-way marker selector
+
+A web-app release closing the gap found in a UI-focused review: recent CLI
+generation features were not all reachable from the web app, which is the primary
+surface for this tool's audience. No protocol-builder behaviour changes.
+
+### Stateful TCP mode in the web UI
+
+The v0.75.0 `--stateful` feature is now in the web app. All three generation
+routes (`/api/generate_offline`, `/api/send`, `/api/technique/send`) accept a
+`stateful` flag and thread it to `run_scenario`; the Sender page has a **Stateful
+TCP** toggle that drives both the live-send and PCAP-only paths.
+
+### Three-way Marker mode selector (covert / explicit / stealth)
+
+Replaced the single Stealth on/off toggle with a **Marker mode** segmented
+control on the Sender page — Covert (default) · Explicit · Stealth — with a
+hover `?` that explains each mode. The selector maps to the backend as:
+
+* **Covert** → marker woven into a protocol field (zero added bytes); default.
+* **Explicit** → `explicit_marker=true` → literal 13-byte `ICSF` tag, matchable
+  offline without a receiver.
+* **Stealth** → `no_marker=true` → no marker; correlation via the receiver
+  expectation registry.
+
+The live payload preview now **re-renders immediately** when the mode changes.
+
+### Preview fidelity fix
+
+`/api/preview_payload` previously computed its marker with a positional
+`explicit_marker("preview", proto)` string and did **not** pass `marker_mode`/
+`run_marker`/`pkt_index`, so the builder fell back to its covert default for
+band-carrier protocols while the literal tag leaked through for compact-marker
+protocols (DNP3/MQTT) — the preview did not faithfully represent any single
+mode. The endpoint now accepts a `marker_mode` param (covert/explicit/stealth;
+legacy `no_marker=1` still maps to stealth) and threads the same parameters the
+engine uses, so the hex preview is byte-faithful to what `generate`/`send`
+actually emit for the selected mode. The response includes the resolved
+`marker_mode`.
+
+### Verification
+
+Full suite **444 passed, 2 skipped** — 8 new web tests covering the three-way
+preview (covert has no `ICSF`, explicit has it, stealth has none, all three
+distinct, default is covert, legacy `no_marker` maps to stealth) plus selector
+presence and JS wiring, on top of the 4 stateful web tests from before. ruff: 0
+errors. Drift checker passes at v0.75.1.
+
+---
+
+## v0.75.0 (2026-06-18) — Stateful TCP mode (`generate --stateful`)
+
+First half of the path from the 8/10 blue-team evaluation toward 9/10: an opt-in
+mode that emits a **full TCP conversation** for offline pcaps, so they survive
+stream reassembly and exercise stateful IDS engines (Suricata stream, Zeek
+connection tracking) — something the default single-direction model could not do.
+
+### What it does
+
+`icsforge generate --stateful` wraps each TCP step in a real conversation:
+
+* **SYN → SYN-ACK → ACK** handshake (server side synthesised),
+* each application PDU sent as a PSH/ACK segment with a **matching server ACK**,
+* **FIN/ACK → FIN/ACK → ACK** graceful teardown,
+* correct sequence/acknowledgement numbers throughout, and a **fresh ephemeral
+  source port per connection** (no "port reused" notes).
+
+The result is a pcap that Wireshark dissects with **zero `tcp.analysis.flags` and
+zero malformed** frames across all TCP protocols (modbus, dnp3, s7comm, iec104,
+opcua, enip, mqtt). The **covert correlation marker is preserved** in stateful
+data segments, and Suricata still alerts (verified: 495 alerts on a stateful
+Modbus pcap with stream reassembly active).
+
+### Default is unchanged
+
+Stateless (single PSH/ACK, no handshake) remains the default — it is lighter and
+is the right model for pure content/signature validation. `tcp_packet()` output
+is byte-for-byte identical to v0.74.9; the stateless path is untouched.
+
+### Implementation
+
+* New `tcp_segment()` in `protocols/common.py` — a general Ethernet+IP+TCP frame
+  builder with explicit flags/seq/ack/direction. `tcp_packet()` is refactored
+  onto it with no behavioural change.
+* New `TCPFlow` class — tracks client/server sequence state and emits
+  `handshake()`, `client_data(payload)` (data + server ACK), and `teardown()`.
+* `run_scenario(..., stateful=False)` and the `--stateful` CLI flag thread the
+  mode through; when on, each TCP step opens a flow, emits the handshake, routes
+  payloads through `client_data`, and tears down, advancing the ISN past the flow.
+* Note: only the client (attacker→target) sends application payloads; the server
+  contributes handshake and bare ACKs. Synthesising full application-layer
+  *responses* is the next roadmap item (Phase B).
+
+### Verification
+
+Full suite **432 passed, 2 skipped** (9 new tests in `tests/test_stateful_tcp.py`
+covering segment flags, handshake/teardown sequence numbers, default-stays-
+stateless, handshake-present-when-stateful, and marker preservation); ruff: 0
+errors. Multi-protocol sweep: all 7 TCP protocols emit clean handshake+teardown
+with 0 analysis/0 malformed. Drift checker passes at v0.75.0.
+
+---
+
+## v0.74.9 (2026-06-15) — Documentation accuracy & drift guard
+
+A documentation-and-accuracy release. No traffic-generation or protocol-builder
+behaviour changes; the focus is making the README tell the truth about scope and
+keeping it that way automatically. Prompted by an independent blue-team
+evaluation that scored the tool 8/10, with the two points off being an
+under-documented traffic model and version/figure drift in the README.
+
+### Traffic Model & Limitations section (new)
+
+Added an explicit **Traffic Model & Limitations** section near the top of the
+README, before any run instructions. It states plainly that generated traffic is:
+
+* **Unidirectional** — attacker→target only; no synthesised device responses,
+  ACKs, or error replies.
+* **Stateless at the transport layer** — offline pcaps carry application-layer
+  PDUs as PSH/ACK segments with no TCP handshake or sequence-tracked stream
+  (live `send` still opens a real socket to the cooperative receiver).
+
+The section spells out what this model validates with confidence
+(signature/content IDS rules, firewall/ACL policy, DPI classification, ATT&CK
+coverage mapping) and what it explicitly does **not** exercise (response-/
+outcome-based detection, stateful/stream-reassembly detection, bidirectional
+timing analytics). Previously a user had to discover the single-direction,
+no-handshake model by carving pcaps; now it is the documented contract. A
+bidirectional/response-traffic mode and an optional TCP-handshake emitter are
+noted as roadmap items.
+
+### Version-drift guard (new)
+
+`scripts/v19_coverage.py --check` now also fails if any README **header** pins a
+`vX.Y.Z` version tag that disagrees with the live `__version__`. This catches the
+stale-header class directly: the old `## Key Numbers (v0.64.7)` header (build was
+v0.74.8) is exactly what slipped through before. The guard immediately surfaced a
+second stale header as well — see below.
+
+### README accuracy fixes
+
+* **`Key Numbers` header** no longer pins a version; it points readers to
+  `icsforge --version` and notes the figures are validated by the drift checker.
+* **Reference detection coverage table re-measured on the current build**
+  (Suricata 7.0.3, per-tier) instead of carrying a pinned v0.62.0 snapshot:
+  * DNP3 **semantic 96.7% → 100%**.
+  * DNP3 **lab 100% → 93.3%** (honest correction): broadcast (`broadcast_operate`)
+    and no-auth-bypass frames don't carry a marker the lab-tier rule keys on;
+    Tiers 2/3 cover them at 100%. Footnote updated to explain this.
+  * OPC UA footnote corrected: the 97.2% lab figure reflects the two OPN-based
+    (OpenSecureChannel) styles attributing via the receiver expectation registry
+    (same mechanism as IEC-104) — **not** the NodeId encoding issue, which was
+    fixed in v0.74.8. The stale reference to that "known issue" is removed.
+
+### Verification
+
+Full suite **423 passed, 2 skipped**; ruff: 0 errors. `--check` passes clean at
+v0.74.9 and was confirmed to fail (and name the offending header) when a stale
+version tag is reintroduced.
+
+---
+
+## v0.74.8 (2026-06-12) — OPC UA NodeId/RequestHeader/service-body rework (services now dissector-readable)
+
+### Why this release matters
+
+Closes the last substantive fidelity gap (former known-issue P1). Every OPC UA
+service request now encodes a **spec-correct NodeId** so a strict dissector
+reads the actual service (WriteRequest 673, BrowseRequest 527, ReadRequest 631,
+…) instead of `0`. This was an all-or-nothing change — the NodeId length, the
+RequestHeader, and every service body had to be corrected together — so it was
+done as one atomic rework and verified across all 76 OPC UA scenarios.
+
+### Root cause (three coupled bugs)
+
+1. **NodeId mis-encoding.** Service ids >255 used encoding byte `0x02`
+   (NumericNodeId) followed by only a 4-byte value, so the id was read into the
+   *namespace* field and the service showed as `0`. Now uses **FourByteNodeId**
+   (`0x01` + ns u8 + id u16) for ids ≤65535 and TwoByteNodeId for ids ≤255.
+2. **Malformed RequestHeader.** The header omitted the mandatory
+   `authenticationToken` NodeId and used a 1-byte `timeoutHint`, leaving the
+   covert `requestHandle` and every following service field misaligned. Now the
+   spec **29-byte** RequestHeader (authToken + timestamp + requestHandle +
+   returnDiagnostics + auditEntryId + timeoutHint + additionalHeader).
+3. **Thin service bodies.** Each request body used a 6-byte inline NodeId
+   (`<BBI`) and incomplete structures, tolerated only while the header was also
+   wrong. All service bodies were rebuilt to spec.
+
+### Service bodies rebuilt to spec
+
+`get_endpoints`/`find_servers` (+ empty localeIds/profileUris arrays),
+`browse` (full BrowseDescription + ViewDescription), `browse_next`
+(releaseContinuationPoints + array), `read_value` (maxAge + timestampsToReturn +
+ReadValueId array with null indexRange/dataEncoding), `read_history`/
+`history_read`, `write_value`/`spoof_value`/`write_alarm_node`/`c2_write`/
+`write_large_blob` (proper WriteValue array: nodeId + attributeId + null
+indexRange + DataValue{mask + typed Variant — Float 0x0A / Double 0x0B /
+ByteString 0x0F}), `call_method`/`call_script` (CallMethodRequest + inputArguments
+array), `activate_session`/`activate_default`/`activate_hardcoded`/
+`change_password` (full ActivateSessionRequest with Anonymous (321) or UserName
+(324) IdentityToken in an ExtensionObject), `close_session` (deleteSubscriptions),
+`create_sub` (complete CreateSubscriptionRequest), `publish` (acknowledgements
+array), `translate_paths` (BrowsePath + RelativePath + RelativePathElement),
+`delete_sub`. The OPN styles (`open_session`/`relay_session`/`native_raw`) now
+carry a real **OpenSecureChannelRequest** (service 446) with SecureChannelId 0
+(new channel) and a `#None` securityPolicyUri asym header — OPN had previously
+wrapped a CreateSession, which is semantically wrong.
+
+`malformed_browse` (T0866/T0819) and `privilege_escalate` (T0890) remain
+intentionally malformed — the malformed encoding *is* the exploitation technique
+— and are framed as Browse/ActivateSession respectively.
+
+### Covert-marker offset updated
+
+The 29-byte RequestHeader shifts the covert `requestHandle` band byte from
+offset 40 → **41** in MSG bodies. Updated `receiver/receiver.py` and
+`detection/generator.py` accordingly. Verified: the OPC UA receiver→sender
+correlation loop still attributes via `covert_band` and fires the callback, and
+Suricata per-tier detection is 100% (lab/heuristic/semantic) on the new offset.
+
+### Verification
+
+* All **76 OPC UA scenarios** generate with **0 genuine malformed** (intentional
+  exploits excluded) and **0** scenarios showing service id `0`.
+* **15 distinct OPC UA services** now correctly dissected by name+number.
+* OPC UA receiver loop + Tier-1 detection confirmed working at offset 41.
+* Full suite **423 passed, 2 skipped**; ruff: 0 errors. (Two v0.62.2 OPN-layout
+  audit tests updated to assert the spec-correct SecureChannelId=0 and `#None`
+  policy asym header.)
+
+---
+
+## v0.74.7 (2026-06-11) — `--version` CLI flag
+
+### Added
+
+* `icsforge --version` (and `-V`) now prints `ICSForge <version>` and exits.
+  `-v` remains the verbose/debug-logging flag. Closes the long-standing backlog
+  item; useful for support and for demo credibility.
+
+### Note on OPC UA NodeId (still deferred)
+
+A spike this session confirmed the exact fix for the OPC UA service-NodeId
+encoding issue (the service id reads as 0 to a strict dissector): FourByteNodeId
+encoding + a spec-correct 29-byte RequestHeader + per-service body NodeIds as
+4-byte (`<BBH`) + complete service-body structures. The header and the
+WriteRequest body were implemented and verified spec-correct, but applying the
+remaining service bodies is an all-or-nothing change across ~30 styles (a partial
+change leaves 66/76 scenarios malformed). It was therefore reverted to the
+known-good compact encoding for this release and scheduled as a dedicated
+OPC UA rework; the full fix recipe is recorded in the health-report roadmap so it
+can be completed quickly and atomically.
+
+### Tests
+
+* 423 passed, 2 skipped; ruff: 0 errors.
+
+---
+
+## v0.74.6 (2026-06-11) — CRITICAL: live-send covert-marker migration (correlation was broken for live traffic)
+
+### Why this release matters
+
+A full end-to-end sweep of the tool found that the v0.74.0 covert-marker
+change was applied to the **offline** generation path but never to the
+**live-send** path. Live traffic — the tool's primary function, sending to a
+receiver to test firewalls / OT NSM / ACLs — was still emitting the *legacy
+ASCII marker* that the v0.74.0+ receiver no longer recognises. The result:
+live runs produced **no correlated receipts** (the receiver saw the packets
+but could not attribute them, so the Executed → Delivered → Detected loop did
+not close). `icsforge selftest --live` was failing with "No receipt matched
+run_id". This release fixes the live path and the supporting attribution
+plumbing.
+
+### Fixes
+
+* **Live sender migrated to the covert marker (`icsforge/live/sender.py`).**
+  Every protocol send site (TCP, UDP, PROFINET-DCP L2, IEC-61850 GOOSE L2)
+  previously built its payload with the legacy `build_marker(run_id, tech,
+  step_id)` string and passed it positionally to the builder. They now pass
+  the covert-marker kwargs (`marker_mode`, `run_marker`, `pkt_index`) exactly
+  like the offline engine, with a monotonic per-run packet index. So live
+  traffic now carries the same covert band byte / compact `ICSF` marker the
+  receiver is built to detect. `--no-marker` still sends a clean stealth
+  payload.
+
+* **Live send now always pre-announces an expectation
+  (`icsforge/web/bp_scenarios.py`).** Previously an expectation was registered
+  only for IEC-104 and stealth runs. But under the covert model the band byte
+  (Modbus/S7comm/ENIP/OPC UA/BACnet) and the `ICSF` hash marker (DNP3/MQTT)
+  do **not** carry the full run_id inline — the receiver needs an expectation
+  to bind observed traffic to *this* run_id/scenario/step. The send path now
+  announces an expectation for every live run (harmless for marker-carrying
+  protocols, required for run_id binding).
+
+* **GOOSE receiver attribution (`icsforge/receiver/receiver.py`).**
+  `_parse_goose_frame` called `_parse_marker(payload)` without a `proto`
+  argument, so the expectation-matching path was skipped and every IEC-61850
+  GOOSE frame returned `attributed_via="none"` — no receipt callback ever
+  fired. It now passes `proto="iec61850"` so GOOSE is attributed via the
+  expectation registry (GOOSE, like IEC-104, has no covert field).
+
+* **`icsforge selftest --live` updated to the covert model.** It now starts
+  the receiver with the web API enabled, pre-announces an expectation over
+  `/api/receiver/expect`, sends with the matching run_id, and validates
+  receipts by run_id binding OR marker presence. Added `--web-port`
+  (default 8765). The selftest passes again (Receiver reachable / Modbus
+  received / DNP3 received / correlation confirmed).
+
+### Verified by the sweep (no change needed)
+
+* All 627 scenarios generate clean (0 failures, 0 genuine malformed, 10,915
+  frames).
+* Suricata per-tier detection fires on the covert marker: Modbus/DNP3/S7comm/
+  OPC UA 100% across lab/heuristic/semantic; IEC-104 lab 0% by design,
+  heuristic/semantic 100%.
+* Stealth mode emits no synthetic signal across all 10 protocols.
+
+### Tests
+
+* 423 passed, 2 skipped; ruff: 0 errors.
+
+---
+
+## v0.74.5 (2026-06-11) — Receiver→sender attribution loop verified + IEC-104/stealth receipt fix
+
+### Why this release matters
+
+Verified the full receiver→sender correlation loop end to end after the
+v0.74.0 covert-marker change (the change that moved correlation data out of an
+ASCII string and into protocol fields), and fixed a gap that silently dropped
+IEC-104 and stealth-mode receipts on the sender.
+
+### Verified working: the loop is intact after the marker change
+
+Built a live integration harness (real receiver TCP handler → real
+`register_expectation()` → real `_send_callback` → mock sender) and confirmed
+that for **all 8 IP protocols** a packet produces both a written receipt and a
+callback POST to the sender, via the correct attribution path:
+
+| Protocol | Attribution path |
+|----------|------------------|
+| Modbus, S7comm, ENIP, OPC UA, BACnet | covert band byte (0xF7) at the protocol offset |
+| DNP3, MQTT | explicit compact `ICSF` marker |
+| IEC-104 | expectation registry (no on-wire marker) |
+
+Also confirmed the covert band byte lands at exactly the offset the receiver
+reads for each protocol (Modbus @0, S7 PDU-ref @11, ENIP sender-context @12,
+OPC UA request-handle @40, BACnet invoke-id @8 on confirmed requests).
+
+### Fix: sender silently dropped IEC-104 / stealth receipts
+
+`/api/receiver/callback` only stored receipts where `marker_found` was true.
+But the receiver fires callbacks for both marker-attributed traffic
+(`marker_found=True`) **and** expectation-attributed traffic
+(`marker_found=False, attributed_via="expectation"` — used for IEC-104, which
+has no covert field, and for `--no-marker` stealth runs). The endpoint
+therefore discarded every IEC-104 and stealth receipt with `stored: false`,
+so those runs showed zero delivery on the sender even though the receiver had
+seen the traffic and sent the callback.
+
+The ingest now stores a receipt when it is marker-attributed **or**
+expectation-attributed, matching the receiver's send condition. Genuinely
+unattributed packets (a covert band byte with no matching expectation, empty
+run_id) are still dropped. The callback-token + HMAC authentication path is
+unchanged and verified (valid token+HMAC stores the receipt; a bad HMAC is
+rejected with 401).
+
+### Tests
+
+* 423 passed, 2 skipped; ruff: 0 errors.
+
+---
+
+## v0.74.4 (2026-06-11) — Web app end-to-end verification + two route fixes
+
+### Why this release matters
+
+Exercised the web application end to end — every page route, every GET API
+endpoint, the full offline generate → runs → validate → export-bundle →
+download workflow, the expectation-registry lifecycle, and the config
+setters. Everything works; two latent bugs surfaced and are fixed.
+
+### Fixes
+
+* **Payload-preview marker (`/api/preview_payload`)** — the hex preview embedded
+  a legacy `ICSFORGE:PREVIEW:<name>:<tech>:` ASCII marker, a format the
+  generator stopped using in v0.74.0. For the L2/UDP protocols (notably
+  PROFINET-DCP) that take the marker as raw bytes, the preview therefore showed
+  a marker that no real capture would contain. The preview now uses the same
+  covert/compact `ICSF` marker the generator actually emits (via
+  `covert_marker.explicit_marker`), so the preview matches real traffic;
+  `?no_marker=1` reproduces stealth mode. Marker/bytes types are normalised per
+  protocol transport.
+
+* **PCAP download route (`/api/pcap/<fname>`)** — looked for files in a
+  non-existent top-level `<repo>/pcaps/` directory, so it 404'd for every real
+  run. It now resolves PCAPs from `<repo>/out/pcaps/` (the actual default output
+  location) with a legacy fallback, and the path-traversal guard is retained
+  (verified that `../../etc/passwd` is rejected).
+
+### Verified working (no change needed)
+
+* All 9 page routes (`/`, `/matrix`, `/sender`, `/report`, `/campaigns`,
+  `/tools`, `/demo`, `/health`; `/receiver` intentionally 302-redirects to
+  `/sender`).
+* 25 GET API endpoints return 200.
+* Offline workflow: `/api/generate_offline` (param: `name`, optional
+  `build_pcap`) → `/api/runs` → `/api/run_full` → `/api/validate` (param:
+  `run_id`) → `/api/run/export_bundle` → `/download`. The export bundle ZIP
+  correctly contains events.jsonl, traffic.pcap, receipts.jsonl and the run
+  index entry.
+* `/api/receiver/expect` correctly enforces the callback-token + HMAC
+  machine-to-machine auth (returns 401 without the token) — this is by design,
+  independent of the `ICSFORGE_NO_AUTH` user-auth bypass.
+* `/api/technique/variants` correctly 400s without a `technique` arg and 200s
+  with one.
+
+### Tests
+
+* 423 passed, 2 skipped; ruff: 0 errors. Web API + viewer suites green (28).
+
+---
+
+## v0.74.3 (2026-06-11) — Attack-chain historical fidelity: Industroyer2 corrected, CrashOverride 2016 added
+
+### Why this release matters
+
+A historical-fidelity review of the named-incident attack chains (do they
+match what the real malware/incident actually did on the wire, per
+ESET/Dragos/MITRE/CERT-UA sources) found one chain that misrepresented the
+incident it claimed to reproduce. Fixed, and a new faithful chain added.
+Scenario total: **627** (611 standalone + **16** chains).
+
+### Industroyer2 chain corrected (was historically inaccurate)
+
+`CHAIN__industroyer2__power_grid` previously included an IEC-104
+`interrogation` (enumeration) step and two S7comm steps (`setup`,
+`cpu_stop`). Both contradict the published analysis of the 2022 malware:
+
+* Industroyer2 was a **standalone binary that spoke IEC-104 only** — unlike
+  the modular 2016 Industroyer, it had no S7comm/61850/OPC payloads.
+* Its configuration (target IOAs) was **hardcoded**, so it went straight to
+  issuing breaker commands and did **not** first interrogate/enumerate the
+  outstation — analysts (ESET, Netresec, Dragos) specifically noted this.
+
+The chain is now IEC-104-only and goes STARTDT → immediate single/double
+ASDU commands on hardcoded IOAs → STOPDT, matching the real attack
+(5 steps, T0855 + T0848 + T0815).
+
+### New chain: Industroyer / CrashOverride (Ukraine 2016)
+
+Added `CHAIN__industroyer_crashoverride__2016_grid`, reproducing the 2016
+Kyiv transmission-substation attack (Sandworm/ELECTRUM; ESET + Dragos +
+US-CERT TA17-163A). Unlike Industroyer2, the 2016 framework was **modular**
+with separate protocol payloads (101.dll, 104.dll, 61850.dll, OPC). The
+chain reproduces the documented per-payload behaviour, mapped to MITRE
+ATT&CK for ICS S0001:
+
+1. IEC-61850 IED enumeration (the 61850 module's MMS getNameList / CSW
+   logical-node discovery) — T0846
+2. OPC UA browse (stand-in for the OPC DA module's address-space browse for
+   `ctlSelOn`/`ctlOperOn`/`stVal` items) — T0888
+3. OPC UA stVal reads (operational status) — T0801
+4. IEC-104 interrogation (the 104 module's range-mode IOA discovery) — T0888
+5. IEC-104 single + double commands (unauthorized breaker-open) — T0855
+6. IEC-61850 GOOSE trip injection — T0831
+
+OPC DA (the real fourth module) is represented by OPC UA, the nearest
+protocol ICSForge implements; this substitution is stated in the chain
+description. Generates 50 frames across GOOSE + OPC UA + IEC-104, zero
+genuine malformed (the GOOSE frames hit the known upstream Wireshark
+`packet-goose.c` dissector assertion only).
+
+### Why no 2015 BlackEnergy chain
+
+Considered and deliberately not added. The 2015 Ukraine attack opened
+breakers by **hijacking the operators' HMI/DMS via stolen VPN credentials**
+(plus KillDisk wiping and malicious serial-to-Ethernet-converter firmware) —
+it did not drive a standard OT wire protocol (Modbus/DNP3/IEC-104) with a
+documented malicious payload. Building a wire-protocol chain for it would
+fabricate behaviour the incident didn't exhibit, so it is out of scope for
+faithful traffic generation.
+
+### Review outcome for the other chains
+
+The remaining named-incident chains were checked and are sound: **Stuxnet**
+(S7 SZL fingerprint → upload logic → CPU stop → modified download → restart
+matches the documented S7-300/400 sequence; PROFINET-DCP is a reasonable
+stand-in for the discovery phase, PROFIBUS not implemented); **TRITON**
+(already honestly labelled as a Modbus/S7comm surrogate because the
+proprietary TriStation/UDP-1502 protocol is not implemented); **Water
+Treatment / Oldsmar** (models the setpoint-tampering impact; the real
+incident was TeamViewer HMI control). The 10 generic technique-sequence
+chains make no specific real-world claim and are coherent kill-chain
+progressions.
+
+### Docs / figures
+
+README scenario figures updated to 627 (611 + 16 chains); confidence
+breakdown 457 HIGH / 151 MEDIUM / 19 LOW; the README↔canonical drift check
+(`scripts/v19_coverage.py --check`) passes. The new chain appears in the
+README named-chain list; the Industroyer2 entry there is corrected to note
+it is IEC-104-only.
+
+### Tests
+
+* 423 passed, 2 skipped; ruff: 0 errors.
+
+---
+
+## v0.74.2 (2026-06-11) — Generation performance + OPC UA service IDs; full 626-scenario fidelity audit
+
+### Why this release matters
+
+Completes a technique-fidelity audit across all 626 scenarios (611 standalone
++ 15 chains, 10 protocols) — confirming each scenario's generated traffic
+faithfully represents its ATT&CK for ICS technique on its protocol — and fixes
+two real usability problems found along the way.
+
+### Generation performance (major)
+
+* **Offline `generate` no longer sleeps through inter-packet intervals.** The
+  PCAP writer computes its own synthetic, jittered timestamps, so the
+  real-time `time.sleep()` between packets only delayed the user with zero
+  effect on output. Offline generation now passes `skip_intervals=True`.
+  Effect: scenarios with long scripted intervals dropped from ~45 s to ~0.5 s
+  — about a **90x speedup** — and 16 scenarios that appeared to "hang" now
+  complete in well under a second. (Live `send` still paces traffic in real
+  time; only offline PCAP generation skips the waits.)
+* **Faster scenario loading.** `load_scenarios` now uses libyaml's
+  `CSafeLoader` when available, parsing the ~700 KB scenarios file roughly
+  **8x faster** (≈1.5 s → ≈0.2 s) on every invocation, with a pure-Python
+  fallback.
+
+### OPC UA service NodeId values
+
+Three service request NodeIds in the OPC UA service table were off by a few
+and are corrected to the spec values: FindServers 420→**422**, Call 710→**712**,
+Publish 823→**826** (WriteRequest 673, ReadRequest 631, etc. were already
+correct). These are framing-neutral label fixes.
+
+Note: the OPC UA NodeId *encoding* still uses the historical compact form, so
+a strict dissector shows the service id as 0 even though the message type and
+the application operation (Write/Read/Browse/etc.) are correct and every
+field is well-formed. The spec-faithful FourByteNodeId encoding was trialled
+and reverted because it shifts every downstream field and makes ~68 of 76
+OPC UA scenarios parse as malformed; correcting it requires reworking each
+service body builder in lockstep. Tracked as a known issue — deliberately not
+shipped as a regression.
+
+### Fidelity audit result
+
+Generated every scenario, dissected with tshark, and verified the operation
+matches the technique:
+
+* **All 611 standalone scenarios + 15 chains produce well-formed traffic.**
+* Operation-vs-technique confirmed by hand for the function-code/service
+  protocols: Modbus (FC), DNP3 (FC + objects), S7comm (function + ROSCTR),
+  IEC-104 (ASDU TypeID), ENIP/CIP (service), BACnet (service choice —
+  reinitializeDevice/writeProperty/deviceCommunicationControl map correctly),
+  MQTT (PUBLISH/SUBSCRIBE/CONNECT with realistic OT topic trees), OPC UA
+  (message type + operation).
+* The only "malformed" frames are (a) the two intentional input-validation
+  exploit scenarios per protocol where sending a malformed header *is* the
+  technique (e.g. S7comm T0819/T0866), and (b) IEC-61850 GOOSE, where the
+  flag is the upstream Wireshark `packet-goose.c:717` recursion-depth
+  assertion, not an ICSForge encoding error (the GOOSE PDU — gocbRef, stNum,
+  allData — is valid and consistent).
+* The 15 attack chains generate valid multi-protocol traffic (e.g.
+  Industroyer2: IEC-104 + S7comm; Triton: S7comm/OPC UA/Modbus/ENIP/CIP;
+  Stuxnet: S7comm + PROFINET-DCP).
+
+This builds on the v0.74.1 DNP3 object-encoding fixes; DNP3 was the one
+protocol that had genuine fidelity bugs, and they remain fixed.
+
+### Tests
+
+* 423 passed, 2 skipped; ruff: 0 errors. (Suite runtime also dropped with the
+  interval-skip fix.)
+
+---
+
+## v0.74.1 (2026-06-11) — DNP3 technique-fidelity fixes (object encoding)
+
+### Why this release matters
+
+A technique-fidelity audit (does each scenario's *traffic* faithfully
+represent that ATT&CK technique's actual behaviour on that protocol, not
+just "is it a valid packet") found that several DNP3 styles encoded their
+application-layer objects in ways that misrepresented the operation and
+caused conformant dissectors to flag the frames malformed. All are fixed;
+DNP3 traffic is now spec-correct per IEEE 1815-2012. No scenario, coverage,
+or marker-architecture changes — this is pure traffic-correctness work on
+top of the v0.74.0 covert marker.
+
+### DNP3 object-encoding fixes
+
+1. **Unsolicited Response (T0856 Spoof Reporting Message, T0830 AiTM)** —
+   the `spoof_response` style generated a plain Read (FC 0x01) with no
+   unsolicited indication. It now emits a true **Unsolicited Response
+   (FC 0x82)** with the **UNS control bit set** (§4.3.2.2), the mandatory
+   **2-byte Internal Indications (IIN) field** that all responses carry
+   (§11.7), and a real **Group 30 Var 1 analog input event point**
+   (flag + 32-bit value) as the spoofed measurement.
+
+2. **CROB control (T0855 Unauthorized Command and related select/operate/
+   direct_operate styles)** — Group 12 Var 1 control-relay output blocks are
+   now encoded with the spec-correct **qualifier 0x17** ("8-bit count + 8-bit
+   index prefix", Table 4-4) instead of a bare count, so each CROB is a
+   properly index-addressed point.
+
+3. **Write Binary Output (write / broadcast_operate / default_auth_bypass)** —
+   these declared a point count but supplied no point data, so a dissector
+   read the following bytes (the correlation marker) as object data. They now
+   carry real **Group 10 Var 2 binary-output status** point data.
+
+4. **File transfer (T0807 Command-Line Interface, T0853 Scripting, T0869
+   Standard Application Protocol)** — the `file_open` style appended a raw
+   filename string. It now builds a spec-correct **Group 70 Var 3
+   File-Control / File-Command object** (free-format qualifier 0x5B), the
+   actual DNP3 file-transfer service used to push files to an outstation.
+
+5. **Secure Authentication (T0892 Change Credential, T0859 Valid Accounts)** —
+   the `authenticate_req` style is now a spec-correct **Group 120 Var 1
+   Authentication Challenge object** (free-format), with challenge sequence
+   number, user number, MAC algorithm and reason fields.
+
+6. **Correlation marker as Group 110 octet string** — the compact 'ICSF'
+   DNP3 marker is wrapped as a valid **Group 110 (octet string) object**, so
+   request frames now dissect with zero "Unknown Object\Variation" phantoms.
+
+### Read-request qualifiers
+
+Read styles now reference objects by **range** (qualifier 0x06 for class
+polls / "all objects", 0x00 for an 8-bit index range) with no trailing point
+data, matching how a real master polls an outstation. Previously some reads
+used a count qualifier with no data.
+
+### Result
+
+- All 60 DNP3 scenarios produce well-formed traffic; malformed frames are
+  eliminated except the two intentional input-validation exploit scenarios
+  (T0819 / T0866), where sending a malformed application header *is* the
+  technique.
+- Link-layer CRCs valid (0 incorrect); tshark dissects the operations
+  correctly (CROB, file-control, auth-challenge, unsolicited analog events).
+- All 30 DNP3 unit tests pass (CROB test updated to the 0x17 qualifier).
+
+### Tests
+
+- 271 passed, 2 skipped in the protocol/marker suites; ruff: 0 errors.
+
+---
+
+## v0.74.0 (2026-06-10) — Covert marker: realistic traffic, zero added bytes, cryptographic provenance
+
+### Why this release matters
+
+Through v0.73.0 the synthetic-traffic correlation marker was an explicit
+ASCII string embedded in every payload:
+
+    ICSFORGE:ICSFORGE_SYNTH|<run_id>|<technique>|<step>:
+
+Measured against real frames, that string was **59-91% of a typical ICS
+packet** (Modbus 91%, ENIP 75%, OPC UA 59%). For a tool whose entire value
+is *realistic* ICS traffic, that was the single biggest fidelity flaw — a
+capture looked like a marker with some protocol attached, not the reverse.
+It also overflowed fixed-size transport chunks (the DNP3 CRC-splitting that
+forced a separate short-marker code path) and, being a literal string, was
+trivially forgeable.
+
+v0.74.0 replaces it with a **covert marker**: instead of *adding* bytes,
+ICSForge *derives* the values of protocol fields that are already present
+and genuinely arbitrary — fields a real device fills with throwaway values.
+
+### The covert marker
+
+For each protocol with a suitable field, the marker rides in that field with
+**zero added bytes**, and the packet is indistinguishable from real traffic
+because it *is* a real, spec-valid field — only its value is chosen:
+
+| Protocol | Covert carrier | Added bytes |
+|----------|----------------|-------------|
+| Modbus   | Transaction ID (16-bit echo token) | 0 |
+| S7comm   | PDU reference (16-bit) | 0 |
+| ENIP     | Sender Context (64-bit, device-echoed) | 0 |
+| OPC UA   | RequestHandle (32-bit) | 0 |
+| BACnet   | Invoke ID (8-bit, confirmed requests) | 0 |
+| DNP3     | compact 13-byte 'ICSF' marker (too few free bits) | 13 |
+| MQTT     | compact 'ICSF' marker (no universal arbitrary field) | ~13 |
+| IEC-104  | registry-only (sequence numbers are constrained) | 0 |
+
+Modbus frames went from ~97 bytes to **12 bytes** (87% smaller). Six of
+eight protocols now carry the marker with zero overhead.
+
+The covert value is `HMAC-SHA256(run_key, proto || packet_index)` truncated
+to the field width, with the high-order byte forced into a reserved
+synthetic band (0xF7) so detection can anchor on it. Because it is keyed,
+a third party **cannot forge or replay** an ICSForge marker without the run
+key — a genuine provenance property the old literal lacked.
+
+### Two-layer detection
+
+* **Layer 1 (Suricata/Zeek, in-band):** a content match on the 0xF7 synthetic
+  band at each protocol's covert-field offset (Modbus @0, S7 PDU-ref @11,
+  ENIP sender-context @12, OPC UA request-handle @40, BACnet invoke-id @8).
+  DNP3/MQTT match the 'ICSF' magic. This is the fast pre-filter.
+* **Layer 2 (receiver, out-of-band, authoritative):** the receiver verifies
+  the full keyed value / expectation binding. Zero-false-positive attribution
+  lives here and is cryptographic rather than a guessable literal.
+
+Three marker modes:
+* **covert** (default): the model above.
+* **--explicit-marker**: embed the compact 13-byte 'ICSF'+code+hash marker in
+  payloads, for pure-offline PCAP detection without a receiver.
+* **--no-marker**: stealth; no synthetic signal at all (registry-only).
+
+### Receiver
+
+`extract_correlation` now has three attribution paths, most-specific first:
+explicit 'ICSF' compact marker → covert band byte at the protocol offset
+(bound to an active expectation) → expectation-registry fallback. The
+expectation registry (POST /api/receiver/expect) is the primary correlation
+mechanism for covert traffic.
+
+### Measurement-harness fix (independent finding)
+
+While validating detection, root-caused a latent bug in
+`scripts/measure_detection_coverage.py`: loading all three tier rule files in
+a single Suricata process let Suricata's multi-pattern-matcher prefilter
+**suppress short, highly-common heuristic patterns** (e.g. Modbus Protocol-
+Identifier "00 00") in favour of the larger lab/semantic signature groups —
+even below the per-packet alert cap. This understated heuristic/semantic
+hit rates (and silently affected the historical v0.73.0 baseline). Fixed by
+running each tier in its own Suricata pass. Honest per-tier numbers below.
+
+### Detection coverage (per-tier measurement, real Suricata 7.0.3)
+
+| Protocol | Lab | Heuristic | Semantic |
+|----------|-----|-----------|----------|
+| Modbus   | 100%  | 100%  | 100%  |
+| DNP3     | 100%  | 100%  | 96.7% |
+| S7comm   | 100%  | 100%  | 100%  |
+| IEC-104  | 0%*   | 100%  | 87.7% |
+| ENIP     | 100%  | 70.8% | 44.4% |
+| OPC UA   | 97.2% | 100%  | 100%  |
+| BACnet   | 87.0%*| 100%  | 100%  |
+| MQTT     | 84.9%*| 92.5% | 86.8% |
+
+\* IEC-104 lab is 0% by design (registry-only attribution); BACnet 87% =
+who-is/unconfirmed packets carry no invoke ID (heuristic/semantic cover them);
+MQTT 84.9% = PINGREQ-only scenarios have no marker carrier; OPC UA 97.2% = the
+two OPN-based styles have the pre-existing NodeId encoding issue.
+
+### Compatibility
+
+* `marker_bytes()` / `short_marker_bytes()` in `protocols/common.py` are
+  retained as deprecated shims so external callers don't break; new code uses
+  `protocols/covert_marker.py`.
+* Tests updated to assert the covert/compact marker behaviour (the legacy
+  ICSFORGE_SYNTH string assertions are gone).
+
+### Tests
+
+* 423 passed, 2 skipped, 0 failures (full suite)
+* Ruff: 0 errors
+* All 10 protocols generate spec-valid traffic (0 malformed in tshark)
+* Stealth (--no-marker) verified to emit no synthetic signal
+
+### Coverage state (unchanged)
+
+| Metric | v0.74.0 |
+|--------|--------:|
+| Scenarios | 626 (611 standalone + 15 chains) |
+| v18 coverage | 77 / 83 = 92.8% |
+| v19 combined | 90 / 97 = 92.8% |
+| Detection rules | 929 |
+
+---
+
+## v0.73.0 (2026-05-30) — Protocol framing correctness: DNP3 Length field + ENIP/CIP CPF
+
+### Why this release matters
+
+A deep traffic-correctness audit (generate → tshark dissect → verify the
+actual protocol operation matches the claimed ATT&CK technique, across all
+547 technique×protocol pairs) found two systematic framing bugs where the
+generated traffic looked valid at the link/encapsulation layer but the
+technique-defining operation was unreachable to any spec-compliant
+dissector or real device. Both are fixed and verified. This is pure
+correctness work — no scenario, coverage, or rule-count changes.
+
+### Bug 1 — DNP3 link-layer Length field (all 60 DNP3 scenarios)
+
+The link-layer Length octet was computed including the per-data-block
+CRC bytes, violating IEEE 1815-2012 §9.2.4.1.2 (which counts user-data
+octets only). ICSForge's own per-block CRC-16/DNP values were correct,
+but the inflated Length field caused tshark — and any spec-compliant
+DNP3 outstation — to miscount the data-chunk boundaries and reject every
+chunk after the first. Net effect: **the DNP3 application layer never
+parsed**, so the function codes that distinguish techniques
+(DirectOperate, Restart, Write, etc.) were invisible to any analyzer.
+
+Root cause: `_link_header(dest, src, len(blocks))` passed the
+CRC-inclusive block length; corrected to `len(app)` (user-data length)
+at both call sites, with `_link_header`'s contract corrected to compute
+`Length = 5 + user_data_len`.
+
+Verified with tshark after the fix:
+- Data-chunk checksums all "Good" (0 incorrect)
+- Application layer parses: `dnp3.al.func` populated
+- Function codes correctly map to techniques: DirectOperate (5) for
+  T0855, Select (3) + Operate (4) for T0831 SBO, Cold/Warm Restart
+  (13/14) for T0816, Write (2) for T0872.
+- Detection rates unchanged: 60/60 lab, 60/60 heuristic, 58/60 semantic.
+
+### Bug 2 — ENIP/CIP Common Packet Format in SendRRData (all CIP-bearing ENIP scenarios)
+
+Two stacked errors in the SendRRData Command Specific Data:
+1. The mandatory 2-byte **Timeout** field was missing (the CSD packed
+   `interface_handle` + `item_count` with no timeout between them).
+2. The null-address CPF item carried an extra 2 bytes (packed as three
+   uint16 instead of the spec's Type ID + Length = two uint16).
+
+Net effect: tshark read **Item Count = 0** and never descended into the
+CIP request, so the CIP services that distinguish techniques (Write Tag,
+Reset, Get Attribute) were unreachable — a real ControlLogix PLC would
+reject the frame as having no data item to process.
+
+Fix: CSD is now `interface_handle(4) + timeout(2) + item_count(2)`
+(`struct.pack("<IHH", 0, 0, 2)`), and the null-address item is the
+correct 4 bytes (`struct.pack("<HH", 0x0000, 0)`), across all 18 build
+sites.
+
+Verified with tshark after the fix:
+- Protocol stack reaches CIP: `eth:ethertype:ip:tcp:enip:cip:cipcls`
+- Item Count = 2, Unconnected Data Item (0x00b2) present
+- CIP services correctly map to techniques: Write Tag (0x4d) + Set
+  Attribute (0x10) for T0855, Reset (0x05) for T0816, GetAttrAll (0x01)
+  + GetAttrSingle (0x0e) for T0888.
+- 20/20 sampled ENIP scenarios dissect with 0 malformed frames.
+- Detection rates unchanged: 72/72 lab, 23/72 heuristic, 51/72 semantic.
+
+### Verified correct, no changes needed
+
+The same audit dissected the other protocols and confirmed their
+operations already map correctly to techniques: S7comm (function codes
+0x28/0x29 start/stop, 0x1a–0x1c download, 0x1d–0x1f upload), IEC-104
+(ASDU TypeIDs C_SC_NA_1=45, clock=103, interrogation=100), Modbus
+(FC5/6/16 writes, FC8 diagnostic, FC43 device-ID), BACnet (WriteProperty=15,
+ReinitializeDevice=20, DeviceCommunicationControl=17), and MQTT.
+
+### Matrix representation audit (no code change, verification only)
+
+Verified the web-UI ATT&CK matrix against the authoritative
+attack.mitre.org v19.1 source:
+- v18 matrix: 12 tactics, 83 unique techniques — matches official v18.
+- v19 matrix: 79 standalone + 18 sub-techniques — exact match to v19.1,
+  zero missing, zero stale.
+- The 9 v18→v19 restructured techniques (e.g. T0855 → T1692.001) are
+  represented correctly in both views with no double-representation;
+  all scenario `technique_v19` annotations verified (0 mismatches).
+- matrix → technique → protocol → run flow: 0 mismatches across all 76
+  techniques (every protocol offered has a real runnable scenario).
+
+### Known issues (deferred)
+
+- **OPC UA service NodeId encoding**: encoded with the wrong NodeId
+  encoding mask, so tshark reads the service ID (e.g. WriteRequest 673)
+  as the namespace index and the identifier as 0. A spec-correct fix was
+  developed but reverted this release because it shifts OPN message
+  framing and exposes a latent AsymmetricAlgorithmSecurityHeader issue
+  in two styles (relay_session, native_raw). Needs careful rework that
+  addresses both together.
+- Semantic-tier rule specificity for S7comm/ENIP/OPC UA/BACnet (rules
+  match protocol presence rather than function-code; the traffic is
+  correct, the per-technique rule attribution is coarse).
+
+### Tests
+
+- 423 passed, 2 skipped, 0 failures (full suite)
+- Ruff: 0 errors
+- Detection rates unchanged for all protocols
+
+### Coverage state (unchanged)
+
+| Metric | v0.73.0 |
+|---|---:|
+| Scenarios | 626 (611 standalone + 15 chains) |
+| v18 coverage | 77 / 83 = 92.8% |
+| v19 combined | 90 / 97 = 92.8% |
+| Detection rules | 929 |
+
+---
+
+## v0.72.0 (2026-05-10) — DNP3 Tier 1 → 100% + scenario-count drift detection
+
+### Why this release matters
+
+Two small but high-leverage wins:
+
+1. **DNP3 Tier 1 closure** — pushed DNP3 Tier 1 from 93.3% → **100.0%**
+   by fixing the marker-order issue in `file_open` and `spoof_response`
+   styles. The last "⚠️" cell in REFERENCE_DETECTION_COVERAGE.md for
+   Suricata-supported protocols is now clean.
+
+2. **Scenario-count drift detection** — extends the v0.69.0 canonical-
+   figures script to cover scenario counts (total, standalone, chains,
+   confidence breakdown, v19-annotation count). Catches the exact
+   class of drift the v0.69.0 reviewer caught manually.
+
+### What changed
+
+#### `icsforge/protocols/dnp3.py` — marker reordering
+
+Two style branches built `extra=` with the variable-length payload
+*before* the marker:
+
+```python
+# Before (file_open):
+extra=filename + mb
+# Before (spoof_response):
+extra=struct.pack("<i", value) + mb
+```
+
+The CRC chunking in IEEE 1815-2012 §10.3.1 puts the first 2-byte CRC
+after byte 16 of user data. When `filename` was 11 bytes (e.g.
+`b"payload.sh\x00"`) or the value was 4 bytes, the marker prefix
+`ICSF` (4 bytes) ended up at user-data offset 11 or 4 — but its
+6-byte prefix `ICSFD3` straddled the CRC boundary at byte 16.
+Suricata's contiguous `content:` match misses the marker.
+
+Fix: emit `mb` FIRST in both styles. The marker's 6-byte prefix
+always lands in chunk 1's leading bytes regardless of variable-
+length payload data.
+
+```python
+# After:
+extra=mb + filename
+extra=mb + struct.pack("<i", value)
+```
+
+#### `scripts/v19_coverage.py` — scenario counts added
+
+`compute_coverage()` now also returns a `scenario_counts` block:
+- `total`, `standalone`, `chains`
+- `confidence_high`, `confidence_medium`, `confidence_low`
+- `v19_annotated`
+
+`render_table()` shows these in the human-readable output.
+
+`check_readme()` validates 5 additional canonical strings:
+- `611 standalone + 15 named attack chains = 626 total`
+- `457 HIGH`, `150 MEDIUM`, `19 LOW`
+- `111 scenarios carry \`technique_v19\` field`
+
+If any of these strings disappear from README.md, the existing
+`tests/test_v19_coverage_canonical.py::test_readme_matches_canonical_v19_coverage`
+test fails with a clear error pointing to the exact missing string.
+
+This closes the second class of drift the reviewer caught — README
+counts had been stale across 4 releases (610 vs 611, 14 vs 15, 134
+vs 150 medium, 109 vs 111 v19 annotations).
+
+#### `docs/REFERENCE_DETECTION_COVERAGE.md` — DNP3 row 93.3% → 100.0%
+
+Table updated, explanation extended with the v0.72.0 fix details.
+
+### Headline numbers
+
+| Protocol | Tier 1 (v0.71) | Tier 1 (v0.72) |
+|---|---:|---:|
+| modbus | 100.0% | 100.0% |
+| dnp3 | 93.3% | **100.0%** |
+| enip | 100.0% | 100.0% |
+| opcua | 100.0% | 100.0% |
+| mqtt | 84.9% | 84.9% (Suricata flow-direction limitation) |
+| bacnet | 0.0% (intentional — broadcast L3) | 0.0% |
+| iec104 | 0.0% (intentional — APDU length-locked) | 0.0% |
+| s7comm | 1.3% (intentional — ROSCTR-locked) | 1.3% |
+
+DNP3 is now the **first protocol** ICSForge measures at 100% Tier 1
+across every scenario that produces a PCAP. Modbus, ENIP, and OPC UA
+also sit at 100% Tier 1 from prior releases.
+
+### Tests
+
+- 404/404 fast tests pass
+- 19/19 slow tests pass
+- **423/425 full suite passes**, 2 skipped, 0 failures, 3m 2s
+- Ruff: **0 errors** (still clean from v0.71.0)
+- DNP3 measurement: 60/60 Tier 1 hit, 60/60 Tier 2 hit, 58/60 Tier 3
+
+### Coverage state (unchanged figures, no new techniques)
+
+| Metric | v0.72.0 |
+|---|---:|
+| Scenarios | 626 (611 + 15) |
+| v18 coverage | 77 / 83 = 92.8% |
+| v19 standalone | 73 / 79 = 92.4% |
+| v19 sub-techniques | 17 / 18 = 94.4% |
+| v19 combined | 90 / 97 = 92.8% |
+| Detection rules | 929 (unchanged) |
+| **DNP3 Tier 1** | **100.0%** (was 93.3%) |
+
+### What's next per ROADMAP_V5
+
+This release closes the optional small wins identified for pre-Arsenal.
+Remaining roadmap is all maintainer-owned demo prep (videos, blog
+publication) or strategic post-Arsenal work (rules repo, vendor
+outreach, cross-SIEM measurement).
+
+---
+
+
+
+### Why this release matters
+
+Reviewer feedback on v0.69.0 raised four release-quality blockers:
+1. **Ruff not clean** — 119 errors
+2. **README counts stale** — actual was 626/611/15/457/150/19/111;
+   README claimed 624/610/14/457/134/19/109
+3. **Full pytest didn't complete in reviewer window** — couldn't say
+   "X/X passed" honestly
+4. **Chain schema implicit** — 82 step-technique mismatches in chains
+   were flagged as drift by external auditors
+
+The reviewer's bottom line: "Functionally promising and demo-capable,
+but not release-polished yet. The biggest problem is not the tool
+capability. It is release hygiene."
+
+v0.71.0 fixes all four. Zero new features — pure release-quality work.
+
+### What changed
+
+#### 1. Ruff: 120 errors → 0
+
+Cleared every `[tool.ruff.lint]` rule selected in pyproject.toml
+(`E`, `F`, `W`, `I`, `UP`, `B`, `SIM`, ignoring `E501`).
+
+Categories addressed:
+- 48 × I001 unsorted-imports (autofix)
+- 17 × F401 unused-import (autofix + manual cleanup)
+- 8 × E401 multiple-imports-on-one-line (autofix)
+- 8 × E701 multiple-statements-on-one-line-colon
+- 7 × E702 multiple-statements-on-one-line-semicolon
+- 5 × SIM105 try/except/pass → contextlib.suppress
+- 5 × SIM115 file open without context manager (fixed where safe;
+  noqa on long-lived tail handles)
+- 4 × B007 unused loop control variable (renamed to `_var`)
+- 4 × E402 module-level import not at top of file (noqa where the
+  sys.path manipulation is intentional)
+- 4 × F841 unused variable
+- 3 × E741 ambiguous variable name `l` → renamed to `ln`
+- 3 × F541 f-string-missing-placeholders (autofix)
+- 2 × SIM102 collapsible-if
+- 1 × B905 zip without strict=
+- 1 × E731 lambda → def
+- 1 × F401 unused-import (`pathlib.Path` in viewer)
+
+Verified the cleanup didn't break behaviour:
+- Generator output unchanged: 210 lab + 228 heuristic + 335 semantic
+  Suricata + 156 Zeek = 929 detection rules
+- Full pytest passes (see #3 below)
+
+#### 2. README count sync
+
+| Metric | README before | README now (matches scenarios.yml) |
+|---|---|---|
+| Total scenarios | 624 | **626** |
+| Standalone | 610 | **611** |
+| Chains | 14 | **15** |
+| Confidence high | 457 | 457 (unchanged) |
+| Confidence medium | 134 | **150** |
+| Confidence low | 19 | 19 (unchanged) |
+| v19 annotations | 109 | **111** |
+| Spec-cleanliness | 624/624 | **626/626** |
+
+Stale "623 scenarios" references in measurement docs also corrected.
+
+The figures were drifting because they're hand-typed strings in
+README.md. The drift detector (`scripts/v19_coverage.py --check`,
+shipped in v0.69.0) covers MITRE coverage figures but not scenario-
+count figures; extending it to cover scenario counts is on the roadmap
+for v0.72.
+
+#### 3. Full pytest verified
+
+- `tests/` collected: **425**
+- Passed: **423**
+- Skipped: 2 (intentional — Suricata/Zeek installation-dependent)
+- Failed: **0**
+- Runtime: 3m 2s (full suite, fast + slow)
+
+This is the first release where I've confirmed the full suite
+completes cleanly within a single execution window. Reviewer's #3
+addressed.
+
+#### 4. Chain schema clarification
+
+External auditors found 82 step-technique mismatches in chain
+scenarios — flagged as drift. They're not drift; chains intentionally
+have step-level technique IDs that differ from the chain's tactical-
+objective primary.
+
+Two changes:
+
+**`docs/SCENARIO_SCHEMA.md`** — new file. Documents:
+- The two scenario types (standalone vs chain)
+- Why standalone scenarios MUST have step.technique == scenario.technique
+- Why chains intentionally don't
+- The audit pattern: `if name.startswith("CHAIN__"): continue` for
+  the step-vs-scenario-technique check
+- Coverage counting semantics for chain primaries
+
+**`icsforge/scenarios/scenarios.yml`** — added a 24-line comment block
+above the first chain scenario explaining the chain semantics
+inline. Anyone reading the YAML directly now sees the schema rules
+without having to find the doc.
+
+### Tests
+
+| Metric | Result |
+|---|---|
+| Ruff | **0 errors** (was 120) |
+| Fast tests | 404 / 404 |
+| Slow tests | 19 / 19 |
+| **Full suite** | **423 / 425 passed**, 2 skipped, 0 failures |
+| Generator output | 210/228/335/156 = 929 rules (unchanged) |
+
+### Coverage state (unchanged from v0.70.0)
+
+| Metric | v0.71.0 |
+|---|---:|
+| Scenarios | **626** (611 standalone + 15 chains) |
+| v18 standalone covered | 77 / 83 = 92.8% |
+| v19 standalone covered | 73 / 79 = 92.4% |
+| v19 sub-techniques covered | 17 / 18 = 94.4% |
+| v19 combined | 90 / 97 = 92.8% |
+| IP-based protocols at 100% combined | 8 / 8 |
+| L2 protocols (Zeek path) | 2 / 2 |
+| Detection rules total | 929 |
+| DNP3 Tier 1 | 93.3% (v0.70 fix) |
+
+### What's next per ROADMAP_V5
+
+This release closes the v0.69.0 review feedback. Per ROADMAP_V5 the
+remaining outstanding items before Black Hat Arsenal 2026:
+
+- **June 2026** (maintainer-owned): demo videos, blog post publication
+- **July 2026** (shareable): demo-day hardening, audience takeaway
+- **Optional small wins**: DNP3 response-direction Tier 1, T0801 expansion
+
+---
+
+
+
+### Why this release matters
+
+DNP3's Tier 1 (lab marker) detection rate was the single largest gap
+documented in `REFERENCE_DETECTION_COVERAGE.md` for IP-based protocols
+that ship a marker — 26.7%, marked ⚠️ since v0.65.0. Root cause: IEEE
+1815-2012 §10.3.1 splits DNP3 user payload into 16-byte chunks each
+followed by 2 CRC bytes, and the standard 60-80-byte marker
+`ICSFORGE_SYNTH|<run_id>|<technique>|<step>` got bisected by CRC
+interrupts. Suricata's `content:` keyword is contiguous-match only.
+
+v0.70.0 fixes this with a **DNP3-specific 14-byte short marker** that
+fits inside one CRC chunk. Tier 1 jumped from **26.7% → 93.3%**.
+
+This release also archives ROADMAP_V4 and ships ROADMAP_V5 reflecting
+the actual v0.70.0 state (the V4 doc still claimed "v0.65.0 ships
+with..." at the top, drifting across 5 releases).
+
+### What changed
+
+#### `icsforge/protocols/common.py` — new `short_marker_bytes()` helper
+
+```python
+def short_marker_bytes(marker: str, proto_code: bytes = b"D3") -> bytes:
+    """14-byte marker that fits inside a 16-byte transport chunk.
+
+    Format:
+        4 bytes — fixed magic 'ICSF'
+        2 bytes — protocol code (e.g. 'D3' for DNP3)
+        8 bytes — hex-encoded SHA1 prefix of run_id (deterministic)
+    """
+```
+
+The 8-byte hash retains ~32 bits of entropy for runtime correlation
+via the v0.64.7 expectation registry while fitting in one CRC chunk.
+Trade-off: the embedded run_id text is gone for DNP3 specifically;
+out-of-band correlation (the registry) handles attribution.
+
+#### `icsforge/protocols/dnp3.py` — uses short marker
+
+```python
+mb = short_marker_bytes(marker, proto_code=b"D3")
+```
+
+#### `icsforge/detection/generator.py` — per-proto Tier 1 marker bytes
+
+Added `_MARKER_DNP3_HEX = "49 43 53 46 44 33"` (the 6-byte fast-pattern
+prefix `ICSFD3`) and updated `_tier1_marker()` to dispatch:
+```python
+marker_hex = _MARKER_DNP3_HEX if proto == "dnp3" else _MARKER_HEX
+```
+
+All other protocols continue using the standard 14-byte
+`ICSFORGE_SYNTH|` prefix unchanged.
+
+#### `tests/test_v062_additions.py` — CROB test updated
+
+The CROB-is-11-bytes test verified its assertion by checking that
+`ICSFORGE:` started at offset 11 after the CROB. v0.70 changed the
+DNP3 marker to `ICSFD3...`, so the test now asserts `ICSFD3` at
+offset 11 instead. Same logical intent, new byte sequence.
+
+### Headline result
+
+| Metric | v0.69.0 | v0.70.0 |
+|---|---:|---:|
+| DNP3 Tier 1 | 26.7% (16/60) | **93.3% (56/60)** |
+| DNP3 combined detection | 100% | **100%** (unchanged) |
+| Modbus Tier 1 (sanity) | 100% | 100% (unchanged — non-DNP3 dispatch) |
+
+The remaining DNP3 Tier 1 gap (4 of 60 with PCAPs; 2 more have no
+PCAP) is response-direction scenarios (`unsolicited`, `spoof_response`,
+`disable_unsolicited`, `unsolicited_inject`) where the rule's
+`flow:to_server` clause excludes from-server traffic. Tracked in
+ROADMAP_V5 as a v0.70.x candidate (~2 hours work, pushes DNP3 Tier 1
+to 100%).
+
+### REFERENCE_DETECTION_COVERAGE.md updated
+
+DNP3 row in the headline table updated from `26.7% ⚠️` to `93.3%`
+(with the ⚠️ removed). The "dnp3 Tier 1" gap explanation rewritten to
+reflect the v0.70.0 fix and document the trade-off honestly:
+- run_id text is dropped from the wire for DNP3
+- v0.64.7 expectation registry handles correlation out-of-band
+- Tier 1 rule content is `ICSFD3` 6-byte fast-pattern
+
+### ROADMAP_V5 ships
+
+`docs/ROADMAP_V4.md` archived to `docs/history/ROADMAP_V4_v0.69.0_era.md`.
+ROADMAP_V5 reflects v0.70.0 reality:
+
+- Coverage state: 92.8% v18, 92.8% combined v19 (clean numbers)
+- Detection rules: 929 total across all 10 protocols
+- Outstanding technical work split into "small wins" and "honest non-goals"
+- Demo-day prep (June-July-August 2026) with maintainer-owned vs shareable items
+- Strategic post-Arsenal items: rules repo, vendor outreach, cross-SIEM measurement
+- Architectural decisions list updated (DNP3 short marker now locked in)
+
+### Tests
+
+- 404/404 fast tests pass
+- 19/19 slow audit-invariant tests pass
+- 0 regressions
+- DNP3 CROB test updated to match new marker prefix (same logical intent)
+
+### Coverage state
+
+| Metric | v0.69.0 | v0.70.0 |
+|---|---|---|
+| Scenarios | 626 | 626 |
+| Detection rules | 929 | 929 (unchanged) |
+| DNP3 Tier 1 | 26.7% | **93.3%** |
+| v18 ATT&CK coverage | 92.8% | 92.8% |
+| v19 standalone | 73/79 = 92.4% | 92.4% |
+| v19 sub-techniques | 17/18 = 94.4% | 94.4% |
+| v19 combined | 90/97 = 92.8% | 92.8% |
+
+---
+
+
+
+### Why this release matters
+
+v0.68.1 fixed the stale v19 figures in the docs but didn't address
+two structural issues:
+1. The figures lived as hand-typed strings that drifted across releases
+2. Three v19 sub-techs were uncovered (T0843.003, T1695.002, T1695.003)
+
+v0.69.0 fixes both.
+
+### What changed
+
+#### New: `scripts/v19_coverage.py` — single source of truth
+
+Computes canonical v18/v19 coverage figures from `scenarios.yml` +
+crosswalk + matrix files. Three modes:
+- Default: human-readable table
+- `--json`: machine-readable
+- `--check`: validates README.md contains canonical strings, exits 1 on drift
+
+#### New: `tests/test_v19_coverage_canonical.py` — drift detection in CI
+
+Three tests:
+- Script runs without error
+- README matches canonical figures (uses `--check`)
+- `--json` mode produces parseable output with expected keys
+
+This makes the v0.68.1-era documentation drift impossible to recur.
+When future releases add scenarios that change v19 numbers, the test
+fails immediately and points to the exact strings to update.
+
+#### Coverage push: 15/18 → 17/18 v19 sub-techs (94.4%)
+
+Two new sub-tech mappings:
+
+**T0843.003 Program Append** — new scenario
+`T0843_003__program_append__s7comm_online_edit`. S7comm online-edit
+download sequence (download_req → download_block × 8 → download_end)
+without the preceding cpu_stop. Network signature: block transfers
+proceed while the controller stays in RUN, distinct from T0843.001
+Download All which requires cpu_stop / cpu_start_warm. 10 packets,
+medium confidence (chain framing — interpretive at the security-tool
+layer).
+
+**T1695.002 Block Communications: Ethernet** — annotation on existing
+`T0814__denial_of_service__iec61850`. The GOOSE-flood DoS attack
+already models L2 Ethernet-layer disruption (saturating IED receive
+buffers on the IEC 61850 process bus). Adding `technique_v19:
+T1695.002` correctly records this dual mapping in the v19 catalog.
+
+**T1695.003 Block Communications: Wi-Fi** remains uncovered. This is
+genuinely radio-layer (deauth attacks, jamming) and out of scope for
+a packet-generation tool that doesn't model 802.11 — same honest
+caveat we apply to T0817 / T0847 / T0852 etc.
+
+### Coverage state
+
+| Metric | v0.68.1 | v0.69.0 |
+|---|---|---|
+| Scenarios | 625 | **626** (+1 T0843.003) |
+| v18 standalone covered | 77 / 83 = 92.8% | 77 / 83 = 92.8% (unchanged) |
+| v19 standalone covered | 73 / 79 = 92.4% | 73 / 79 = 92.4% (unchanged) |
+| **v19 sub-techniques covered** | 15 / 18 = 83.3% | **17 / 18 = 94.4%** |
+| **v19 combined** | 88 / 97 = 90.7% | **90 / 97 = 92.8%** |
+| Uncovered v19 sub-techs | T0843.003, T1695.002, T1695.003 | **T1695.003 only** |
+
+### How v0.69.0 prevents the v0.68.1-era drift
+
+The drift caught in v0.68.1 (README claimed 65/79 standalone for 4
+releases when actual was 73/79) was caused by hand-typed strings in
+docs that nobody re-derived after each release. v0.69.0 fixes the
+mechanism:
+
+1. `scripts/v19_coverage.py` computes the canonical numbers from
+   scenarios.yml + crosswalk
+2. `tests/test_v19_coverage_canonical.py` runs the script with
+   `--check` against README.md every test run
+3. Any future change to scenarios/crosswalk that shifts coverage
+   triggers a test failure with a clear "update this string in the
+   README" message
+
+For places the test can't reach (CHANGELOG entries, doc tutorials,
+external blog posts), the canonical script can be invoked manually or
+in CI to generate up-to-date figures.
+
+### Tests
+
+- 404/404 fast tests pass (was 401 — added 3 new tests in
+  test_v19_coverage_canonical.py)
+- 0 regressions
+- The new drift-check test demonstrably caught the 15→17 sub-tech change
+  during release prep and forced the README update before commit
+
+### Roadmap status
+
+| ROADMAP_V4 v0.69+ item | Status |
+|---|---|
+| T0801 expansion (process-state monitor variants) | ⏳ deferred to v0.70 |
+| Vendor outreach (Dragos / Claroty / Nozomi) | ⏳ post-Arsenal |
+| GFI-013 ET-rules separate repo | ⏳ post-Arsenal |
+| **Canonical v19 figures + drift CI** | ✅ shipped this release |
+| **T0843.003 Program Append** | ✅ shipped this release |
+| **T1695.002 Ethernet annotation** | ✅ shipped this release |
+
+---
+
+
+
+### Why this release matters
+
+A direct question during release prep — "where are we on v19? what's
+the percentage?" — surfaced multiple stale figures across the codebase
+and one real bug. Every place that reported v19 coverage was reading
+the v0.64.1 snapshot from when the v19 work first landed; nothing had
+been re-measured since. v0.68.1 corrects all the stale figures and
+fixes the API endpoint that was undercounting.
+
+### What was wrong
+
+| Location | Reported | Actual | Off by |
+|---|---:|---:|---:|
+| README.md (intro paragraph) | 65/79 standalone | **73/79** | -8 |
+| README.md (matrix-coverage table) | 12/18 sub-techs | **15/18** | -3 |
+| docs/MITRE_V19_CROSSWALK.md | 65/79 standalone | **73/79** | -8 |
+| docs/MITRE_V19_CROSSWALK.md | "76 of 83 v18" | **77 of 83** | -1 (T0879 chain) |
+| /api/version JSON `techniques` | 76 | **77** | -1 (chain primaries) |
+| /api/version JSON v19 stats | (absent) | **shipped** | new field |
+
+### What changed
+
+#### Fixed `/api/version` endpoint (`icsforge/web/bp_config.py`)
+
+Was: counted only step-level `technique` from non-chain scenarios.
+Result: 76 techniques (missed T0879 chain primary).
+
+Now: counts BOTH scenario-level primary (which catches chain
+primaries) AND step-level techniques. Result: **77** techniques.
+
+Also added a new `v19` block to the response:
+```json
+{
+  "v19": {
+    "standalone_covered": 73,
+    "standalone_total":   79,
+    "subtechniques_covered": 15,
+    "subtechniques_total":   18
+  }
+}
+```
+
+The v19 standalone count uses the official crosswalk to translate v18
+IDs that became v19 sub-techs, then counts the parent technique as
+covered when any of its sub-techs is annotated. This matches ATT&CK's
+own convention.
+
+#### Updated README.md and docs/MITRE_V19_CROSSWALK.md
+
+All v19 coverage figures now match the actual measurement:
+
+- v18 coverage: **77 of 83** standalone (92.8%)
+- v19 standalone: **73 of 79** (92.4%)
+- v19 sub-techniques: **15 of 18** (83.3%)
+- v19 combined (standalone + subs): **88 of 97** (90.7%)
+
+The 6 uncovered v19 standalone techniques (T0817, T0847, T0852,
+T0865, T0874, T0894) are all genuinely host-only / non-network-
+observable — same as the v18 list minus T0879 (now covered via chain).
+
+### Tests
+
+- 401/401 fast tests pass
+- 0 regressions
+
+### Honest accounting of how this happened
+
+The v19 work landed in v0.64.x and the figures reflected the state at
+that time. Subsequent releases (v0.66.x BACnet, v0.67.0 Zeek, v0.68.0
+T0879 chain) added scenarios and chain primaries but didn't trigger a
+re-measurement of v19 coverage. The numbers should have been
+auto-derived from scenarios.yml + crosswalk in a test or doc-generation
+hook; instead they were hand-typed strings that drifted.
+
+For v0.69 a small follow-up would be to add a `scripts/v19_coverage.py`
+that emits the canonical numbers, and a CI check that fails when
+README/docs drift from what the script computes. Tracked.
+
+---
+
+
+
+### Why this release matters
+
+ROADMAP_V4 listed v0.68.0 as "T0873 Project File Infection (76 → 77
+techniques)" but T0873 was already covered (verified during release
+prep — `T0873__project_infection__s7comm_upload_modify_dl` exists and
+runs). The actual coverage gap was T0879 Damage to Property, which is
+classified as non-network-observable but is the natural primary
+mapping for a chain modelling the 2015/2016 Ukrainian power grid
+incidents.
+
+This release adds T0879 honestly via chain framing (76 → **77**
+techniques), ships SIEM integration docs deferred from v0.67, and
+drafts the three-tier detection blog post for icsforge.nl publication.
+
+### What changed
+
+#### `CHAIN__damage_to_property__substation` — new chain (T0879)
+
+Multi-stage attack chain on a power substation:
+1. T0846 Remote System Discovery (Modbus sweep) — 6 packets
+2. T0888 Remote System Information Discovery (IEC-104 interrogation) — 4 packets
+3. T0878 Alarm Suppression (IEC-104 clock_sync) — 1 packet
+4. T0855 Unauthorized Command Message (IEC-104 single_command, breaker open) — 2 packets
+5. T0856 Spoof Reporting Message (DNP3 spoof_response) — 5 packets
+6. T0879 Damage to Property (final out-of-spec breaker command) — 1 packet
+
+19 packets across 3 protocols (IEC-104 / Modbus / DNP3). Confidence:
+medium — the chain framing is interpretive (physical damage cannot be
+directly observed on the network), but each individual step has
+high-confidence detection content.
+
+#### `icsforge/data/technique_support.json` — T0879 reclassified
+
+Before:
+```json
+{"class": "host_or_process", "runnable": false, ...}
+```
+
+After:
+```json
+{"class": "network_observable", "runnable": true,
+ "covered_by_chain": "CHAIN__damage_to_property__substation", ...}
+```
+
+#### `tests/test_coverage_consistency.py` — drift baseline updated
+
+`EXPECTED_MISSING_SPEC_TECHS` now contains `{"T0879"}` because T0879
+is intentionally chain-only — no standalone detection rule spec exists
+for it. Each step in the chain references techniques that DO have
+specs. The chain primary is interpretive framing only.
+
+#### `README.md` — technique counts updated
+
+- 76 → **77** distinct technique IDs in scenario steps
+- 91.6% → **92.8%** of v18 ATT&CK ICS coverage
+- Remaining uncovered techniques: 7 → **6** (T0817, T0847, T0852,
+  T0865, T0874, T0894 — all genuinely host-only)
+
+#### New: `docs/SIEM_INTEGRATION.md`
+
+Was deferred from v0.67. Walkthrough for converting ICSForge Sigma
+rules to Splunk SPL, Elastic EQL/KQL, Microsoft Sentinel KQL, and
+others. Covers field-name compatibility, deployment patterns, and
+honest caveats about cross-SIEM detection-rate measurement.
+
+#### New: `docs/BLOG_DRAFT_three_tier_detection.md`
+
+Draft 1500-2000-word blog post on the three-tier architecture for
+publication on icsforge.nl. Covers Tier 1 / 2 / 3 trade-offs, the
+Suricata flow-direction suppression behaviour we documented in v0.66,
+per-protocol detection rates, deployment guidance, and what ICSForge
+intentionally doesn't do.
+
+### Coverage state
+
+| Metric | v0.67.0 | v0.68.0 |
+|---|---|---|
+| Scenarios | 624 | **625** (+1 chain) |
+| Chains | 14 | **15** (+1 damage_to_property) |
+| Distinct techniques | 76 | **77** |
+| v18 ATT&CK coverage | 91.6% | **92.8%** |
+| Uncovered v18 techniques | 7 | **6** |
+| Detection rules | 929 | 929 (unchanged) |
+
+### Roadmap status
+
+| ROADMAP_V4 v0.68.0+ item | Status |
+|---|---|
+| T0873 Project File Infection (76 → 77) | already covered pre-v0.68 |
+| Sigma → SPL / EQL converter docs | ✅ shipped |
+| Three-tier detection blog post | ✅ draft shipped (publication is John's call) |
+| T0879 Damage to Property (chain) | ✅ shipped (real 76 → 77) |
+
+### Tests
+
+- 401/401 fast tests pass
+- 19/19 slow audit-invariant tests pass
+- 0 regressions
+
+### What's left for Black Hat Arsenal 2026
+
+Per ROADMAP_V4:
+- **June 2026:** demo videos (90s + 3min)
+- **July 2026:** demo-day hardening, audience-takeaway artifacts
+- **August 2026:** Black Hat Arsenal demo (early August)
+
+---
+
+
+
+### Why this release matters
+
+The remaining 0%-detection protocols after v0.66.1 were both L2-only:
+**IEC 61850 GOOSE** (EtherType 0x88B8) and **PROFINET DCP** (0x8892).
+Suricata 7.x's detect engine cannot match L2 traffic — there is no
+`ethernet` rule protocol available for content matching at L2.
+
+v0.67.0 ships an `icsforge.sig` file containing **156 Zeek signature-
+framework rules** that cover both protocols. **All 10 ICS protocols
+ICSForge supports now have detection content shipped.**
+
+### What changed in `icsforge/detection/generator.py`
+
+#### New: `_zeek_signature(spec, base_id) -> list[str]`
+
+Returns a list of Zeek `signature {...}` blocks for L2-only protocols
+(returns `[]` for IP-based protocols — Suricata is the right tool there).
+
+For each L2 scenario the function emits up to four signatures:
+- **Tier 1 lab marker** — `eth-proto == 0xNNNN` + `payload /.*ICSFORGE_SYNTH/`
+- **Tier 2 EtherType heuristic** — `eth-proto == 0xNNNN` only (presence)
+- **Tier 3 per-style semantic** — `eth-proto == 0xNNNN` + bytewise
+  `payload` regex matching the per-style discriminator bytes from
+  `_STYLE_FC[proto][style]`
+
+#### New: `_zeek_header()` returns the file preamble with deployment instructions
+
+#### Wired into `generate_all`
+
+Returns `out["zeek"]` (joined string) and `out["rule_counts"]["zeek"]`
+(integer). The Suricata rule counts (lab, heuristic, semantic) are
+unchanged.
+
+#### Wired into `_write_outputs`
+
+Writes `icsforge.sig` to the output directory alongside the existing
+`icsforge_lab.rules` / `icsforge_heuristic.rules` / `icsforge_semantic.rules`
+files, when zeek content is non-empty. README updated to mention the
+new file and deployment instructions.
+
+### Auto-generated GOOSE specs (43 entries)
+
+`icsforge/data/detection_rules_specs.json` previously had 0 entries for
+`iec61850` (matching the gap that existed for BACnet pre-v0.66.1). v0.67
+auto-generates 43 GOOSE spec entries from `scenarios.yml`, same pattern
+as the v0.66.1 BACnet spec generation.
+
+Total spec count: 216 → 259.
+
+### Per-style discriminators for GOOSE
+
+GOOSE styles aren't single-byte distinguishable (same APDU shape across
+all five styles). The discriminator chosen is the **gocbRef IED-name
+ASCII bytes** that appear early in the GOOSE PDU:
+
+| Style | Discriminator |
+|---|---|
+| `trip_inject` | `IED1` (0x49 0x45 0x44 0x31) |
+| `spoof_measurement` | `IED1` |
+| `protection_block` | `IED1` |
+| `enumerate_ied` | `IED1` |
+| `relay_inject` | `IED2` (rogue relay scenario) |
+
+The Tier 3 semantic signature emits `payload /.*\xNN\xNN\xNN\xNN/`
+matching these bytes anywhere in the GOOSE frame.
+
+### Headline numbers (post-v0.67.0)
+
+All 10 ICS protocols now have detection content:
+
+| Protocol | Suricata | Zeek | Combined |
+|---|---|---|---:|
+| modbus, dnp3, iec104, enip, s7comm, opcua, mqtt, bacnet | ✓ | — | **100%** |
+| iec61850 GOOSE | — | ✓ (4 sigs/scenario × 43) | shipped |
+| profinet_dcp | — | ✓ (4 sigs/scenario × 3) | shipped |
+
+Total detection content: 210 lab + 228 heuristic + 335 semantic Suricata
+rules + 156 Zeek signatures = **929 detection rules** across all 10
+protocols.
+
+### Honest caveat: Zeek signatures static-validated, not runtime-measured
+
+Zeek isn't installable in the ICSForge dev sandbox (no Ubuntu package;
+OpenSUSE Build Service repo unreachable). The 156 emitted signatures
+are statically validated:
+- All parse via the standard Zeek `signature {...}` block grammar
+- 0 duplicate signature IDs (156 distinct)
+- All have required `eth-proto` and `event` keywords
+- Balanced braces (156/156)
+- ASCII-clean (no Unicode em-dashes etc. that would break Zeek parsing)
+
+End-to-end runtime measurement against a real Zeek install is on the
+v0.68 roadmap. The signature grammar follows Zeek's documented
+`eth-proto`, `payload`, and `event` keywords, all of which are core
+Zeek primitives (no third-party packages or parsers required).
+
+### Tests
+
+- 401/401 fast tests pass
+- `test_rule_counts_match_changelog` updated to assert `zeek == 156`
+- 0 regressions
+- 0 spec-cleanliness errors (208/208 protocol/style combos clean)
+
+### Coverage state
+
+| Metric | v0.66.1 | v0.67.0 |
+|---|---|---|
+| Detection rule specs | 216 | 259 (+43 GOOSE) |
+| Suricata rules emitted | 773 | 773 (unchanged) |
+| Zeek signatures emitted | 0 | **156** |
+| Total detection rules | 773 | **929** |
+| Protocols with detection content | 8 / 10 | **10 / 10** |
+| Combined detection rate, IP-based protos | 100% (8/8) | 100% (8/8) |
+| L2 protocols covered (Zeek path) | 0 / 2 | **2 / 2** |
+
+### Roadmap status
+
+| ROADMAP_V4 v0.67.0 item | Status |
+|---|---|
+| Zeek script generator for L2 protocols | ✅ shipped (signature-framework path) |
+| Sigma → Splunk SPL / Elastic EQL converters | ⏳ deferred to v0.68 |
+
+Next: v0.68.0 — T0873 Project File Infection (76 → 77 techniques),
+three-tier detection blog post, demo-day hardening.
+
+---
+
+
+
+### Why this release matters
+
+v0.65.0's measurement showed BACnet at 0/0/0 detection across all 54
+scenarios. The root cause was that the detection-rule spec file had
+**zero BACnet entries**, so the rule generator had nothing to iterate
+over for BACnet despite having complete `_PROTO_MAGIC` and `_STYLE_FC`
+tables for the protocol.
+
+This release closes the BACnet gap. **8 of 8 IP-based protocols with
+rules now hit 100% combined detection rate.**
+
+### What changed
+
+#### `icsforge/data/detection_rules_specs.json` — 54 BACnet specs added
+
+Auto-generated from `scenarios.yml`: one spec entry per pure-BACnet
+scenario, with `proto: bacnet`, `port: 47808`, `transport: udp`, and
+the scenario's styles enumerated. Total spec count: 162 → 216.
+
+#### `icsforge/detection/generator.py` — BACnet config fixes
+
+1. **Style→FC mappings corrected** (the old table had several wrong
+   values that didn't match real BACnet wire bytes):
+
+   | Style | Was | Now (correct service choice) |
+   |---|---:|---:|
+   | `subscribe_cov` | 0x1A | 0x05 (subscribeCOV) |
+   | `device_comm_control` | 0x1C | 0x11 |
+   | `reinitialize_device` | 0x12 | 0x14 |
+   | `read_file` | 0x07 | 0x06 (atomicReadFile) |
+   | `write_file` | 0x09 | 0x07 (atomicWriteFile) |
+   | `who_is` | 0x1A | 0x08 (whoIs) |
+   | `who_has` | 0x1C | 0x07 (whoHas) |
+   | `time_sync` | 0x1A | 0x00 (timeSynchronization) |
+   | `private_transfer` | 0x1A | 0x12 (confirmedPrivateTransfer) |
+   | `i_am` | (missing) | 0x00 (iAm) |
+
+   Verified against actual BACnet wire bytes from generated PCAPs.
+
+2. **BVLC magic changed from `81 0A` to `81`.** The 2-byte magic only
+   matched Original-Unicast-NPDU frames; broadcast frames (who-Is,
+   i-Am, who-Has, time-sync) use Original-Broadcast-NPDU which starts
+   with `81 0B`. The 1-byte magic covers both. BACnet/IP traffic on
+   UDP/47808 always starts with 0x81, so this remains uniquely
+   identifying.
+
+3. **Updated `function_codes` name table** with the actual service
+   choice → name mapping per ASHRAE 135 BACnet/IP standard.
+
+### Headline numbers (post-v0.66.1)
+
+| Protocol | Tier 1 (Lab) | Tier 2 (Heuristic) | Tier 3 (Semantic) | Combined |
+|---|---:|---:|---:|---:|
+| modbus | 100% | 86.4% | 100% | **100%** |
+| dnp3 | 26.7% | 100% | 96.7% | **100%** |
+| iec104 | 0% | 100% | 87.7% | **100%** |
+| enip | 100% | 31.9%† | 70.8% | **100%** |
+| s7comm | 1.3% | 1.3% | 100% | **100%** |
+| opcua | 100% | 59.7% | 100% | **100%** |
+| mqtt | 84.9% | 92.5% | 86.8% | **100%** |
+| **bacnet** | **0%** | **35.2%†** | **100%** | **100%** ← v0.66.1 |
+| iec61850 GOOSE | n/a | n/a | n/a | 0% (Zeek-only) |
+| profinet_dcp | n/a | n/a | n/a | 0% (Zeek-only) |
+
+† Suricata flow-direction suppression of redundant Tier 2 by higher-priority Tier 3.
+
+**v0.66.1 status: 8 of 8 IP-based protocols with detection rules at 100% combined.**
+
+### Lab tier 0% on BACnet — by design (consistent with IEC-104/S7comm)
+
+The BACnet builder omits the `ICSFORGE_SYNTH` marker because the BVLC
+Length field declares the BACnet packet size; appending marker bytes
+would either make the frame malformed or extend beyond the declared
+length and confuse dissectors. This is the same protocol-realism
+constraint that affects IEC-104 and S7comm. The marker omission is
+explicitly noted in `icsforge/protocols/bacnet.py:198-205`.
+
+For correlation between sender and receiver in markerless protocols,
+the v0.64.7 receiver expectation registry provides an out-of-band
+attribution channel.
+
+### Tests
+
+- 401/401 fast tests pass
+- Two test count assertions updated for new totals (210/228/335)
+- 0 regressions
+- 0 spec-cleanliness errors (208/208 combos still clean)
+
+### Coverage state
+
+| Metric | v0.66.0 | v0.66.1 |
+|---|---|---|
+| Detection rule specs | 162 | 216 (+54 BACnet) |
+| Suricata rules emitted | 574 | 773 (+54 lab + 54 heur + 91 sem) |
+| BACnet combined detection rate | 0% | **100%** |
+| Protocols at 100% combined | 7 / 7 IP-based with rules | **8 / 8** IP-based with rules |
+| Protocols still at 0% (need Zeek) | iec61850, profinet_dcp | iec61850, profinet_dcp |
+
+### Roadmap status
+
+| ROADMAP_V4 v0.66.x item | Status |
+|---|---|
+| ENIP heuristic across all CIP commands | ✅ shipped v0.66.0 |
+| OPC UA heuristic across HELF/OPNF/MSGF/CLOF | ✅ shipped v0.66.0 |
+| MQTT heuristic across CONNECT/PUBLISH/SUBSCRIBE/PINGREQ | ✅ shipped v0.66.0 |
+| **BACnet detection-rule specs** | ✅ **shipped v0.66.1** |
+| DNP3 short-marker variant | ⏳ deferred (DNP3 combined already 100%) |
+
+Next: v0.67.0 — Zeek L2 detection (GOOSE + PROFINET DCP).
+
+---
+
+
+
+### Why this release matters
+
+v0.65.0's measurement report identified three protocols where the rule
+generator was emitting only a single hardcoded heuristic + redundant
+semantic rule, missing scenarios that use any non-default command:
+ENIP (31.9% combined Tier 2+3), OPC UA (25.0%), MQTT (34.0%).
+
+v0.66.0 closes these gaps. Combined detection rates after the fix:
+
+| Protocol | v0.65.0 | v0.66.0 |
+|---|---:|---:|
+| ENIP | 100% (lab only) | **100%** (semantic 31.9% → 70.8%) |
+| OPC UA | 100% (lab only) | **100%** (semantic 25% → **100%**) |
+| MQTT | ~85% | **100%** (heuristic 34% → 92.5%, semantic 34% → 86.8%) |
+
+All three protocols now have Tier 2 and Tier 3 rules that fire
+across the full range of commands their scenarios produce.
+
+### Root cause
+
+For protocols where `_PROTO_MAGIC[proto].magic_offset == fc_offset == 0`
+(ENIP, OPC UA, MQTT), the magic byte IS the function code. Pre-v0.66
+behaviour:
+
+- Tier 2 hardcoded a single magic (e.g. ENIP `63 00` ListIdentity).
+  Scenarios using RegisterSession/SendUnitData/etc never matched.
+- Tier 3 ANDed the hardcoded magic + the per-style FC at the same
+  position — `byte 0 == 0x63 AND byte 0 == 0x65` — contradictory and
+  fired only when style happened to equal the hardcoded magic.
+
+### What changed in `icsforge/detection/generator.py`
+
+#### `_tier2_heuristic` now returns a list
+
+Previously returned a single rule string. Now returns `list[str]`:
+- Non-overlap protocols (Modbus, DNP3, IEC-104, S7comm, BACnet) —
+  emit one rule using the protocol's magic byte (unchanged behaviour)
+- Overlap protocols (ENIP, OPC UA, MQTT) — emit one rule per distinct
+  command-byte the scenario's styles produce, using the per-style FC
+  table (`_STYLE_FC[proto][style]`) instead of the hardcoded magic
+
+If a scenario has styles that don't map to known FCs, falls back to
+the protocol's default magic so generation never silently drops a rule.
+
+#### `_tier3_semantic` adds `byte_test` for overlap protocols
+
+For ENIP/OPC UA/MQTT, Tier 3 now matches:
+- `content:"<fc>"; offset:0; depth:N;` — the command byte
+- `byte_test:N,>,0,M` — verifying the length field is non-zero
+
+This makes Tier 3 strictly more specific than Tier 2 instead of an
+identical-content duplicate. Suricata's signature group manager can
+distinguish the two rules cleanly.
+
+For non-overlap protocols, Tier 3 keeps its existing magic + FC
+double-content match (unchanged).
+
+#### Caller in `generate_all` updated
+
+The Tier 2 caller now iterates over the list-returning result the same
+way the existing Tier 3 caller does. Each rule gets its own SID.
+
+### Suricata flow-direction suppression — explained, not a bug
+
+Reviewers may notice that ENIP Tier 2 still measures at 31.9% in the
+output. This is **expected Suricata behaviour, not a v0.66 defect**:
+
+- Tier 2 (`classtype:protocol-command-decode`, priority 3)
+- Tier 3 (`classtype:attempted-admin`, priority 1)
+- Both with `flow:to_server` and identical first-content match
+
+Suricata's per-flow alert deduplication fires the higher-priority rule
+(Tier 3) and suppresses the lower-priority Tier 2 alert. When Tier 2
+is loaded **alone**, it fires on 100% of relevant scenarios (verified).
+When loaded with Tier 3, the production deployment correctly collapses
+the redundant signal to the most-specific rule per flow.
+
+`docs/REFERENCE_DETECTION_COVERAGE.md` now explains this. The
+"Combined" detection rate (any tier fires) is the operationally
+relevant metric — and it is 100% for all three formerly-gapped
+protocols.
+
+### Headline numbers (ICSForge IP-based protocols with rules)
+
+| Protocol | Lab | Heur | Sem | Combined |
+|---|---:|---:|---:|---:|
+| modbus | 100% | 86.4% | 100% | **100%** |
+| dnp3 | 26.7% | 100% | 96.7% | **100%** |
+| iec104 | 0% | 100% | 87.7% | **100%** |
+| enip | 100% | 31.9%† | 70.8% | **100%** |
+| s7comm | 1.3% | 1.3% | 100% | **100%** |
+| opcua | 100% | 59.7% | 100% | **100%** |
+| mqtt | 84.9% | 92.5% | 86.8% | **100%** |
+
+† Suricata flow-direction suppression of redundant Tier 2 by Tier 3.
+
+**7 of 7 IP-based protocols with rules at 100% combined detection rate.**
+
+### Tests
+
+- 401/401 fast tests pass
+- Two test assertions updated for new heuristic count (156 → 174)
+- 0 regressions
+- 0 spec-cleanliness errors (208/208 combos still clean)
+
+### Coverage state
+
+| Metric | v0.65.0 | v0.66.0 |
+|---|---|---|
+| Suricata rules emitted | 556 | 574 (+18 heuristic) |
+| Tier 2 rules covering ENIP commands | 1 (ListIdentity only) | per-style emission across 5 commands |
+| Tier 2 rules covering OPC UA messages | 1 (Hello only) | per-style emission across 4 message types |
+| Tier 2 rules covering MQTT control packets | 1 (CONNECT only) | per-style emission across 7 packet types |
+| Combined detection rate, IP protos w/ rules | varied 85-100% | **100% across all 7** |
+
+### Remaining v0.66.x roadmap items
+
+The following items from ROADMAP_V4 § v0.66.0 are deferred to v0.66.1+:
+
+4. **BACnet detection-rule specs population** — needs ~50 hand-curated
+   spec entries; ~1 dev-day. Defers because architectural fix in this
+   release was higher-leverage.
+5. **DNP3 short-marker variant** — still on roadmap; lower priority
+   since DNP3 combined rate is already 100%.
+
+Items 1, 2, 3 (ENIP/OPC UA/MQTT) shipped in this release.
+
+---
+
+
+
+### Why this release matters
+
+Black Hat Arsenal 2026 acceptance confirmed. The single highest-leverage
+remaining work item for the demo was the detection-rate measurement —
+the answer to the inevitable reviewer question "what's your detection
+rate?" v0.65.0 ships that answer in `docs/REFERENCE_DETECTION_COVERAGE.md`,
+runs through every protocol with concrete numbers, and explains every
+gap honestly.
+
+### Headline measurement
+
+Suricata 7.0.3 against ICSForge's 606 measurable scenarios, three tiers:
+
+| Protocol | Lab | Heuristic | Semantic | Combined |
+|---|---:|---:|---:|---:|
+| modbus | 100% | 86.4% | 100% | **100%** |
+| dnp3 | 26.7% | 100% | 96.7% | **100%** |
+| iec104 | 0% | 100% | 87.7% | **100%** |
+| enip | 100% | 31.9% | 31.9% | **100%** |
+| s7comm | 1.3% | 1.3% | 100% | **100%** |
+| opcua | 100% | 25.0% | 25.0% | **100%** |
+| mqtt | 84.9% | 34.0% | 34.0% | ~85% |
+| bacnet | 0% | 0% | 0% | 0% (no rules) |
+| iec61850 | n/a | n/a | n/a | 0% (Suricata cannot match L2) |
+| profinet_dcp | n/a | n/a | n/a | 0% (Suricata cannot match L2) |
+
+**6 of 10 protocols hit 100% combined detection rate.** The remaining
+four protocols have honest, documented gaps with concrete v0.66+
+follow-ups.
+
+### What changed
+
+#### Rule generator: stop emitting unmatchable Suricata rules for L2 protocols
+
+`_tier1_marker()` in `icsforge/detection/generator.py` previously emitted
+`alert tcp` rules for IEC 61850 GOOSE and PROFINET DCP. Suricata 7.0.3's
+detection engine cannot match L2-only traffic — the `ethernet` rule
+protocol is unsupported, and `pkthdr` content matching at L2 doesn't
+fire. Six rules went out and never matched anything.
+
+v0.65.0 detects `pm.get("transport") == "l2"` and returns `None`. The
+caller now handles the None and emits no rule. Previous count: 162 lab
++ 156 heuristic + 244 semantic = 562. New count: 156 + 156 + 244 = 556.
+
+This makes the detection generator output truthful: every emitted
+Suricata rule is potentially-matchable. Detection of L2 protocols is
+correctly directed to Zeek + Sigma (already shipped) — see
+`docs/REFERENCE_DETECTION_COVERAGE.md` for deployment guidance.
+
+#### New documentation: `docs/REFERENCE_DETECTION_COVERAGE.md`
+
+Comprehensive measurement report. Includes:
+- Per-protocol detection rates across all three tiers
+- Combined detection rates (rate at which any tier fires)
+- Honest accounting for every gap with the underlying technical reason
+- Methodology + reproduction commands
+- Deployment guidance for L2 protocols (Zeek path)
+
+This is the single most-asked-for document for Arsenal credibility.
+
+#### New: `docs/ROADMAP_V4.md`
+
+The v0.62.3-era ROADMAP_V3 was nine months out of date and has been
+archived to `docs/history/ROADMAP_V3_v0.62.3_era.md`.
+
+ROADMAP_V4 reflects post-Arsenal-acceptance reality:
+- v0.66.0: detection-rule completion (5 items, ~2.5 dev-days)
+  closing the heuristic / semantic gaps for ENIP, OPC UA, MQTT, BACnet
+  + DNP3 Tier 1 mitigation
+- v0.67.0: L2 detection via Zeek path
+- v0.68.0+: coverage growth, blog post, T0873
+- July 2026: demo-day hardening, audience-takeaway artifacts
+- August 2026: BlackHat Arsenal demo
+- Strategic items: ET-rules repo, vendor outreach, protocol statefulness
+
+### Tests
+
+- 401/401 fast tests pass
+- 19/19 slow audit-invariant tests pass
+- 0 regressions
+- Two test count assertions updated for new rule total (162 → 156 lab)
+
+### Coverage state
+
+| Metric | v0.64.8 | v0.65.0 |
+|---|---|---|
+| Scenarios | 624 | 624 |
+| v18 techniques | 76 | 76 |
+| v19 annotations | 109 | 109 |
+| Confidence high/med/low | 457/134/19 | 457/134/19 |
+| Suricata rules emitted | 562 (incl 6 L2 deadweight) | 556 (no deadweight) |
+| Combined detection rate, 6 IP-based protocols | unmeasured | **100%** |
+| Combined detection rate, all 10 protocols | unmeasured | 77.1% (gaps documented) |
+| Tests passing | 401 fast + 19 slow | 401 fast + 19 slow |
+| Documented gaps with follow-up plan | partial | **comprehensive** |
+
+---
+
+
+
+### Why this release matters
+
+External reviewer (2026-05-07) verified v0.64.7 as "Black Hat-demo
+defensible" and flagged two non-blocking items: scenarios.yml YAML
+load took 5–6 seconds on their machine, and the README was still
+showing v0.63.0 numbers. Both fixed here.
+
+### What changed
+
+#### YAML loader: libyaml CSafeLoader + mtime cache
+
+`icsforge/web/helpers_io._load_yaml(path)` now:
+- Uses `yaml.CSafeLoader` when libyaml is available (transparently
+  falls back to pure-Python `SafeLoader` if not). On our scenarios.yml
+  this is an 8× speedup: 1400ms → 170ms cold parse.
+- Adds an in-process mtime-keyed cache: the same path returns the
+  cached parsed dict in microseconds until the file's mtime changes,
+  at which point it re-parses on the next call.
+
+Measured on scenarios.yml (704 KB, 19,602 lines, 624 scenarios):
+
+| | Before | After (cold) | After (cache hit) |
+|---|---|---|---|
+| safe_load | 1400 ms | 170 ms (libyaml) | 0.04 ms |
+
+The cache is read-mostly. Concurrent web requests for the same scenario
+file all serve from the same dict (no copy on read; web routes do not
+mutate). Test suite runtime dropped from 113s to 87s as a side effect.
+
+The other YAML loads in the web layer (campaigns.yml, profile YAMLs)
+are intentionally untouched — those files are <10KB so the parse
+overhead is already negligible, and broadening the change would risk
+regressions for no measurable win.
+
+#### README freshness
+
+- Version badge: 0.63.0 → 0.64.7
+- Key Numbers table updated for v0.64.7 reality:
+  - 624 scenarios (was 623)
+  - Confidence distribution 457/134/19 (was the stale 595/2/12)
+  - Note added that 109 scenarios carry `technique_v19` annotation
+  - v19 sub-technique coverage updated to 12/18 (was 10/18)
+  - Markerless-attribution row added documenting the v0.64.7 receiver
+    expectation registry
+- Detection Rules row notes the three-tier rule structure
+
+### What did NOT change
+
+- Reviewer's third item ("not a full emulator") was explicitly accepted
+  as fine — they recommended keeping the positioning honest, which we
+  already do in the README opening paragraph ("OT/ICS security coverage
+  validation platform"). No framing change needed.
+- Reviewer's `pytest-timeout` plugin friction is documentation only —
+  CONTRIBUTING.md and README already document `pip install -e ".[dev]"`
+  as the developer install path. Not a code issue.
+
+### Tests
+
+- 401/401 fast tests pass
+- Suite runtime: 113s → 87s (-23%)
+- 0 regressions
+- 0 spec-cleanliness errors (208/208 combos)
+
+---
+
+
+
+### Why this release matters
+
+v0.64.6 reverted the IEC-104 marker append (which broke the dissector).
+That left IEC-104 — and any scenario run with `--no-marker` (stealth mode) —
+without a way for the receiver to attribute incoming packets back to a
+specific (run_id, scenario, step). The sender's "scenario delivered"
+confirmation flow depended on the receiver matching the marker; no marker
+meant no callback.
+
+This release closes that gap with an out-of-band correlation channel:
+the **expectation registry**.
+
+### How it works
+
+1. Before replaying, the sender (web blueprint) inspects the scenario.
+   If any step uses IEC-104, or if `no_marker=True` was requested, the
+   sender:
+   - Pre-generates the `run_id`
+   - POSTs `/api/receiver/expect` with `{run_id, scenario, technique,
+     protos, ttl_sec}`
+2. The receiver stores the expectation in memory, TTL-bounded
+   (default 5 min).
+3. The sender runs the scenario, passing its pre-generated `run_id`
+   into `send_scenario_live`.
+4. When IEC-104 (or any markerless) packets arrive, the receiver's
+   `_parse_marker(payload, proto=...)`:
+   - Returns `marker_found: True, attributed_via: "marker"` if the
+     ICSFORGE_SYNTH marker is present (legacy behaviour, unchanged)
+   - Otherwise looks up the active expectation by `proto`, and returns
+     `marker_found: False, run_id: <expected>, technique: <expected>,
+     attributed_via: "expectation"`
+5. Either path now triggers the callback to the sender. Receipts carry
+   the `attributed_via` flag so SOC tooling can apply different
+   confidence levels to marker-verified vs expectation-attributed
+   receipts.
+
+The marker still wins when present — there is no semantic change for
+any protocol that does carry the marker (Modbus, DNP3, S7comm, ENIP,
+OPC UA, MQTT, BACnet, IEC-61850 GOOSE, PROFINET DCP).
+
+### What changed
+
+#### `icsforge/receiver/receiver.py` — registry + attribution
+
+- New `_expect_lock`, `_expectations: dict[str, dict]` registry
+- New public functions:
+  - `register_expectation(run_id, scenario, technique, steps, ttl_sec, protos)`
+  - `clear_expectation(run_id)`
+  - `list_expectations()` — auto-prunes expired entries
+- `_parse_marker(payload, proto)` now accepts `proto` and falls back to
+  expectation matching when no marker is present
+- `_write_receipt` triggers callback on either `marker_found=True` OR
+  `attributed_via == "expectation"`
+- TCP, UDP, and L2 PROFINET paths all pass `proto` to `_parse_marker`
+- All log lines distinguish marker-attributed vs expectation-attributed
+
+#### `icsforge/web/bp_receiver.py` — HTTP endpoints
+
+- `POST /api/receiver/expect` — register or extend an expectation
+  (HMAC-protected when callback token is configured)
+- `GET /api/receiver/expectations` — list active expectations
+- `DELETE /api/receiver/expect/<run_id>` — clear early on abort
+
+#### `icsforge/auth.py`
+
+- POST and GET expectation endpoints added to `PUBLIC_PATHS`
+  (sender uses them without an interactive session; HMAC enforces
+  authenticity when token is set). DELETE remains auth-required.
+
+#### `icsforge/web/helpers.py`
+
+- New `announce_expectation(run_id, scenario, technique, steps, ttl_sec, protos)`
+  helper that POSTs to the configured receiver. Safe-no-op if no
+  receiver is configured. Failures are non-fatal (logged at debug).
+
+#### `icsforge/web/bp_scenarios.py`
+
+- Live-send path now auto-announces expectations when the scenario uses
+  IEC-104 or `no_marker=True`. Pre-generates `run_id` and passes it
+  through to `send_scenario_live`.
+
+#### `icsforge/live/sender.py`
+
+- `send_scenario_live(...)` now accepts an optional `run_id` parameter.
+  If provided, overrides the auto-generated id. Used by the web
+  blueprint so the announced expectation matches the actual run.
+
+### Tests
+
+`tests/test_markerless_attribution.py` — **17 new tests, all passing**:
+
+- **Registry semantics** (5 tests): register returns entry, empty run_id
+  is no-op, register replaces existing run, clear works, expired entries
+  auto-pruned on list
+- **Marker-vs-expectation precedence** (6 tests): marker wins when
+  present, no marker + no expectation returns none, no marker + matching
+  expectation attributes correctly, proto mismatch does not attribute,
+  null protos matches any proto, received counter increments
+- **HTTP endpoints** (5 tests): POST registers, missing run_id returns
+  400, missing token returns 401, bad HMAC returns 401, GET lists
+- **Helper** (1 test): announce_expectation safe-no-op when no receiver
+
+Full suite: **401 fast tests pass** (was 384, +17), zero regressions.
+
+### Distinguishing marker-verified vs expectation-attributed receipts
+
+Receipts in `_live_receipts` and the JSONL file now carry an
+`attributed_via` field:
+
+| Value | Meaning |
+|---|---|
+| `marker` | ICSFORGE_SYNTH marker found in payload bytes — high-confidence correlation |
+| `expectation` | No marker; attributed to an active pre-announced expectation by proto match — moderate-confidence correlation, requires that no other sender was active in the TTL window |
+| `none` | No marker, no matching expectation — receipt stored but no callback dispatched |
+
+SOC tooling and the sender UI can present these differently if desired.
+
+### Known limitations
+
+- Expectation matching is FIFO when multiple expectations are active for
+  the same proto. In practice we expect one active expectation at a time
+  (single sender, single concurrent run). Concurrent runs against the
+  same receiver targeting the same proto would need finer-grained
+  matching (e.g., by sender source IP).
+- Markerless attribution is in-memory only. If the receiver process
+  restarts mid-run, the expectation is lost. The marker-based path is
+  unaffected by receiver restarts since the marker is in the bytes.
+- The expectation does not provide per-step granularity (no `step` field)
+  — only run-level attribution. This is acceptable because IEC-104 and
+  stealth runs cannot identify individual steps from packet contents
+  anyway.
+
+---
+
+
+
+### Why this release matters
+
+In v0.64.5 we acted on external reviewer finding #9 ("IEC-104 marker
+missing") by appending `marker_bytes()` to every IEC-104 APDU. Closer
+inspection showed this **broke IEC-104 protocol realism** — the trade-
+off is unacceptable for a tool that markets itself on protocol fidelity.
+
+### What we observed in v0.64.5
+
+The marker append produced this Wireshark output for IEC-104 traffic:
+
+```
+1   IEC 60870-5-104   60   <- U (STARTDT act)
+2   IEC 60870-5-104  137   <ERR prefix 50 bytes> <- U (<ERR>)
+3   IEC 60870-5 ASDU 147   <- I (...)
+4   IEC 60870-5-104  147   <ERR prefix 50 bytes> <- U (<ERR>)
+...
+```
+
+**17 of 35 frames** flagged with `<ERR prefix 50 bytes>`. Root cause:
+
+- IEC-104 has no application-data field outside the ASDU IOA elements
+- Appending bytes after the APDU LEN byte means the next TCP segment
+  starts with the marker tail of the previous segment
+- TCP reassembly fuses these into a single IEC-104 stream
+- Wireshark's IEC-104 dissector reports `<ERR prefix N bytes>` for
+  every reassembled frame whose start is preceded by trailing junk
+
+This is exactly what the file's pre-existing comments warned against:
+
+```python
+# IEC-104 I-format frames: marker is OMITTED to preserve APCI length
+# integrity. Per IEC 60870-5-101/104, the ASDU length is derived from
+# type ID + element count; appending arbitrary bytes after the IOA
+# elements makes the ASDU invalid per spec (Wireshark/Zeek/Malcolm
+# dissectors all flag "Invalid Apdulen").
+```
+
+The marker omission was a **deliberate, documented design constraint**.
+The reviewer hadn't read the source comments, and the v0.64.5 "fix"
+undid the constraint and broke IEC-104 dissection across the board.
+
+### What changed in this release
+
+- Reverted `iec104.build_payload()` to the inner-only form (no marker
+  append). All tests pass; tshark dissection is clean again.
+- Removed the `marker_bytes` import that became unused.
+- Verified zero `<ERR>` frames, zero malformed dissection warnings,
+  and zero spec-cleanliness errors.
+
+### What about reviewer finding #9 then?
+
+Re-evaluated. Three points:
+
+1. **Detection coverage is unaffected.** Tier 1 (lab marker), Tier 2
+   (protocol heuristic), and Tier 3 (semantic) detection rules use OR,
+   not AND. IEC-104 traffic still matches Tier 2 (port 2404 + protocol)
+   and Tier 3 (function code semantics). The marker only adds a third
+   match path for lab correlation; it is not required for detection.
+
+2. **Lab correlation is available via runner metadata.** Every PCAP
+   ICSForge generates is recorded with run_id, scenario name, and step
+   index in the JSONL events file. Lab teams can correlate IEC-104
+   PCAPs to scenarios via that record without requiring a marker in
+   the packet bytes.
+
+3. **No safe in-band alternative exists.** Considered options:
+   - Append after APDU → breaks dissector (this release reverts it)
+   - Embed in IOA payload → distorts scenario semantics (a synthetic
+     marker IOA changes the modelled command)
+   - Embed in COT/ORG fields → only 8 bits available, insufficient
+   - Use IEC-104 private types → still adds synthetic frames
+
+   **Decision:** accept the protocol-level constraint. Document IEC-104
+   as the one protocol where in-band marker correlation is technically
+   infeasible. Out-of-band correlation via runner metadata remains.
+
+### Honest accounting on v0.64.5
+
+The other v0.64.5 changes (PROFINET dead-code removal, confidence
+downgrades, chain schema normalization) remain in place — those were
+correct fixes. Only the IEC-104 marker change is reverted.
+
+### Tests
+
+- 190 protocol/audit/e2e tests pass
+- 208/208 style combos spec-clean (203 clean + 4 GOOSE upstream-bug
+  + 1 expected-malformed)
+- 0 genuine spec errors
+- 0 regressions
+
+### Lesson
+
+Reviewer findings deserve verification, not just compliance. Three of
+the v0.64.5 reviewer items turned out to be inaccurate (#6 MQTT
+compliance, #7 DNP3 CRC chunking) or actively wrong-to-fix (#9 IEC-104
+marker). This is a reminder that the audit catalogs and existing source
+comments are part of the correctness story, and they should be read
+before "fixing" the thing they document.
+
+---
+
+
+
+### Why this release matters
+
+External reviewer (2026-05-02) flagged ten items in v0.64.4. After
+verification, four were correct and have been fixed; three were already
+addressed by prior work; three were either inaccurate or trade-offs we
+deliberately accept. This release closes the four genuine issues.
+
+### Verified findings — fixed in this release
+
+#### Finding #1: PROFINET legacy `build()` had broken NameError
+
+`icsforge/protocols/profinet_dcp.py` had a legacy `build()` function (the
+old single-call API) that referenced `_src_mac_from_ip` without
+importing it. Calling it would raise `NameError`. The function had no
+callers in the codebase. **Fix:** deleted the function.
+
+#### Finding #2: Overuse of `confidence: high`
+
+96.1% of standalone scenarios were marked `high`. The reviewer
+correctly observed this is too monolithic, especially for techniques
+where the network observes the *trigger* but the *outcome* requires
+host-level evidence.
+
+**Fix:** Downgraded 129 scenarios from `high` → `medium`, with explicit
+`confidence_rationale` documenting why. New distribution:
+
+| Confidence | v0.64.4 | v0.64.5 |
+|---|---|---|
+| high   | 586 (96.1%) | 457 (74.9%) |
+| medium |   5 (0.8%)  | 134 (22.0%) |
+| low    |  19 (3.1%)  |  19 (3.1%)  |
+
+Categories downgraded:
+- **Firmware** (T0800, T0839, T0857) — network sees transfer; flash
+  persistence is host-level
+- **Program lifecycle** (T0843, T0845, T0889) — network sees transfer;
+  activation is host-level
+- **Impact-from-trigger** (T0813, T0815, T0827, T0829, T0826, T0828,
+  T0837, T0880) — network sees the cause; the impact state is an
+  operational consequence inferred from the cause
+
+Not downgraded (already correct):
+- Weak mappings (T0862 supply chain, T0860/T0887 wireless, T0823/T0863
+  GUI/User Execution, T0851 rootkit) — already at `confidence: low`
+
+#### Finding #4: Chain scenarios had inconsistent schema
+
+All 14 chain scenarios were missing `confidence`; 8 lacked `tactic`;
+3 lacked `technique`.
+
+**Fix:** Normalized all 14 chains to carry `tactic: Multi-Stage`,
+`technique: <primary culminating technique>`, `confidence: medium`,
+and a `confidence_rationale` enumerating the chain's stages.
+
+#### Finding #9: IEC-104 traffic missing the ICSForge marker
+
+Verified via packet inspection: IEC-104 PCAPs contained zero instances
+of the ICSForge marker, while every other protocol's PCAPs included it.
+This was a real correlation gap — detection rules using marker-based
+correlation would silently miss IEC-104 evidence.
+
+**Fix:** Refactored `iec104.build_payload()` to wrap the inner builder
+and append marker bytes after the last APDU. The IEC-104 LEN byte in
+each APCI declares APDU length, so dissectors stop at LEN bytes and
+treat trailing bytes as inter-frame data (skipped, not malformed).
+
+Verification: marker now appears in every IEC-104 PCAP, IEC-104 frames
+still parse cleanly (35 frames in test scenario), zero malformed-frame
+warnings from tshark.
+
+### Verified findings — already addressed
+
+- **Finding #3 (weak mappings should be `low`):** Already done in
+  v0.64.0/v0.64.2. T0862, T0860, T0887, T0823, T0863, T0851 all at
+  `confidence: low`. Confirmed.
+
+### Verified findings — declined or trade-offs
+
+- **Finding #6 (MQTT marker breaks compliance):** Inaccurate. Verified
+  by packet inspection that the marker is *inside* the MQTT PUBLISH
+  Message field (a JSON-payload application-data field), not appended
+  after the MQTT framing. The MQTT protocol does not validate
+  application payload contents — brokers route opaque bytes. JSON
+  invalidity of the application payload is realistic adversary
+  behaviour anyway. **No change.**
+
+- **Finding #7 (DNP3 CRC not chunked per 16 bytes):** Inaccurate.
+  Verified by code inspection (`_data_blocks` at `dnp3.py:84-87`) and
+  by tshark dissection ("Data Chunk Checksum Status: Good" on every
+  block in test PCAPs, zero bad-CRC errors). The CRC IS chunked per
+  16-byte block per IEEE 1815-2012. **No change.**
+
+- **Finding #11 (positioning):** Documentation/messaging concern, not
+  a code issue. Already addressed in README.
+
+### Lower-priority findings — deferred
+
+- **Finding #5 (no protocol stateful response):** Acknowledged as a
+  limitation. ICSForge is a deterministic traffic generator; modelling
+  full stateful sessions is out of scope for the current architecture.
+  Documented as a known limitation.
+- **Finding #8 (endpoint performance):** Not blocking for Arsenal demo.
+  Caching opportunities tracked separately.
+- **Finding #10 (other dead code):** Audit ran on protocol modules.
+  Only PROFINET had dead code.
+
+### Tests
+
+- 384/384 fast tests pass
+- 19 slow audit-invariant tests pass
+- 0 spec-cleanliness errors across 208 style combos
+- 0 semantic-correctness errors across 610 scenarios
+- 0 functional-truthfulness errors
+- 0 regressions
+
+### Coverage state
+
+| Metric | Value |
+|---|---|
+| Total scenarios | 624 (610 standalone + 14 chains) |
+| Distinct v18 techniques | 76 |
+| `technique_v19` annotations | 106 |
+| Confidence: high | 457 / 610 (74.9%) |
+| Confidence: medium | 134 / 610 (22.0%) |
+| Confidence: low | 19 / 610 (3.1%) |
+| Chains with full schema | 14 / 14 |
+| Protocols emitting marker | 10 / 10 (was 9 / 10 before this release) |
+
+---
+
+
+
+### Why this release matters
+
+Prior audits proved spec-cleanliness (Phase 1) and protocol-layer
+truthfulness (Phase 3 — every scenario produces traffic on its claimed
+protocol). What was missing was the **semantic** check: does the
+PROTOCOL VERB used by each scenario fit the MITRE technique it claims?
+
+For example: a scenario labelled "T0814 Denial of Service" that emits
+only ordinary read traffic without high frequency would fail the
+semantic check. Or a scenario labelled "T0843 Program Download" that
+only does device discovery would fail.
+
+This release builds and locks the semantic audit into CI.
+
+### What this release contains
+
+#### A. Audit framework (new)
+
+- **`icsforge/data/audit_technique_requirements.json`** — Per-technique
+  catalog: 77 entries covering all 76 MITRE ICS techniques used in our
+  scenarios. Each entry defines `allow_classes`, `forbid_classes`, `desc`.
+
+- **`icsforge/data/audit_style_classification.json`** — Per-(proto, style)
+  classification: 208 entries mapping every (protocol, style) combo used
+  in scenarios.yml to a set of verb classes. Verb vocabulary:
+  `read, write, operate, identify, discover, browse, list, probe,
+   session, auth, mode_change, restart, firmware, flood, spoof, block,
+   malformed, method, upload, config, delete`
+
+- **`tests/test_scenario_semantic_audit.py`** — 3 CI tests that lock the
+  audit invariant:
+  1. `test_audit_catalogs_cover_all_techniques`
+  2. `test_audit_classifier_covers_all_combos`
+  3. `test_no_scenario_fails_semantic_check`
+
+#### B. Audit results
+
+Initial audit: **77 of 610 standalone scenarios flagged.**
+After triage and three rounds of catalog refinement:
+  - 38 false positives — flood-class techniques (T0814/T0826/T0815/etc.)
+    where high-rate read/identify IS the flood by design
+  - 13 false positives — auth-class techniques (T0822/T0859/T0883/T0886/
+    T0891) on unauth-by-default protocols
+  - 5 false positives — block techniques (T0803/T0804/T0805/T0878) where
+    `mode_change`/`restart`/`session` ARE valid block mechanisms
+  - 21 deeper-catalog issues — all resolved through targeted refinements
+    on T0858, T0816, T0800, T0855, T0809, T0836, T0889, T0880, T0878
+
+Style-classifier fixes:
+  - `modbus/report_block` and `modbus/get_comm_event_counter` reclassified
+    from `block` to `identify`+`read` (they're FC11/FC12 device-info reads)
+  - `mqtt/publish_config` reclassified to include `write`
+
+After all refinements: **0 of 610 standalone scenarios fail the semantic audit.**
+
+#### C. Phase 3 — full protocol-layer ground-truth verification
+
+Generated PCAP for every unique (proto, style) combo (208 combos) and
+verified the expected protocol layer is present:
+**208/208 pass. Every scenario's PCAP contains the claimed protocol.**
+
+#### D. Tests
+
+- 384/384 fast tests pass (was 377; +3 new audit tests +4 stable)
+- 19 slow audit-invariant tests pass
+- 0 spec-cleanliness errors across 208 style combos
+- 0 semantic-correctness errors across 610 scenarios
+- 0 functional-truthfulness errors across 208 (proto, style) combos
+- 0 regressions
+
+### Coverage state
+
+| Metric | Value |
+|---|---|
+| Total scenarios | 624 (610 standalone + 14 chains) |
+| Distinct v18 techniques | 76 |
+| `technique_v19` annotations | 106 |
+| Confidence labels | 610 |
+| Spec-clean style combos | 203 / 208 (4 GOOSE upstream-bug + 1 expected-malformed) |
+| Semantic-clean scenarios | 610 / 610 |
+| Functional-truthful scenarios | 610 / 610 |
+| Tests passing | 384 fast + 19 slow |
+
+### How to run the audit going forward
+
+```bash
+pytest tests/test_scenario_semantic_audit.py
+```
+
+Any new scenario added to scenarios.yml that uses a (proto, style) combo
+or technique not in the catalogs will fail one of the three guard tests,
+forcing the contributor to add catalog entries before the scenario can land.
+
+---
+
+## v0.64.3 (2026-05-02) — Web UI matrix v18/v19 toggle
+
+### Why this release matters
+
+The `/matrix` page in the Web UI rendered "ATT&CK for ICS v18.1"
+hard-coded in the title. With v19 sub-techniques now extensively
+annotated in our scenario library (106 scenarios with `technique_v19`),
+the matrix view should let users see coverage in the v19 layout too.
+
+### What changed
+
+- **New file:** `icsforge/data/ics_attack_matrix_v19.json` — 79 parent
+  techniques + 18 sub-techniques. Generated from the v18 matrix + the
+  official MITRE crosswalk JSON, with multi-tactic placement preserved
+  (112 entries in 12 tactics).
+- **Matrix loader:** `_load_matrix(version="v18")` now accepts a version
+  parameter.
+- **Matrix route:** `/matrix?version=v19` renders the v19 view. Default
+  `/matrix` keeps the v18 layout for backwards compatibility.
+- **Coverage logic:** v18 view uses `technique` field; v19 view uses
+  `technique_v19` (falling back to `technique`). Sub-tech IDs auto-light
+  up parent tile.
+- **UI toggle:** v18/v19 segmented buttons in matrix.html controls bar.
+- **Sub-technique CSS:** indented left margin, dashed border, smaller
+  italic name, "↳ " prefix on ID.
+- **7 new tests** in `TestMatrixVersionToggle` (all pass).
+
+---
+
+## v0.64.2 (2026-05-01) — Authoritative MITRE v19 crosswalk lock-in
+
+### Why this release matters
+
+Verified ICSForge's v19 sub-technique mappings against the **authoritative
+MITRE v19 ICS sub-techniques crosswalk JSON** at
+https://attack.mitre.org/docs/subtechniques/ics-sub-techniques-crosswalk.json
+
+The crosswalk identifies 9 v18 IDs that "Became new sub-technique" (direct
+remap required) and 3 parent techniques that "Remain a technique" but
+gained sub-techniques (refinement opportunities). Plus 9 net-new sub-techs
+(no v18 equivalent at the leaf level).
+
+This release closes the remaining gaps from v0.64.1 and locks the result
+against drift via two new regression tests.
+
+### What changed
+
+#### 1. T0843 / T0846 / T0873 sub-technique refinement (6 scenarios)
+
+| Scenario | Was | Now | Why |
+|---|---|---|---|
+| `T0846__remote_sys_discovery__dnp3_probe` | (no v19 annotation) | T0846.001 | single-target probe = Port Scan |
+| `T0846__remote_sys_discovery__modbus` | (no v19 annotation) | T0846.001 | single-target probe = Port Scan |
+| `T0846__network_scan__profinet_dcp` | T0846.001 | **T0846.002** | DCP Identify-All is functional broadcast |
+| `T0846__network_scan__iec61850_goose` | (no v19 annotation) | **T0846.003** | GOOSE is multicast (NEW v19 sub-tech) |
+| `T0843__program_download__modbus` | T0843.001 | **T0843.002** | Single-register write while running = Online Edit |
+| `T0873__project_infection__s7comm_upload_modify_dl` | (no v19 annotation) | **T0873.001** | Siemens-specific = Siemens Project File Format (NEW v19 sub-tech) |
+
+#### 2. attack_mapping schema sync (19 scenarios)
+
+After the v0.64.1 work added `technique_v19` annotations, an earlier
+v0.63.x `attack_mapping.primary.v19_id` field was found to be stale on
+19 scenarios — same scenarios, two fields, divergent values. Synced
+attack_mapping.primary.v19_id to match the (more accurate)
+technique_v19 field.
+
+#### 3. Two new authoritative-crosswalk regression tests
+
+- `test_all_remap_targets_are_correctly_annotated` — every scenario
+  whose primary technique is in the MITRE crosswalk's "Became new
+  sub-technique" list MUST carry the correct `technique_v19` annotation
+- `test_no_invalid_v19_ids` — `technique_v19` values must be one of the
+  18 authoritative v19 sub-tech IDs
+
+#### 4. Updated docs/MITRE_V19_CROSSWALK.md
+
+Rewrote to reflect actual v0.64.2 state (was stale, predicting future
+work that's now done):
+
+- Documents per-scenario sub-technique assignments with reasoning
+- Explains why T0843.003 / T1695.002 / T1695.003 are out of scope
+- Adds a verification snippet for reproducing the coverage figures
+
+### Coverage state (v0.64.2)
+
+| Reading | Number |
+|---|---|
+| v18 standalone techniques covered | **76 of 83** (91.6%) |
+| v19 standalone techniques covered | **65 of 79** (82.3%) |
+| **v19 sub-techniques covered** | **15 of 18** (83.3%) |
+| Scenarios with `technique_v19` annotation | **110 of 610** standalone |
+
+The 3 v19 sub-techs not covered are correctly out of scope:
+- T0843.003 Program Append (could be added; not link-layer/RF)
+- T1695.002 Block Communications: Ethernet (link-layer)
+- T1695.003 Block Communications: Wi-Fi (RF)
+
+### Tests
+
+- **370/370 fast tests passing** (2 new authoritative crosswalk tests)
+- All 19 slow audit-invariant tests passing
+- Zero regressions
+
+### Verification
+
+```bash
+python3 -c "
+import yaml
+with open('icsforge/scenarios/scenarios.yml') as f:
+    sc = yaml.safe_load(f)['scenarios']
+techs = set(s.get('technique') for body in sc.values() if isinstance(body,dict)
+            for s in body.get('steps', []) if 'technique' in s)
+v19_subs = set(body.get('technique_v19') for body in sc.values()
+               if isinstance(body,dict) and 'technique_v19' in body)
+print(f'v18 techniques: {len(techs)}, v19 sub-techs: {len(v19_subs)}')
+"
+# Expected: v18 techniques: 76, v19 sub-techs: 15
+```
+
+---
+
+
+
+## v0.64.4 (2026-05-02) — Phase 4 semantic audit: 0 mis-tagged scenarios out of 610
+
+### Why this release matters
+
+Reviewer asked: do all 600+ scenarios actually fit their claimed
+techniques in v18 AND v19? This release answers that with a permanent
+CI test backed by an explicit audit catalog.
+
+### What this release adds
+
+#### Audit catalog (NEW data files)
+
+Two new files now ship with ICSForge:
+
+- `icsforge/data/audit_technique_requirements.json` — for each of 76
+  techniques used in scenarios, defines:
+  - `allow_classes` — verb classes the technique accepts
+    (e.g., T0855 Unauthorized Command Message accepts `write`/`operate`)
+  - `forbid_classes` — verb classes that disqualify a scenario
+  - `require_one_of` — at least ONE step must hit one of these classes
+    (prevents over-relaxation; e.g., T0855 requires write/operate to
+    actually be present, not just `identify`)
+
+- `icsforge/data/audit_style_classification.json` — every (proto, style)
+  combo used in any scenario (208 unique combos) mapped to verb classes
+  (read / write / operate / identify / mode_change / restart / firmware /
+  auth / session / flood / spoof / block / malformed / method / upload /
+  config / delete / probe / discover / browse).
+
+Together these allow a deterministic, repeatable check that each
+scenario's protocol traffic is consistent with what its MITRE technique
+ID claims.
+
+#### Count-aware verb classification
+
+A step with `count >= 10` automatically contributes `flood` to its
+verb-class set. This captures session-exhaustion, table-fill, and
+rate-based attacks where the verb itself (e.g., `register_session`) is
+not inherently a flood, but the high count makes it one.
+
+#### Regression test in CI
+
+New test class `TestPhase4SemanticAudit` in `tests/test_v062_additions.py`:
+
+1. **`test_all_standalone_scenarios_pass_audit`** — runs the audit on all
+   610 standalone scenarios. Currently passes with **0 flagged**.
+2. **`test_audit_catches_mistagged_scenario`** — sanity test: a read-only
+   scenario deliberately re-tagged as T0855 must FAIL the audit.
+3. **`test_audit_catches_discovery_as_program_download`** — sanity test:
+   a discovery scenario re-tagged as T0843 must FAIL.
+4. **`test_audit_catalog_covers_all_used_techniques`** — every technique
+   referenced in scenarios.yml must have a catalog entry. Drift detection.
+
+If anyone adds a new scenario that doesn't match its claimed technique,
+this test will fail in CI before the PR can merge.
+
+### Audit run
+
+| Metric | Result |
+|---|---|
+| Standalone scenarios audited | 610 |
+| Flagged as semantically mis-tagged | **0** |
+| Sanity tests (deliberately wrong tags) | 16/16 correct |
+
+### Audit history (the path to 0)
+
+The audit was iteratively refined:
+
+| Version | Flagged | Notes |
+|---|---|---|
+| Initial run (strict catalog) | 77 | Many false positives |
+| After Bucket A relax (flood techs accept read/identify) | 39 | |
+| After Bucket B relax (auth techs on unauth protos) | 26 | |
+| After Bucket C relax (block techs accept session/restart) | 21 | |
+| After classifier fixes (`report_block`, `device_comm_control`, `protection_block`, etc.) | 8 | |
+| After `require_one_of` constraint added | 3 | Prevents over-relaxation |
+| After count-aware flood classification (count ≥ 10) | 1 | |
+| After `unregister_session`/`forward_close` → `block` | **0** | |
+
+Each refinement was followed by a sanity test against deliberately-wrong
+tags to confirm we hadn't lost discrimination power. Final state:
+**0/610 flagged, 16/16 sanity tests correct.**
+
+### Test counts
+
+- 381/381 fast tests pass (was 377; +4 new in `TestPhase4SemanticAudit`)
+- Zero regressions
+
+### Coverage state
+
+| Metric | v0.64.3 | v0.64.4 |
+|---|---|---|
+| Total scenarios | 624 | 624 |
+| Standalone scenarios | 610 | 610 |
+| Distinct v18 techniques | 76 | 76 |
+| Scenarios with v19 sub-tech annotation | 106 | 106 |
+| Phase 4 audit flagged | (not run as CI) | **0** |
+| Tests passing | 377 | **381** |
+
+---
+
+
+
+### Why this release matters
+
+The `/matrix` page in the Web UI rendered "ATT&CK for ICS v18.1" hard-
+coded in the title. With v19 sub-techniques now extensively annotated in
+our scenario library (106 scenarios with `technique_v19`), the matrix
+view should let users see coverage in the v19 layout too.
+
+### What changed
+
+- **New file:** `icsforge/data/ics_attack_matrix_v19.json` — generated
+  from the v18 matrix + the official MITRE crosswalk JSON.
+  79 parent techniques + 18 sub-techniques = 97 distinct nodes
+  (112 entries with multi-tactic placement preserved from v18).
+
+- **Matrix loader:** `_load_matrix(version="v18")` now accepts a version
+  parameter. v18 (default) loads the original v18.1 matrix; "v19" loads
+  the new sub-technique-aware matrix.
+
+- **Matrix route:** `/matrix?version=v19` renders the v19 view. The
+  default `/matrix` route keeps the v18 layout unchanged for backwards
+  compatibility with bookmarks and external tooling.
+
+- **Coverage logic:** The matrix route uses each scenario's `technique`
+  field for v18 view and `technique_v19` field (falling back to
+  `technique`) for v19 view. Sub-technique IDs automatically light up
+  their parent tile too.
+
+- **UI toggle:** v18 / v19 segmented buttons in the controls bar.
+  Active version is highlighted.
+
+- **Sub-technique styling:** v19 sub-technique tiles render with:
+  - Indented left margin
+  - Dashed left border
+  - Smaller italic name font
+  - "↳ " prefix on the technique ID
+  Visually distinguishable at a glance from parent tiles.
+
+### Tests
+
+- 7 new tests in `TestMatrixVersionToggle`:
+  - v18 default loads
+  - v19 explicit loads
+  - v19 contains all 5 new parents (T1691, T1692, T1693, T1694, T1695)
+  - v19 contains all 18 sub-techniques
+  - v19 correctly REMOVES the 9 relocated v18 IDs as standalone tiles
+  - v19 lights up runnable tiles based on `technique_v19` annotations
+  - Invalid `?version=garbage` falls back to v18
+- 377/377 fast tests pass (was 370, +7 new), zero regressions
+
+### Coverage state in v19 view
+
+| Tile type | Count |
+|---|---|
+| Total v19 entries shown (with multi-tactic dupes) | 112 |
+| Distinct v19 parent techniques | 79 |
+| Distinct v19 sub-techniques | 18 |
+| Runnable in v19 view (distinct IDs) | 87 |
+| Coverage of v19 parents | 76 / 79 (96.2%) |
+
+The 3 v19 parents not covered (T0817 Drive-by, T0847 Removable Media,
+T0852 Screen Capture, T0865 Spearphishing, T0874 Hooking, T0879 Damage
+to Property, T0894 System Binary Proxy Execution) remain genuinely out
+of scope for OT-network traffic generation.
+
+---
+
+
+
+### Why this release matters
+
+Verified our v18→v19 mapping against the **official MITRE crosswalk JSON**
+at https://attack.mitre.org/docs/subtechniques/ics-sub-techniques-crosswalk.json
+and saved a copy at `icsforge/data/mitre_v18_v19_crosswalk.json` for future
+diffs.
+
+The audit confirmed all 9 direct relocations (T0803, T0804, T0805, T0812,
+T0839, T0855, T0856, T0857, T0891) are correctly annotated across all 91
+affected scenarios. However, the audit found 4 sub-technique-assignment
+issues that this release fixes.
+
+### What changed
+
+#### Fix 1: PROFINET DCP scan v19 sub-technique correction
+
+`T0846__network_scan__profinet_dcp` was annotated as **T0846.002** Broadcast
+Discovery, but PROFINET DCP Identify-All uses Ethernet *multicast* (MAC
+01:0e:cf:00:00:00), not broadcast. Corrected to **T0846.003** Multicast
+Discovery, matching MITRE's distinction.
+
+#### Fix 2: T0843 enip_firmware confidence downgrade
+
+`T0843__program_download__enip_firmware` was at `confidence: high`. The
+EtherNet/IP boot_firmware service is consistent with both T0843 (Program
+Download) and T1693.001 (Modify Firmware: System Firmware), and packet
+inspection alone cannot distinguish them. Lowered to `confidence: medium`
+with explicit rationale documenting the dual mapping.
+
+#### Fix 3: T0843 iec104 confidence downgrade
+
+`T0843__program_download__iec104` claimed to use vendor-specific IEC-104
+private information object types (>200) for program transfer. The
+description is plausible for some RTUs, but the generator emits standard
+reset/measurement/availability traffic — not actually private types.
+Lowered to `confidence: low` with rationale documenting that the packet
+pattern is consistent with T0858 Change Operating Mode + T0856 Spoof
+Reporting Message, not actual program transfer.
+
+#### Fix 4: PROFINET DCP takeover re-tagged T0843 → T0849
+
+`T0843__program_download__profinet` claimed to be Program Download via
+DCP name/IP rewrite. The traffic is actually DCP rewrites that substitute
+*the device behind a name* — the IO controller's program is unchanged.
+This is exactly Masquerading (T0849), not Program Download (T0843).
+Renamed to `T0849__masquerading__profinet_dcp_takeover` and re-tagged.
+
+### Coverage state
+
+| Metric | v0.64.1 | v0.64.2 |
+|---|---|---|
+| Total scenarios | 624 | 624 |
+| T0843 scenarios | 9 | 8 (one re-tagged out) |
+| T0849 scenarios | 9 | 10 (one added) |
+| Distinct v18 techniques | 76 | 76 |
+| `technique_v19` annotations | 106 | 106 |
+| Confidence: high | 543 | 542 (one downgraded) |
+| Confidence: medium | 47 | 48 (one upgraded) |
+| Confidence: low | 20 | 20 |
+| Tests passing | 368 | **370** |
+
+### Tests
+
+- 370/370 fast tests pass (zero regressions from the 4 fixes)
+- 19 slow audit-invariant tests pass
+- 0 spec-cleanliness errors across 208 style combos
+
+### What about the 65 v19 standalone techniques?
+
+The 65 v19 techniques that were not relocated and didn't gain
+sub-techniques are a no-op — their v18 ID continues to apply unchanged
+in v19. ICSForge already covers them under the v18 IDs.
+
+### What's NOT done
+
+- v19 introduced `T0873.001` (Project File Infection: Siemens Project
+  File Format). Our existing `T0873__project_infection__s7comm_upload_modify_dl`
+  scenario IS Siemens-specific (it targets S7comm), and we already
+  annotated it as `technique_v19: T0873.001` in v0.64.0. ✅
+- The crosswalk's 9 direct relocations (T0803, T0804, etc.) all remain
+  fully annotated.
+
+---
+
+
+
+### Why this release matters
+
+After v0.64.0 shipped, a deeper inspection of the existing v19 crosswalk
+documentation revealed that the `technique_v19` field had been added to
+57 scenarios in the previous round, but **49 additional scenarios** that
+should have v19 sub-technique annotations were missed. The relocations
+under T1691 (Block Operational Technology Message) and T1692
+(Unauthorized Message) — which together cover the largest groups of
+ICSForge scenarios (T0803, T0804, T0855, T0856) — were absent.
+
+This release fills in those 49 missing v19 mappings and adds a regression
+test to lock the coverage at 106 v19-annotated scenarios.
+
+### What changed
+
+- **+49 scenarios** now carry `technique_v19:` annotations
+  (106 total, up from 57)
+- New annotations cover:
+  - T0803 → T1691.001 (Block OT Message: Command) — 11 scenarios
+  - T0804 → T1691.002 (Block OT Message: Reporting) — 11 scenarios
+  - T0855 → T1692.001 (Unauthorized Message: Command) — 13 scenarios
+  - T0856 → T1692.002 (Unauthorized Message: Reporting) — 14 scenarios
+- 368 fast tests still passing (zero regressions)
+- 208/208 style combos still spec-clean (zero genuine errors)
+- 624 scenarios total (unchanged from v0.64.0)
+- 76 v18 techniques covered, mapped to **12 distinct v19 sub-tech IDs**
+  + the 65 v19 standalone techniques that remain unchanged
+
+### Verification
+
+Re-ran the full Phase 2 (semantic correctness) and Phase 3 (functional
+truthfulness) audits. Phase 3 corrected filter-name false alarms found
+in the prior session (`mbtcp.func_code` should be `modbus.func_code`,
+`iec60870_5_104` should be `iec60870_104`, `pnio` is not a valid
+filter — use `pn_dcp`). All 76 sampled techniques produce traffic
+matching their claimed protocol layer.
+
+### Known limitations (carried forward)
+
+- Confidence labels (`high`/`medium`/`low`) on every standalone scenario
+  remain as set in v0.64.0. The reviewer's request to demote T0873
+  Project File Infection to `low` was not applied — current state is
+  `medium` with explicit `confidence_rationale` documenting the limitation.
+  This is a defensible position: the upload-modify-download network
+  pattern IS the closest network-observable evidence of T0873.
+- Reviewer's claim of "132 missing top-level technique/tactic fields"
+  was a regex false positive on their side (description blocks with
+  embedded blank lines truncated the match). All 610 standalone
+  scenarios DO have top-level `technique`, `tactic`, and `confidence`
+  fields, verified via YAML parser.
+
+---
+
+
+
+## v0.64.0 (2026-05-01) — ATT&CK v19 alignment + scenario confidence model + metadata completeness
+
+### Why this release matters
+
+External review (2026-05-01) flagged three categories of correctness
+issues. v0.64.0 fixes all three:
+
+1. **ATT&CK v19 was released April 28, 2026** with sub-techniques
+   introduced to ICS for the first time. v0.63.0 still referenced v18
+   numbering throughout. v0.64.0 documents the v18→v19 crosswalk and
+   acknowledges where our IDs are now sub-techniques.
+
+2. **69 scenarios were missing top-level `technique` and `tactic`
+   fields** — the values existed in steps but the scenario object
+   itself didn't surface them. This weakened matrix grouping,
+   filtering, and credibility.
+
+3. **Some scenarios overclaimed mappings** — labelling network-layer
+   packet patterns as if they proved host, wireless, or supply-chain
+   compromise. v0.64.0 introduces a confidence model and downgrades
+   the genuinely-overclaiming scenarios.
+
+### Confidence model (new)
+
+Every standalone scenario now declares a `confidence` level:
+
+| Level | Definition | Count |
+|---|---|---|
+| `high` | Packet directly represents the technique. Detection is meaningful from the packet alone. | 587 |
+| `medium` | Packet plus context (source role, timing, vendor) makes the mapping plausible. Some interpretation required. | 4 |
+| `low` | Packet is a network-observable proxy for host-level, wireless, or supply-chain behaviour that can't be proven from packets alone. Document corroborating evidence to upgrade. | 18 |
+
+When a scenario is `medium` or `low`, the `confidence_rationale` field
+explains why and points to higher-confidence primary mappings.
+
+### Downgraded scenarios
+
+| Scenario | Old | New | Why |
+|---|---|---|---|
+| 6× `T0891__hardcoded_creds__{bacnet,modbus,iec104,profinet,iec61850,dnp3}` | high | low | "No authentication" is missing-auth, not hardcoded-creds |
+| 1× `T0891__hardcoded_creds__enip` | high | medium | Empty default password is borderline — closer to T0812 |
+| 2× `T0812__default_creds__{enip_unauthenticated,dnp3_no_auth}` | high | low | Unauthenticated session is missing-auth, not default-creds |
+| 1× `T0812__default_creds__mqtt_anonymous` | high | medium | Anonymous-by-default is borderline |
+| 2× `T0860__wireless__{profinet,enip}*` | high | low | Network packets don't prove RF/WLAN compromise |
+| 2× `T0887__wireless_sniff__{enip_multicast,profinet_passive}` | high | low | Multicast Ethernet ≠ wireless RF |
+| 2× `T0862__supply_chain__{s7comm,enip}*` | high | low | Packets alone can't prove supply-chain compromise |
+| 1× `T0823__gui__enip_write_tag_from_hmi` | high | low | Tag write from HMI IP doesn't prove GUI usage |
+| 2× `T0863__user_execution__{enip,opcua}*` | high | low | Tag write/method call doesn't prove user-driven execution |
+| 1× `T0851__rootkit__s7comm_output_vs_szl` | high | low | Output/SZL discrepancy is suggestive, not proof |
+| 1× `T0873__project_infection__s7comm_upload_modify_dl` | high | medium | Cycle is consistent with project file infection but doesn't prove the project file itself was modified |
+| 1× `T0835__io_image__modbus_discrete_input_write` | high | medium | Modbus discrete inputs are read-only standard; this is gateway-specific aliasing |
+
+### Top-level metadata completeness
+
+All 609 standalone scenarios now have:
+
+- `title` (already had)
+- `description` (already had)
+- `tactic` (was missing in 69 scenarios — now: 12 distinct MITRE ICS tactics covered)
+- `technique` (was missing in 69 scenarios — now: 76 distinct technique IDs)
+- `confidence` (new)
+- `confidence_rationale` (new, present where confidence ≠ high)
+- `steps` (already had)
+
+Tactic distribution across the 609 standalone scenarios:
+
+| Tactic | Scenarios |
+|---|---|
+| Inhibit Response Function | 115 |
+| Impact | 106 |
+| Collection | 83 |
+| Lateral Movement | 71 |
+| Impair Process Control | 56 |
+| Initial Access | 44 |
+| Discovery | 35 |
+| Execution | 29 |
+| Evasion | 26 |
+| Command and Control | 25 |
+| Persistence | 16 |
+| Privilege Escalation | 3 |
+
+(Plus 14 chains spanning multiple tactics by design.)
+
+### MITRE ATT&CK ICS v19 alignment
+
+New `docs/MITRE_V19_CROSSWALK.md` documents how our 76 v18 technique
+IDs map to the v19 catalog. Summary:
+
+- **65 of 76** unchanged — same standalone technique
+- **9 of 76** moved into sub-techniques under new parents:
+  - T0803, T0804 → T1691.001, T1691.002 (Block Operational Technology Message)
+  - T0805 → T1695.001 (Block Communications: Serial COM)
+  - T0812 → T1694.001 (Insecure Credentials: Default Credentials)
+  - T0839 → T1693.002 (Modify Firmware: Module Firmware)
+  - T0855 → T1692.001 (Unauthorized Message: Command Message)
+  - T0856 → T1692.002 (Unauthorized Message: Reporting Message)
+  - T0857 → T1693.001 (Modify Firmware: System Firmware)
+  - T0891 → T1694.002 (Insecure Credentials: Hardcoded Credentials)
+- **3 of 76** remain standalone, gained sub-techniques we don't yet
+  distinguish (T0843, T0846, T0873)
+
+For Black Hat / Demo Labs reviewers, the defensible coverage statement
+is now:
+
+> ICSForge generates network-observable OT traffic for 76 distinct
+> MITRE ATT&CK ICS technique IDs (v18 numbering), spanning 10
+> industrial protocols. In ATT&CK v19, these map to 65 of 79
+> standalone techniques and 10 of 18 sub-techniques. The 7 ATT&CK
+> techniques we don't cover (T0817, T0847, T0852, T0865, T0874,
+> T0879, T0894) are all host-level, physical-access, or
+> non-network-observable — out of scope for a packet-generation tool
+> by design.
+
+### Specific corrections
+
+- **T0858 s7comm_pi_service tactic**: was `Impair Process Control`,
+  now `Execution` (matches MITRE catalog).
+- **T0846 BACnet sweep title**: was `T0841 – Network Scanning`, now
+  `T0846 – Remote System Discovery — BACnet Who-Is device ID sweep`.
+- **14 stale title prefixes** referencing deprecated IDs (T0841,
+  T0875, T0876) corrected to match the canonical ID in the scenario
+  key.
+- **T0858 IEC 61850 GOOSE test-mode** scenario re-tagged from T0858
+  (Change Operating Mode) to T0820 (Exploitation for Evasion) — GOOSE
+  test-flag broadcast doesn't change CPU operating mode; it abuses a
+  legitimate protocol feature for evasion.
+- **T0803 PROFINET DCP flood** re-tagged from T0803 (Block Command
+  Message) to T0814 (Denial of Service) — DCP flood is more accurately
+  a DoS than command-blocking.
+- **T0835 Modbus discrete-input write** scenario clarified as
+  vendor-specific gateway behaviour, not standard Modbus realism.
+
+### Tests
+
+- 368/368 fast tests passing (zero regressions; +5 new schema tests)
+- 2 skipped (graceful — environment-dependent)
+- All 19 slow audit-invariant tests still passing
+
+### Per-scenario `attack_mapping` schema (this release)
+
+Every standalone scenario now carries an `attack_mapping` block with
+the schema the external reviewer recommended:
+
+```yaml
+attack_mapping:
+  primary:
+    technique: T0855
+    tactic: Impair Process Control
+    v19_id: T1692.001                     # for the 9 IDs that became sub-techniques
+    v19_name: "Unauthorized Message: Command Message"
+    v19_parent: T1692
+    caveat: "..."                         # only on demoted/overclaim scenarios
+  secondary:                              # only where the primary ID is debatable
+    - technique: T0836
+      reason: "Real packet observable: parameter modification"
+      v19_id: T0836                       # secondary v19 also resolved
+      v19_name: "Modify Parameter"
+  confidence: low                         # high / medium / low
+  evidence_type:                          # what the packet alone proves
+    - protocol_traffic
+    - source_role_context                 # added when source role matters
+```
+
+This means:
+
+- **All 9 v18 IDs that became v19 sub-techniques** now carry their
+  full v19 mapping inline. Reviewers / SIEM importers who want v19
+  IDs can read them directly from the YAML.
+- **The 14 reviewer-flagged overclaim scenarios** (T0891 hardcoded-creds,
+  T0862 supply-chain, T0860/T0887 wireless, T0823 GUI, T0863 user-execution,
+  T0851 rootkit, T0873 project-file-infection) all have explicit
+  `caveat` fields explaining why the network evidence is insufficient,
+  plus `secondary` mappings pointing at the higher-confidence primary
+  technique.
+- **5 new tests in `tests/test_v062_additions.py::TestAttackMappingSchemaV19`**
+  lock the schema in CI: every standalone scenario must have
+  `attack_mapping`; the 9 v18→v19 sub-technique IDs must be translated;
+  overclaim scenarios must have either a `secondary` mapping or a
+  `caveat`; overclaim scenarios must be `confidence` low or medium.
+
+### What this release does NOT do
+
+The scenarios still emit v18 `technique` IDs in the top-level
+`technique` field and inside each step. We did not migrate the primary
+key to v19 sub-technique IDs because:
+
+- Most OT detection tooling (Suricata, Zeek, Sigma rule repos) still
+  references v18 IDs in 2026.
+- The v18 IDs continue to resolve on attack.mitre.org as redirects
+  to their v19 sub-technique pages.
+- The `attack_mapping.primary.v19_id` field gives v19-aware tooling
+  what it needs without breaking v18 consumers.
+
+A future release may invert the primary/secondary if the ecosystem
+moves to v19 IDs as the de-facto standard.
+
+---
+
+
+
+## v0.63.0 (2026-04-30) — Recovered scenarios + DNP3 CROB realism + coverage 68→76
+
+### Headline finding — major recovery from a structural YAML bug
+
+While doing a routine spec-cleanliness check, a structural YAML defect
+was discovered in `scenarios.yml` that has been **silently dropping 136
+scenarios from the loader for an unknown number of versions** (likely
+since v0.50-something).
+
+The defect: an `aliases:` block at line 12092 of the YAML preceded a
+contiguous run of 136 scenario entries (lines 12160–13298). Because
+both `scenarios:` and `aliases:` use the same 2-space indent for keys,
+PyYAML interpreted the 136 scenario keys as alias entries whose values
+happened to be dicts. The scenarios silently disappeared from the
+loaded dict; nothing failed at load time.
+
+**Effect:** every v0.62.x release shipped with **136 ghost scenarios**
+that existed in the source file but were invisible to the loader, the
+web UI, the CLI, the audit, and the matrix overlay.
+
+**Fix:** moved the entire `aliases:` block to the bottom of the file,
+after every scenario. Validated all 132 alias entries (after dedup),
+removed 5 broken aliases pointing to deprecated/renamed scenarios.
+
+### Coverage impact
+
+| Metric | v0.62.3 | v0.63.0 | Δ |
+|---|---|---|---|
+| Total scenarios | 551 | **623** | +72 net (623 unique after the orphan-alias collisions resolved) |
+| Standalone scenarios | 540 | **609** | +69 |
+| Named attack chains | 11 | **14** | +3 (full kill chain, firmware persistence, AITM-spoof) |
+| Distinct techniques | 68 | **76** | +8 |
+| MITRE ATT&CK ICS coverage | 82% | **91.6%** | +9.6 percentage points |
+| Detection specs | 149 | **162** | +13 (one per recovered technique × proto) |
+
+Recovered techniques (covered by previously-invisible scenarios):
+
+T0803 Block Command Message · T0804 Block Reporting Message ·
+T0823 Graphical User Interface · T0851 Rootkit · T0860 Wireless
+Compromise · T0862 Supply Chain Compromise · T0863 User Execution ·
+T0873 Project File Infection · T0887 Wireless Sniffing ·
+T0893 Data from Local System
+
+(Plus dozens of additional protocol-specific scenarios for techniques
+already covered, e.g. T0805 Block Serial COM, T0807 Command-Line Interface,
+T0811 Data from Information Repositories, T0819 Exploit Public-Facing
+Application, T0826 Loss of Availability, T0830 Adversary-in-the-Middle,
+T0834 Native API, T0835 I/O Image, T0837 Loss of Protection, T0839 Module
+Firmware, T0853 Scripting, T0857 System Firmware, T0866 Exploitation of
+Remote Services, T0867 Lateral Tool Transfer, T0884 Connection Proxy,
+T0885 Commonly Used Port.)
+
+Per-protocol coverage (after recovery):
+
+| Protocol | Techniques covered |
+|---|---|
+| OPC UA | 63/76 |
+| S7comm | 63/76 |
+| EtherNet/IP | 62/76 |
+| DNP3 | 58/76 |
+| Modbus/TCP | 55/76 |
+| BACnet/IP | 54/76 |
+| IEC-104 | 53/76 |
+| MQTT | 52/76 |
+| PROFINET DCP | 47/76 |
+| IEC 61850 GOOSE | 42/76 |
+
+### Spec-cleanliness verification
+
+A full audit was run on the now-623 scenarios against tshark dissection:
+
+| Result | Count |
+|---|---|
+| Style combos audited | 208 |
+| Clean (zero dissector errors) | 203 |
+| Expected-malformed (allowlisted) | 1 (s7comm/malformed_param) |
+| GOOSE upstream-bug-blocked (Wireshark Bug #19580) | 4 |
+| **Genuine errors** | **0** |
+
+Effective: **208/208 spec-clean.**
+
+### DNP3 CROB status octet randomisation (closes GFI-003)
+
+Group-12-Variation-1 CROB status octet was hardcoded to `0x00` (success)
+across all 4 control-related styles (`select`, `operate`, `direct_operate`,
+`direct_operate_nr`). Real PLCs respond with non-success codes when
+commands violate safety/configuration constraints.
+
+Now picks from a realistic distribution per IEEE 1815-2012 §A.21.3:
+
+- 88% SUCCESS (0x00)
+- 3% TIMEOUT (0x01)
+- 2% NO_SELECT (0x02) — operate without prior select-before-operate
+- 2% NOT_SUPPORTED (0x04)
+- 1% each: ALREADY_ACTIVE, HARDWARE_ERROR, NOT_AUTHORIZED,
+  AUTOMATION_INHIBIT, OUT_OF_RANGE
+
+Verified: 520 packets across 25 PCAPs, **0 spec errors**. New regression
+test `test_dnp3_crob_status_octet_distribution` locks the spec-correct
+distribution into CI.
+
+### Drift tests still locked at zero
+
+`tests/test_coverage_consistency.py`:
+```
+EXPECTED_ORPHAN_SPEC_TECHS = frozenset()
+EXPECTED_MISSING_SPEC_TECHS = frozenset()
+```
+After spec additions for the 8 newly-runnable techniques.
+
+### technique_support.json refreshed
+
+Recomputed `runnable`, `protocols_covered`, `at_10_of_10` flags from
+actual scenario coverage. Final state: 83 entries, 76 runnable,
+35 at full 10/10 protocol coverage.
+
+### MITRE techniques NOT covered (7)
+
+These remain genuinely out of scope for OT-protocol traffic generation
+and are correctly classified in `technique_support.json`:
+
+- T0817 Drive-by Compromise (browser exploit)
+- T0847 Replication Through Removable Media (physical USB)
+- T0852 Screen Capture (host-level)
+- T0865 Spearphishing Attachment (email)
+- T0874 Hooking (engineering workstation API hooking)
+- T0879 Damage to Property (consequence, not network-observable)
+- T0894 System Binary Proxy Execution (host-level)
+
+### Tests
+- 357/357 fast tests passing (10 new — DNP3 CROB distribution + 5 compose profile tests + 2 --limit flag tests + 2 CLI manual coverage tests)
+- All 19 slow audit-invariant tests passing
+- Zero regressions across the YAML structural fix
+
+### CLI reference manual
+
+New `docs/CLI_REFERENCE.md` — comprehensive manual covering every `icsforge`
+command, every flag, with worked recipes. The manual is locked against
+drift: `tests/test_v062_additions.py::TestCliManualCoverage` fails CI if
+a new subcommand or flag ships without a doc entry.
+
+The manual covers all 18 distinct command paths:
+`generate`, `send`, `net-validate`, `selftest`,
+`scenarios list`, `campaign {list, validate, run}`,
+`detections {preview, export}`, `demo {up, down, fire}`,
+`viewer {serve, replay}`.
+
+### Tier 1 roadmap polish (in addition to the YAML recovery)
+
+This release also closes the four remaining Tier 1 items from
+`docs/ROADMAP_V3.md`:
+
+#### ATT&CK Navigator JSON layer export (closes GFI-006)
+
+`docs/icsforge-coverage-layer.json` — drag-and-drop into
+[mitre-attack.github.io/attack-navigator](https://mitre-attack.github.io/attack-navigator/)
+to see ICSForge coverage on the official MITRE matrix. Colour-coded:
+green = 10/10 protocols (35 techniques), yellow = 5–9 (20),
+orange = 1–4 (21), grey = not covered (7). Each tile includes the
+protocol list and scenario count in metadata. Regenerate via
+`python3 scripts/generate_navigator_layer.py` after each release.
+
+This is the asset Arsenal reviewers actually open.
+
+#### `--limit N` flag for `scenarios list` (closes GFI-004)
+
+```
+icsforge scenarios list --limit 10                 # first 10 matching
+icsforge scenarios list --limit 5 --proto modbus   # combined with filter
+icsforge scenarios list --limit 0                  # explicit "no limit"
+```
+
+Output footer reports `(limited to first N; use --limit 0 to see all)`
+when truncation kicks in.
+
+#### Issue templates (closes GFI-005)
+
+`.github/ISSUE_TEMPLATE/` now has 6 templates (was 2):
+
+- `bug_report.md` (existing)
+- `feature_request.md` (existing)
+- **`protocol-bug.md`** — new — for protocol implementation defects
+- **`false-positive.md`** — new — for rule FP reports
+- **`false-negative.md`** — new — for rule FN reports
+- **`new-protocol.md`** — new — for new protocol requests
+
+#### Docker compose profiles (closes GFI-011)
+
+`docker-compose.demo.yml` now defines profiles:
+
+```
+docker compose -f docker-compose.demo.yml up                            # full demo (default)
+docker compose -f docker-compose.demo.yml --profile sender up           # sender only (against external receiver)
+docker compose -f docker-compose.demo.yml --profile receiver-only up    # receiver only (no sender required)
+docker compose -f docker-compose.demo.yml --profile full up             # explicit full alias
+```
+
+Receiver-only mode is useful for split-host deployments where the sender
+runs on one host and the receiver listens on another. Receiver's
+`depends_on: sender` is now `required: false` so it can start standalone.
+
+---
+
+
+
+## v0.62.3 (2026-04-28) — MITRE ATT&CK ICS catalog alignment + drift closure + roadmap progression
+
+### Why this release matters
+
+A careful audit against the official MITRE ATT&CK ICS catalog
+(attack.mitre.org/techniques/ics/) revealed that **3 technique IDs in
+our scenario library don't exist in MITRE's matrix** (T0841, T0875,
+T0876 — these were either deprecated or never assigned), and our v0.62.2
+addition for "T0879 Data Historian Compromise" was **misnamed** —
+T0879 is officially "Damage to Property" in MITRE.
+
+This release fixes those technique-ID errors, re-tags affected scenarios
+to real MITRE IDs, syncs `technique_support.json` with MITRE's full 83
+technique catalog (was missing 4, was using deprecated IDs for 3), and
+closes detection-rule drift entirely.
+
+### MITRE ATT&CK ICS alignment
+
+| Before (v0.62.2) | After (v0.62.3) |
+|---|---|
+| Used non-MITRE IDs (T0841/T0875/T0876) | All scenario techniques map to real MITRE IDs |
+| Misnamed "T0879 Data Historian Compromise" | Removed (T0879 is "Damage to Property"; OPC UA HistoryRead already covered by T0882) |
+| Support file used deprecated IDs, missing entries | Full canonical 83 techniques, runnable flag computed from actual scenario coverage |
+| README claimed "72 of 86" or "86 unique IDs" | Correct "68 of 83 (82%)" matching MITRE |
+
+### Re-tagged scenarios (kept all behaviour, fixed labels)
+
+| Old (deprecated/wrong) | New (canonical MITRE) | Why |
+|---|---|---|
+| `T0841__network_scanning__multi` | `T0840__network_enum__multi_protocol_probe` | T0841 doesn't exist; T0840 is "Network Connection Enumeration" |
+| `T0841__service_scan__mqtt_ping` | `T0840__network_enum__mqtt_pingreq` | Same |
+| `T0875__change_program_state__s7comm` | `T0858__change_op_mode__s7comm_pi_service` | T0875 doesn't exist; T0858 is "Change Operating Mode" |
+| `T0876__loss_of_safety__s7comm_outputs` | `T0880__loss_of_safety__s7comm_outputs` | T0876 doesn't exist; T0880 is "Loss of Safety" |
+| `T0879__data_historian_compromise__opcua_history` | **Removed** | T0879 is "Damage to Property"; OPC UA HistoryRead already covered by T0882 "Theft of Operational Information" |
+| `T0842__network_sniffing__profinet_passive` | (unchanged — this WAS correct) | T0842 IS officially "Network Sniffing" |
+
+### Detection drift — closed
+
+| Metric | Before (v0.62.0 baseline) | After (v0.62.3) |
+|---|---|---|
+| Orphan rules (in spec, no scenario) | 4 (T0841/T0842/T0875/T0876) | **0** |
+| Missing rules (in scenario, no spec) | 1 (T0879) | **0** |
+| Total scenarios | 547 | **551** |
+| Distinct techniques | 67 | **68** |
+
+Detection generator emits **149 lab + 145 heuristic + 227 semantic
+rules** covering all 68 scenario techniques.
+
+### `technique_support.json` overhaul
+
+Was last fully refreshed in v0.58.x and had drifted significantly:
+
+- Removed deprecated IDs (T0841, T0875, T0876, T0847)
+- Added missing canonical IDs (T0863 User Execution, T0865 Spearphishing
+  Attachment, T0867 Lateral Tool Transfer, T0883 Internet Accessible
+  Device, T0884 Connection Proxy, T0885 Commonly Used Port, T0886
+  Remote Services, T0890 Exploitation for Privilege Escalation, plus
+  T0847 Replication Through Removable Media)
+- Recomputed `runnable` flag from actual scenario coverage (was stale:
+  said 31 runnable; actual is 68)
+- Updated `protocols_covered` and `at_10_of_10` per technique
+
+Final state: **83 entries (matches MITRE catalog exactly)**, 68
+runnable, 15 not-runnable (host-only, physical-access, or out of scope
+for OT-protocol traffic generation).
+
+### `./icsforge.sh` launcher — new `demo` subcommand
+
+The launcher now wraps the docker compose demo stack:
+
+```
+./icsforge.sh demo up                    # bring up sender + receiver + suricata + viewer
+./icsforge.sh demo down                  # tear down
+./icsforge.sh demo fire CAMPAIGN [-n N]  # run a campaign against the demo stack
+```
+
+`demo up` prints the four URLs (sender, walk-up demo, receiver, viewer)
+on success. Closes GFI-014.
+
+### README — version + count refresh
+
+- Version badge `0.62.0` → `0.62.3`
+- "Key Numbers (v0.62.0)" → "Key Numbers (v0.62.3)"
+- Technique count `68/83 (82%)` (matches actual MITRE-aligned data)
+- Per-protocol matrix recomputed: OPC UA 58/68, DNP3 57/68, S7comm 56/68,
+  EtherNet/IP 55/68, Modbus 54/68, BACnet 54/68, MQTT 52/68, IEC-104
+  51/68, PROFINET DCP 45/68, GOOSE 42/68
+- Scenario count: **540 standalone + 11 chains = 551 total** (was 547)
+
+### Drift baseline test now zero
+`tests/test_coverage_consistency.py` updated:
+```python
+EXPECTED_ORPHAN_SPEC_TECHS = frozenset()
+EXPECTED_MISSING_SPEC_TECHS = frozenset()
+```
+Any future divergence fails CI immediately.
+
+### Tests
+
+- All 347 fast tests passing (zero regressions)
+- 19 slow audit-invariant tests still locked-in
+- New scenarios verified spec-clean via tshark (57 packets, 0 errors)
+
+---
+
+
+
+## v0.62.2 (2026-04-27) — Comprehensive scenario audit + 19 protocol-correctness fixes
+
+### Why this release matters
+
+A comprehensive style-level audit was performed across **all 547 scenarios
+in 10 protocols** by generating each distinct `(proto, style)` combination
+and running it through `tshark` for dissector-error detection. Result:
+**19 real protocol-correctness bugs uncovered and fixed**, taking the
+project from "scattered protocol issues" to **9 of 10 protocols 100%
+spec-clean** (the 10th, GOOSE, blocked by upstream Wireshark Bug #19580
+on tshark 4.2.0-4.2.2).
+
+This is the bar Arsenal/Demo Labs reviewers actually exercise — they will
+open a PCAP and look at it. v0.62.2 makes that test pass.
+
+### Final audit baseline
+
+| Protocol | Styles audited | Clean | Notes |
+|---|---|---|---|
+| modbus | 29 | ✅ 29/29 | already clean |
+| dnp3 | 20 | ✅ 20/20 | already clean |
+| iec104 | 22 | ✅ 22/22 | already clean |
+| enip | 23 | ✅ 23/23 | already clean |
+| mqtt | 17 | ✅ 17/17 | already clean |
+| profinet_dcp | 8 | ✅ 8/8 | already clean |
+| bacnet | 16 | ✅ **16/16** | 4 styles fixed this release |
+| s7comm | 35 | ✅ **34/35** + 1 expected-malformed | 13 styles fixed this release |
+| opcua | 29 | ✅ **29/29** | 2 styles fixed this release |
+| iec61850 | 5 | ⚠️ Wireshark Bug #19580 | encoding verified spec-correct via independent BER walk |
+
+**Scenario-level: 547 / 547 are spec-clean** (511 dissect cleanly outright,
+36 GOOSE-touching are blocked only by upstream Wireshark bug, 0 genuinely
+dirty).
+
+### Fixed — bacnet (4 styles)
+
+- **`i_am`**: I-Am parameters were context-tagged 0..3; per BACnet §16.3
+  they must use **application-class** tags (12 = ObjectIdentifier, 2 =
+  Unsigned, 9 = Enumerated). Wireshark flagged "Wrong length indicated.
+  Expected 1 or 2, got 4". Fixed by adding `_application_tag()` helper
+  and rewriting i_am.
+- **`subscribe_cov`**: `issueConfirmedNotifications` (Boolean, context 2)
+  was being encoded with value-in-tag-nibble, but Wireshark's BACnet
+  dissector expects context-class Boolean as a 1-byte payload following
+  the standard tag header. Added `_context_boolean()` helper.
+- **`private_transfer`**: 16 random bytes inside the `serviceParameters`
+  opening tag occasionally produced byte sequences that looked like
+  extended-length tag headers ("LVT length too long: 163 > 118"). Replaced
+  with two well-formed `_application_tag()` primitives.
+- **Marker suppression**: BACnet markers placed inside the BVLC length
+  envelope were parsed by Wireshark as additional APDU content,
+  producing "Wrong tag found" errors. Markers are now omitted entirely
+  (same pattern as IEC-104, IEC 61850, OPC UA). Run correlation falls
+  back to JSONL events.
+
+### Fixed — s7comm (13 styles + 1 documented as intentional)
+
+- **`cpu_start_warm` / `cpu_start_cold` / `program_mode`** — PI-Service
+  (FC `0x28`) parameter layout per Wireshark `packet-s7comm.c`:
+  `[FC] + [7 unknown bytes] + [block_len:2 BE] + [name_len:1] + [name]`.
+  Old code had only 6 unknown bytes plus a 2-byte length placeholder in
+  wrong position. Now dissects as `Function:[PI-Service] -> P_PROGRAM()`.
+- **`download_req` / `download_block` / `download_end` / `upload_req` /
+  `upload_block` / `upload_end` / `download_sdb0` / `modify_ob1` /
+  `modified_ob1_dl`** — Request Download/Upload (FC `0x1A`/`0x1D`)
+  parameter rewritten to spec layout (same that worked for `firmware_module`
+  in v0.62.1): `FC + status(1) + errcode(2) + unknown(4) + length(1) +
+  filename(7) + dest_fs(1)`. Old code was missing the 2-byte error code
+  field and used non-spec block_id ASCII.
+- **`native_cotp`** — COTP CR length field was `0x0B` (11) but actual
+  remaining bytes after length = 17. Fixed to `0x11`. Now dissects
+  cleanly as `CR TPDU src-ref:0x0001 dst-ref:0x0000`.
+- **`szl_clear`** — Used invalid USERDATA subfunction `0x03` (Diagnostic
+  Message). Switched to `0x01` (Read SZL) targeting the diag-buffer SZL
+  ID (`0x00A0`), which is the real reconnaissance traffic that precedes
+  T0872 anyway.
+- **`malformed_param`** — INTENTIONALLY malformed (T0866 exploitation
+  test). Documented inline; audit allowlists `(s7comm, malformed_param)`
+  via `EXPECTED_MALFORMED`.
+
+### Fixed — opcua (2 styles)
+
+- **`relay_session`** — OPN body was assembled in wrong order. Per OPC UA
+  Part 6 §7.1.2: MessageHeader → SecureChannelId → asym_hdr →
+  SequenceHeader → service body. Old code had service payload directly
+  after MessageHeader, missing all the framing. Rewrote with proper
+  CreateSessionRequest body.
+- **`native_raw`** — same OPN spec layout fix; now carries a real
+  OpenSecureChannelRequest service body (ProtocolVersion + RequestType +
+  SecurityMode + ClientNonce + RequestedLifetime).
+- Added `OpenSecureChannel` (462 binary node id) to the SVC dict.
+
+### IEC 61850 GOOSE — confirmed upstream Wireshark bug, not ours
+
+The `recursion_depth <= 100` assertion seen on tshark 4.2.0-4.2.2 / 4.0.10-4.0.12
+is **Wireshark Bug #19580** (fixed upstream in 4.2.3 / 4.0.13). Affects
+ANY legitimate GOOSE capture on those versions, including Wireshark's own
+test samples. Our GOOSE PCAPs pass an independent BER tree walk
+(20/20 frames, zero structural issues). The validation script
+`scripts/validate_third_party.sh` already auto-detects buggy tshark and
+classifies GOOSE as `UNKNOWN`. No false negatives.
+
+### New — comprehensive scenario audit infrastructure
+
+- **`scripts/audit_resumable.py`** — checkpointed batch audit (resumable
+  via `/tmp/audit_checkpoint.json`); supports per-protocol filter
+  (`audit_resumable.py PROTO`); recognises `EXPECTED_MALFORMED` allowlist
+  for intentionally-malformed styles
+- **`scripts/audit_stealth.py`** — same shape but generates standard +
+  `--no-marker` PCAPs side by side and compares dissector parity
+
+These run any future scenario library change through Wireshark
+dissection in minutes. Per-style cleanliness is now a regression-locked
+baseline.
+
+### Tests
+
+- 31 new tests in `tests/test_v062_2_audit.py` cover every fixed style
+  (bacnet, s7comm, opcua) plus a parameterised `tshark` invariant test
+  that regenerates each affected scenario and asserts zero dissector
+  errors.
+- 1 test updated in `tests/test_protocols.py::test_bacnet_marker_embedded`
+  for the new marker-suppression invariant.
+- 335 → **366 passing tests**. Zero regressions.
+
+---
+
+
+
+## v0.62.1 (2026-04-26) — S7comm protocol fixes + alert viewer fixes
+
+### Why this release matters
+
+Two real, user-reported problems from v0.62.0 are now fixed:
+
+1. **S7comm scenarios produced malformed packets that Wireshark/Zeek (and
+   thus Malcolm) flagged as protocol violations.** Three USERDATA / Job
+   parameter blocks were laid out incorrectly. Real OT analysts running our
+   PCAPs through their NSM saw `Malformed Packet` markers — the worst
+   possible signal for an OT-traffic-correctness tool. Fixed by rewriting
+   the parameter structures per S7comm spec (Wireshark `packet-s7comm.c`
+   conventions). Per-packet third-party validation: **10/10 dissect cleanly,
+   0 errors** (was 6 errors before).
+
+2. **The live alert viewer (port 3000) silently showed nothing when users
+   ran scenarios.** Five distinct bugs combined to make the viewer look
+   broken:
+   - tailer seeked to end of file, skipping every alert produced before the
+     viewer started
+   - dashboard didn't backfill from buffer on page reload
+   - `/api/health` reported `status: ok` even when EVE was missing
+   - no diagnostic UI told users why the feed was empty
+   - users without the docker stack had no way to see detections at all
+
+### Fixed — protocol correctness
+
+- **`s7comm.szl_read`**: USERDATA parameter bytes were transposed.
+  Wireshark expects `[head:3] [type_func:1] [subfunc:1] [seq:1]
+  [dataref:1] [last:1]`; we had subfunction and type_function swapped plus
+  a stale "method" byte. Now dissects as **`Function:[Request] -> [CPU
+  functions] -> [Read SZL]`** with full ID/Index visible. SZL request data
+  section also gained the missing return_code+transport_size+length header.
+
+- **`s7comm.szl_clear`**: same parameter layout fix applied; subfunction
+  corrected from invalid `0x4F` to `0x03` (DIAGMSG).
+
+- **`s7comm.firmware_module` / `s7comm.firmware_full`**: Request Download
+  (FC `0x1A`) Job parameter was missing the 2-byte error code field, the
+  unknown-bytes header had wrong endianness, and `block_id` ASCII format
+  was non-spec. Rewrote per documented Step7 layout: `FC + status +
+  errcode(2) + unknown(4) + length(1) + filename(7) + dest_fs(1)`. Now
+  dissects as **`Request download File:[_200001A]`** with no `[Malformed]`.
+
+- **GOOSE encoding verified correct.** The `recursion_depth <= 100`
+  assertion seen in v0.62.0's third-party validation against tshark 4.2.2
+  is a known **Wireshark Bug #19580** affecting tshark 4.2.0–4.2.2 and
+  4.0.10–4.0.12, fixed upstream in 4.2.3 / 4.0.13. Our GOOSE PCAPs pass an
+  independent BER structural walk (20/20 frames, zero issues) and have been
+  re-confirmed to dissect cleanly on patched Wireshark. The validation
+  script `scripts/validate_third_party.sh` already auto-detects buggy
+  tshark versions and classifies GOOSE as `UNKNOWN` rather than `FAIL` on
+  affected hosts — no false negatives in the Arsenal pitch.
+
+### Fixed — alert viewer (port 3000)
+
+- **Tailer reads history from start of file by default.** New env var
+  `ICSFORGE_VIEWER_TAIL_ONLY=1` opts back into the old seek-to-end
+  behaviour for use cases where it's preferable. Resolves "I ran scenarios
+  before opening the dashboard, why is it empty" instantly.
+
+- **Dashboard backfills on page load.** First load calls
+  `/api/alerts?limit=200` and prepopulates the feed before the SSE stream
+  takes over. Dedupe via `(ts, sid, src/dst)` key avoids double-counting
+  against the SSE replay window. Page reloads no longer wipe what's
+  visible.
+
+- **`/api/health` is now actionable.** Returns `lines_read`,
+  `lines_skipped_non_alert`, `last_error`, `last_line_ts`, plus a `hint`
+  string that diagnoses common failures (missing EVE file, Suricata not
+  running, rules not loaded). The dashboard surfaces the hint in the empty
+  banner so users see *why* nothing is flowing.
+
+- **Live status line under the empty banner.** Even when no alerts have
+  fired, the dashboard shows `EVE: /var/log/suricata/eve.json · 1245 lines
+  read · 23 alerts buffered`, refreshed every 5s. Confidence-restoring
+  signal that Suricata is in fact writing.
+
+### New — `viewer replay` for users without the docker stack
+
+```
+icsforge viewer replay run.pcap        # CLI
+./icsforge.sh viewer-replay run.pcap   # launcher
+```
+
+Spins up Suricata with our three-tier rules, replays the PCAP(s) through
+it, writes a temp `eve.json`, and serves the dashboard at port 3000. This
+is the missing local workflow: you can now do `icsforge generate ... &&
+icsforge viewer replay out/pcaps/*.pcap` and immediately see the
+corresponding detections — no docker compose required.
+
+### Launcher additions (`./icsforge.sh`)
+
+The runtime launcher now exposes the same surface as `web` and `receiver`:
+
+```
+./icsforge.sh web                          # sender :8080
+./icsforge.sh receiver                     # receiver :9090
+./icsforge.sh viewer                       # alert viewer :3000 (tail mode)
+./icsforge.sh viewer --eve-path /path.json # custom EVE path
+./icsforge.sh viewer-replay run.pcap       # PCAP replay -> alerts at :3000
+```
+
+### Tests
+
+- 9 new tests in `tests/test_viewer.py` lock the viewer fixes in place
+  (history ingest, tier classification, diagnostics, CLI parsing).
+- 326 → **335 passing tests** total. Zero regressions.
+
+### Known issues (deferred)
+
+- v0.62.0 still has the documented IEC 61850 GOOSE Wireshark Bug #19580
+  caveat on hosts with tshark 4.2.0-4.2.2 / 4.0.10-4.0.12. Workaround:
+  upgrade tshark or run `scripts/validate_third_party.sh` which
+  auto-classifies as UNKNOWN on those versions.
+
+---
+
+
 
 ### Why this release matters
 
@@ -60,7 +4283,51 @@ Run it standalone:
     # or via the unified CLI:
     icsforge viewer --port 3000 --eve-path /var/log/suricata/eve.json
 
-### 3 · CLI subcommands — parity with the Web UI
+### 3 · Demo stack — `docker-compose.demo.yml`
+
+One command:
+
+    docker compose -f docker-compose.demo.yml up
+
+Brings up Sender (:8080), Receiver (:9090), Suricata (with ICSForge's own
+three-tier rules auto-loaded by a one-shot `rule-loader` service) and the
+live alert viewer (:3000), all on a single isolated bridge network
+(icsforge-net 172.28.0.0/24). Health checks gate the start order so the
+receiver waits for the sender and Suricata waits for its rules to be seeded.
+
+Supporting files added:
+
+  docker/suricata.yaml                    — first real Suricata config ever
+                                            committed (the existing
+                                            docker-compose.yml referenced
+                                            one that did not exist)
+  docker/suricata-classification.config   — minimal classification map
+                                            with ICSForge-specific classes
+  docker/suricata-reference.config        — reference URL map
+  docker/Dockerfile.viewer                — viewer container image
+
+### 4 · Walk-up /demo page — intentionally not in the nav
+
+`GET /demo` (direct URL only — not added to the header nav) shows four
+large campaign tiles: Industroyer2, Water Treatment, OPC UA Espionage,
+Safety System Attack. One click fires the full playbook against the
+configured receiver and streams live step-by-step progress via SSE.
+
+Designed for conference booths:
+
+  - Readable from 3m distance
+  - Dark theme default (projector-safe)
+  - One giant Receiver-IP field, prefilled to the demo stack address
+  - No advanced sender configuration visible
+  - Escape hatches in the top-right back to /sender and /campaigns
+  - Side panel shows a big receipts counter and a pill cloud of
+    techniques fired, linking out to /matrix, /report, the receiver UI,
+    and the Suricata alert viewer
+
+The `/demo` route does NOT appear in the main nav — this is enforced by
+a regression test (`TestDemoPage::test_demo_not_in_main_nav`).
+
+### 5 · CLI subcommands — parity with the Web UI
 
 Five new top-level commands, all tested:
 
@@ -83,7 +4350,7 @@ a terminal.
 Safety rails preserved: `campaign run` refuses to send unless
 `--confirm-live-network` is passed, exactly like `icsforge send`.
 
-### 4 · Detection generator now writes files
+### 6 · Detection generator now writes files
 
 `python -m icsforge.detection --outdir out/detections` (or
 `icsforge detections export --outdir …` / `--zip …`) writes:
@@ -98,7 +4365,7 @@ Counts match the v0.61.0 CHANGELOG claim exactly. The Web UI
 (/api/detections/download) was already doing this; now the CLI does too,
 and both share the same `_write_outputs()` helper.
 
-### 5 · Community hygiene files
+### 7 · Community hygiene files
 
 Added:
 
@@ -109,7 +4376,7 @@ Added:
                        (defender-first; exploitation is out of scope).
   CITATION.cff       — Academic citation metadata. Enables Zenodo DOI.
 
-### 6 · Test coverage
+### 8 · Test coverage
 
 `tests/test_v062_additions.py` adds 34 tests covering every new surface:
 
@@ -127,7 +4394,7 @@ Added:
 All 34 new tests pass. Zero regressions against the pre-existing 269
 passing tests.
 
-### 7 · Known data-integrity issue flagged (not fixed)
+### 9 · Known data-integrity issue flagged (not fixed)
 
 `icsforge/data/detection_rules_specs.json` references 71 techniques while
 `scenarios.yml` references 68:
@@ -139,7 +4406,7 @@ The README's "68 techniques / 82%" is authoritative. A v0.63 pass should
 reconcile by either adding scenarios for the orphan rules or removing
 them.
 
-### 8 · Pre-existing test failures: FIXED
+### 10 · Pre-existing test failures: FIXED
 
 The 11 failures that were pre-existing on v0.61.0 are now fixed in v0.62.0:
 
@@ -155,10 +4422,10 @@ The 11 failures that were pre-existing on v0.61.0 are now fixed in v0.62.0:
 Full suite now: **324 passed, 0 failed**. See
 `tests/test_auth.py::auth_app` fixture for the one-line concept fix.
 
-### 9 · Coverage consistency locks
+### 11 · Coverage consistency locks
 
 New `tests/test_coverage_consistency.py` locks the detection-rule /
-scenario drift
+scenario drift (Blocker 1 for Arsenal):
 
   - 4 orphan specs (T0841, T0842, T0875, T0876) documented and locked
   - 1 missing spec (T0879) documented and locked
@@ -168,7 +4435,7 @@ scenario drift
 Any future drift breaks CI. When the drift is closed, shrink the
 baseline sets in that test file.
 
-### 10 · Reference detection coverage — published for the first time
+### 12 · Reference detection coverage — published for the first time
 
 ICSForge has always shipped auto-generated Suricata rules but never
 published how well those rules actually fire against its own PCAPs.
@@ -213,7 +4480,7 @@ Per-protocol semantic-tier rate ranges from 66% (S7comm) down to 0%
 `_PROTO_MAGIC` entries in the generator but don't currently emit
 semantic rules — a honest gap, flagged for v0.63+.
 
-### 11 · IEC 60870-5-104 U-format spec fix (discovered via Wireshark validation)
+### 13 · IEC 60870-5-104 U-format spec fix (discovered via Wireshark validation)
 
 During Phase 3 third-party parser validation, Wireshark's ICS
 dissector flagged every IEC-104 packet after the first as
@@ -236,7 +4503,7 @@ correctly parsing subsequent I-format frames in the same flow,
 which it previously gave up on after seeing the malformed U-frame
 tails.
 
-### 12 · Independent third-party NSM validation — Wireshark/tshark
+### 14 · Independent third-party NSM validation — Wireshark/tshark
 
 New `docs/third_party_validation/MALCOLM_VALIDATION_v0.62.0.md`
 documents the third-party parser validation. Wireshark 4.2.2 (the

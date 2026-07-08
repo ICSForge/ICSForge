@@ -44,11 +44,23 @@ def cmd_generate(args) -> int:
     _parts = args.name.split("__")[:2]
     _run_id = "__".join(_parts) + f"__{_date}__{_word}"
 
+    # Profile sets the default for stateful; an explicit --stateful always wins.
+    from icsforge.scenarios.engine import profile_defaults
+    _profile = getattr(args, "profile", "firewall")
+    _pdef = profile_defaults(_profile)
+    _stateful = getattr(args, "stateful", False) or _pdef.get("stateful", False)
+
     res = run_scenario(args.file, args.name, args.outdir,
                        dst_ip=args.dst_ip, src_ip=args.src_ip,
                        run_id=_run_id, build_pcap=True,
-                       no_marker=getattr(args, "no_marker", False))
-    log.info("Generate complete:\n%s", json.dumps(res, indent=2))
+                       no_marker=getattr(args, "no_marker", False),
+                       explicit_marker=getattr(args, "explicit_marker", False),
+                       stateful=_stateful,
+                       skip_intervals=True)  # offline pcap: write_pcap() computes
+                       # synthetic timestamps, so real-time inter-packet sleeps
+                       # only delay the user with no effect on the output.
+    log.info("Generate complete (profile=%s, stateful=%s):\n%s",
+             _profile, _stateful, json.dumps(res, indent=2))
     return 0
 
 
@@ -77,6 +89,7 @@ def cmd_send(args) -> int:
         receiver_allowlist=allowlist,
         timeout=args.timeout,
         no_marker=getattr(args, "no_marker", False),
+        explicit_marker=getattr(args, "explicit_marker", False),
     )
 
     # Use try/finally so the run registry is always updated,
@@ -198,7 +211,7 @@ def cmd_selftest(args) -> int:
     recv_cmd = [
         sys.executable, "-m", "icsforge.receiver",
         "--bind", args.bind,
-        "--no-web",  # avoid web server port conflict during selftest
+        "--web-port", str(args.web_port),  # web enabled so we can announce an expectation
         "--log-level", "WARNING",
     ]
     if args.receiver_config:
@@ -235,6 +248,32 @@ def cmd_selftest(args) -> int:
             tf.flush()
             scenario_file = os.path.basename(tf.name)
 
+        # v0.74.0 covert-marker model: the on-wire signal (covert band byte for
+        # Modbus; compact ICSF hash marker for DNP3) does not carry the full
+        # run_id inline. The receiver binds observed traffic to a run via an
+        # expectation. Pre-generate the run_id and register an expectation
+        # directly in this process's receiver registry is not possible (the
+        # receiver runs as a subprocess), so we announce it over the receiver's
+        # HTTP API. Start the receiver with web enabled (above) for this.
+        from icsforge.live.sender import generate_run_id as _gen_run_id
+        pre_run_id = _gen_run_id()
+        try:
+            import urllib.request as _u
+            body = json.dumps({
+                "run_id": pre_run_id, "scenario": "selftest_live",
+                "technique": "T0855", "steps": 2,
+                "protos": ["modbus", "dnp3"], "ttl_sec": 120,
+            }).encode()
+            req = _u.Request(
+                f"http://{dst_ip}:{args.web_port}/api/receiver/expect",
+                data=body, headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            _u.urlopen(req, timeout=3.0)
+            log.debug("Expectation announced: run_id=%s", pre_run_id)
+        except Exception as exc:
+            log.debug("Expectation announce failed (will rely on marker): %s", exc)
+
         res = send_scenario_live(
             scenario_file=os.path.join(args.cwd, scenario_file),
             scenario_name="selftest_live",
@@ -243,6 +282,7 @@ def cmd_selftest(args) -> int:
             confirm_live_network=True,
             receiver_allowlist=[dst_ip],
             timeout=2.0,
+            run_id=pre_run_id,
         )
 
         # Allow receiver to write receipts
@@ -257,11 +297,17 @@ def cmd_selftest(args) -> int:
         got_modbus = False
         got_dnp3 = False
         for r in _read_jsonl(receipts_path):
-            if r.get("run_id") == res["run_id"]:
+            # A receipt counts if it binds to our run_id (covert band + expectation,
+            # or expectation fallback) OR carries a marker for the right proto
+            # (DNP3/MQTT ICSF hash marker, whose run_id is resolved out-of-band).
+            rid_match = r.get("run_id") == res["run_id"]
+            marker_seen = bool(r.get("marker_found"))
+            proto = r.get("receiver.proto")
+            if rid_match or marker_seen:
                 got_run = True
-                if r.get("receiver.proto") == "modbus":
+                if proto == "modbus":
                     got_modbus = True
-                if r.get("receiver.proto") == "dnp3":
+                if proto == "dnp3":
                     got_dnp3 = True
 
         if not got_run:
@@ -308,9 +354,12 @@ def _resolve_scenarios_file(path: str | None) -> str:
     import icsforge as _pkg
     candidate_default = os.path.join(os.path.dirname(_pkg.__file__), "scenarios", "scenarios.yml")
     chosen = path or candidate_default
-    if not os.path.isabs(chosen) and not os.path.exists(chosen):
-        if os.path.exists(candidate_default):
-            chosen = candidate_default
+    if (
+        not os.path.isabs(chosen)
+        and not os.path.exists(chosen)
+        and os.path.exists(candidate_default)
+    ):
+        chosen = candidate_default
     return os.path.abspath(chosen)
 
 
@@ -319,9 +368,12 @@ def _resolve_campaigns_file(path: str | None) -> str:
     import icsforge as _pkg
     candidate_default = os.path.join(os.path.dirname(_pkg.__file__), "campaigns", "builtin.yml")
     chosen = path or candidate_default
-    if not os.path.isabs(chosen) and not os.path.exists(chosen):
-        if os.path.exists(candidate_default):
-            chosen = candidate_default
+    if (
+        not os.path.isabs(chosen)
+        and not os.path.exists(chosen)
+        and os.path.exists(candidate_default)
+    ):
+        chosen = candidate_default
     return os.path.abspath(chosen)
 
 
@@ -352,6 +404,13 @@ def cmd_scenarios_list(args) -> int:
             continue
         rows.append((name, technique, proto, title))
 
+    # Apply --limit AFTER filtering so the user gets the first N matching rows.
+    limit = getattr(args, "limit", None)
+    truncated = False
+    if limit is not None and limit > 0 and len(rows) > limit:
+        rows = rows[:limit]
+        truncated = True
+
     if getattr(args, "json", False):
         print(json.dumps(
             [{"name": n, "technique": t, "proto": p, "title": ti} for n, t, p, ti in rows],
@@ -360,8 +419,11 @@ def cmd_scenarios_list(args) -> int:
     else:
         for name, tech, proto, _title in rows:
             print(f"  {tech:7s}  {proto:13s}  {name}")
+        suffix = ""
+        if truncated:
+            suffix = f" (limited to first {limit}; use --limit 0 to see all)"
         print(f"\n{len(rows)} scenarios "
-              f"({len(scenarios)} total{', filtered' if len(rows) != len(scenarios) else ''})")
+              f"({len(scenarios)} total{', filtered' if len(rows) != len(scenarios) and not truncated else ''}){suffix}")
     return 0
 
 
@@ -434,7 +496,6 @@ def cmd_campaign_validate(args) -> int:
 
 def cmd_campaign_run(args) -> int:
     """Run a campaign playbook locally (no Web UI needed)."""
-    import yaml as _yaml
 
     from icsforge.campaigns.runner import CampaignRunner, CampaignValidationError, validate_campaign_file
 
@@ -511,7 +572,7 @@ def cmd_detections_preview(args) -> int:
         rc = r["rule_counts"]
         print(f"Scenarios:  {r['count']}")
         print(f"Techniques: {len(r['techniques'])}")
-        print(f"Rules:")
+        print("Rules:")
         print(f"  Tier 1 lab_marker        {rc['lab_marker']:>4d}")
         print(f"  Tier 2 protocol_heuristic {rc['protocol_heuristic']:>4d}")
         print(f"  Tier 3 semantic          {rc['semantic']:>4d}")
@@ -648,8 +709,8 @@ def cmd_demo_fire(args) -> int:
 
 def cmd_viewer(args) -> int:
     """Launch the live Suricata alert viewer."""
-    from icsforge.viewer import create_app
     import icsforge.viewer as _viewer
+    from icsforge.viewer import create_app
 
     _viewer.EVE_PATH = args.eve_path
     app = create_app()
@@ -657,8 +718,111 @@ def cmd_viewer(args) -> int:
     return 0
 
 
+def cmd_viewer_replay(args) -> int:
+    """Replay PCAP(s) through Suricata into a temp EVE file then serve it.
+
+    This is the "no docker" path: users running scenarios locally can do
+    ``icsforge generate ... && icsforge viewer replay out/pcaps/*.pcap`` and
+    immediately see the corresponding Suricata alerts in the dashboard.
+
+    Requires `suricata` on PATH. Generates rules into a temp dir if needed.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    import icsforge.viewer as _viewer
+    from icsforge.viewer import create_app
+
+    if not shutil.which("suricata"):
+        print(
+            "ERROR: suricata is not installed. Install it (e.g. `apt install suricata`)\n"
+            "or use the dockerised stack: `icsforge demo up`.",
+            file=sys.stderr,
+        )
+        return 2
+
+    pcaps = list(args.pcaps)
+    missing = [p for p in pcaps if not os.path.exists(p)]
+    if missing:
+        print(f"ERROR: PCAP not found: {missing}", file=sys.stderr)
+        return 2
+
+    work = tempfile.mkdtemp(prefix="icsforge-viewer-")
+    rules_dir = os.path.join(work, "rules")
+    log_dir = os.path.join(work, "log")
+    os.makedirs(rules_dir, exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Export ICSForge rules so Suricata fires on our scenarios.
+    print(f"[viewer replay] Exporting detection rules to {rules_dir}")
+    from icsforge.detection.generator import _write_outputs, generate_all
+    result = generate_all()
+    _write_outputs(rules_dir, result)
+
+    # Minimal Suricata config that points at our rules and writes EVE.
+    cfg_path = os.path.join(work, "suricata.yaml")
+    with open(cfg_path, "w") as f:
+        f.write(f"""%YAML 1.1
+---
+default-log-dir: {log_dir}
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert: {{tagged-packets: no, metadata: yes}}
+default-rule-path: {rules_dir}
+rule-files:
+  - icsforge_lab.rules
+  - icsforge_heuristic.rules
+  - icsforge_semantic.rules
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config
+app-layer:
+  protocols:
+    modbus: {{enabled: yes, detection-ports: {{dp: 502}}, request-flood: 500, stream-depth: 0}}
+    dnp3:   {{enabled: yes, detection-ports: {{dp: 20000}}}}
+""")
+
+    eve_path = os.path.join(log_dir, "eve.json")
+    # Run suricata once per PCAP. -k none disables checksum validation since
+    # offline PCAPs sometimes carry checksum=0 placeholders we set on synth.
+    for pcap in pcaps:
+        print(f"[viewer replay] Processing {pcap}")
+        cmd = ["suricata", "-c", cfg_path, "-r", pcap, "-l", log_dir, "-k", "none"]
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if r.returncode != 0:
+                print(f"  suricata exited {r.returncode}: {r.stderr[-300:]}", file=sys.stderr)
+        except subprocess.TimeoutExpired:
+            print(f"  suricata timed out on {pcap}", file=sys.stderr)
+
+    # Count alerts produced
+    alerts = 0
+    if os.path.exists(eve_path):
+        with open(eve_path) as f:
+            for line in f:
+                try:
+                    if json.loads(line).get("event_type") == "alert":
+                        alerts += 1
+                except Exception:
+                    pass
+    print(f"[viewer replay] {alerts} alert(s) written to {eve_path}")
+    print(f"[viewer replay] Dashboard: http://{args.host if args.host != '0.0.0.0' else 'localhost'}:{args.port}")
+
+    _viewer.EVE_PATH = eve_path
+    app = create_app()
+    app.run(host=args.host, port=args.port, threaded=True)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
+    from icsforge import __version__ as _ver
     ap = argparse.ArgumentParser(prog="icsforge", description="ICSForge — OT/ICS Coverage Validation Framework")
+    ap.add_argument("-V", "--version", action="version", version=f"ICSForge {_ver}",
+                    help="Show the ICSForge version and exit")
     ap.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
     ap.add_argument("--log-level", default="INFO", help="Log level (DEBUG, INFO, WARNING, ERROR)")
     ap.add_argument("--log-file", default=None, help="Log to file in addition to stderr")
@@ -672,6 +836,23 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--src-ip", default="127.0.0.1")
     g.add_argument("--no-marker", dest="no_marker", action="store_true",
                    help="Stealth mode: generate PCAP with no synthetic tags.")
+    g.add_argument("--explicit-marker", dest="explicit_marker", action="store_true",
+                   help="Embed the compact 13-byte 'ICSF' marker in payloads "
+                        "(for offline PCAP detection without a receiver). Default "
+                        "is the covert marker woven into protocol fields.")
+    g.add_argument("--stateful", dest="stateful", action="store_true",
+                   help="Emit a full TCP conversation per step (SYN/SYN-ACK/ACK "
+                        "handshake, per-segment ACKs, FIN/ACK teardown) so the "
+                        "pcap survives stream reassembly and exercises stateful "
+                        "IDS engines. Default is the stateless attacker->target "
+                        "model (single PSH/ACK segments, no handshake).")
+    g.add_argument("--profile", dest="profile", choices=["firewall", "nsm"],
+                   default="firewall",
+                   help="Test profile (intent + safe defaults). 'firewall' "
+                        "(default): boundary/ACL test, unidirectional, arrival "
+                        "is the signal. 'nsm': sensor test, path assumed open, "
+                        "defaults --stateful on so stream sensors engage. Never "
+                        "fabricates device responses (receiver is a safe sink).")
     g.set_defaults(func=cmd_generate)
 
     s = sub.add_parser("send", help="Send scenario traffic over the real network to an ICSForge Receiver")
@@ -687,6 +868,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--also-build-pcap", action="store_true", help="Also build an offline PCAP alongside live sending")
     s.add_argument("--no-marker", dest="no_marker", action="store_true",
                    help="Stealth mode: omit ICSForge correlation tags — generates real protocol traffic indistinguishable from genuine devices. Receiver confirmation shows 0 but TCP ACK is used instead.")
+    s.add_argument("--explicit-marker", dest="explicit_marker", action="store_true",
+                   help="Embed the literal 13-byte 'ICSF' marker in payloads (matchable by a single content rule). Default is the covert marker woven into protocol fields.")
     s.set_defaults(func=cmd_send)
 
     nv = sub.add_parser("net-validate", help="Correlate ground-truth events with receiver receipts and optional alerts")
@@ -703,6 +886,8 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_argument("--cwd", default=".", help="Working directory (repo root)")
     st.add_argument("--receipts", default="receiver_out/receipts.jsonl")
     st.add_argument("--receiver-config", default=None)
+    st.add_argument("--web-port", type=int, default=8765,
+                    help="Receiver web port for expectation announce during selftest")
     st.set_defaults(func=cmd_selftest)
 
     # ── scenarios list ────────────────────────────────────────────────
@@ -713,6 +898,8 @@ def build_parser() -> argparse.ArgumentParser:
     sc_list.add_argument("--proto", default=None, help="Filter by protocol (modbus, dnp3, s7comm, …)")
     sc_list.add_argument("--technique", default=None, help="Filter by technique ID (e.g. T0855)")
     sc_list.add_argument("--search", default=None, help="Free-text filter against name/title")
+    sc_list.add_argument("--limit", type=int, default=None,
+                         help="Show first N matching scenarios (use 0 for unlimited; default: unlimited)")
     sc_list.add_argument("--json", action="store_true", help="Emit JSON instead of table")
     sc_list.set_defaults(func=cmd_scenarios_list)
 
@@ -783,11 +970,33 @@ def build_parser() -> argparse.ArgumentParser:
     df.set_defaults(func=cmd_demo_fire)
 
     # ── live alert viewer ─────────────────────────────────────────────
-    vw = sub.add_parser("viewer", help="Live Suricata EVE JSON alert viewer (colour-coded by tier)")
+    vw = sub.add_parser(
+        "viewer",
+        help="Live Suricata EVE JSON alert viewer (colour-coded by tier). "
+             "Subcommands: serve (default — tail an eve.json), replay (run pcap through suricata first).",
+    )
+    vw_sub = vw.add_subparsers(dest="viewer_cmd")
+    # Default behaviour (no subcommand) keeps backward compat: same as `serve`
     vw.add_argument("--host", default="0.0.0.0")
     vw.add_argument("--port", type=int, default=3000)
     vw.add_argument("--eve-path", default="/var/log/suricata/eve.json")
     vw.set_defaults(func=cmd_viewer)
+
+    vws = vw_sub.add_parser("serve", help="Tail an existing eve.json (default mode)")
+    vws.add_argument("--host", default="0.0.0.0")
+    vws.add_argument("--port", type=int, default=3000)
+    vws.add_argument("--eve-path", default="/var/log/suricata/eve.json")
+    vws.set_defaults(func=cmd_viewer)
+
+    vwr = vw_sub.add_parser(
+        "replay",
+        help="Replay PCAP(s) through Suricata then serve the resulting alerts. "
+             "Use this when you don't have the docker stack running.",
+    )
+    vwr.add_argument("pcaps", nargs="+", help="One or more .pcap files to replay")
+    vwr.add_argument("--host", default="0.0.0.0")
+    vwr.add_argument("--port", type=int, default=3000)
+    vwr.set_defaults(func=cmd_viewer_replay)
 
     return ap
 

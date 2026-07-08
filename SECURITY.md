@@ -17,11 +17,11 @@ to the latest minor release only.
 
 Use **[GitHub Security Advisories](https://github.com/ICSForge/ICSForge/security/advisories/new)**
 to privately report a vulnerability. You will receive an acknowledgement
-within 1 week. We aim to publish a coordinated disclosure within 30 days
+within 72 hours. We aim to publish a coordinated disclosure within 30 days
 of confirmation, or sooner for critical issues.
 
 If you cannot use GitHub Security Advisories, email
-[icsforge at gmail.com] with the following information:
+[security at icsforge.nl] with the following information:
 
 - Description of the vulnerability
 - Steps to reproduce

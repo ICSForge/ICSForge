@@ -2,7 +2,8 @@
 import random
 import struct
 
-from .common import marker_bytes
+from .common import marker_bytes  # noqa: F401 — retained for back-compat callers
+from .covert_marker import covert_u16, explicit_marker
 
 
 def _mbap(tid: int, length: int) -> bytes:
@@ -29,10 +30,18 @@ def build_payload(marker: str, style: str = "read_holding", **kwargs) -> bytes:
       exception_probe      (FC03 illegal addr, T0820)
     """
     rnd  = random.Random(kwargs.get("seed"))
-    # Prefer modbus_tid from engine (monotonic); fall back to explicit transaction_id; then random
-    tid  = int(kwargs.get("modbus_tid") or kwargs.get("transaction_id") or rnd.randint(0, 0xFFFF)) & 0xFFFF
+    _mode = kwargs.get("marker_mode", "covert" if marker else "none")
+    _run = kwargs.get("run_marker", "offline")
+    _idx = int(kwargs.get("pkt_index", 0))
+    # Transaction ID: in covert mode this echo field IS the marker (zero added
+    # bytes, fully spec-valid). Otherwise prefer the engine's monotonic tid.
+    if _mode == "covert" and marker:
+        tid = covert_u16(_run, "modbus", _idx)
+    else:
+        tid = int(kwargs.get("modbus_tid") or kwargs.get("transaction_id") or rnd.randint(0, 0xFFFF)) & 0xFFFF
     unit = int(kwargs.get("unit_id", rnd.randint(1, 247))) & 0xFF
-    mb   = marker_bytes(marker)
+    # Explicit mode appends a compact 13-byte tag; covert/none append nothing.
+    mb = explicit_marker(_run, "modbus") if (_mode == "explicit" and marker) else b""
 
     if style == "read_holding":
         addr = int(kwargs.get("address", rnd.randint(0, 9999))) & 0xFFFF
