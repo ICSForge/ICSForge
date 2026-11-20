@@ -4,7 +4,7 @@ message: >
   If you use this software, please cite it using these metadata.
 type: software
 authors:
-  - name: Can Kurnaz
+  - name: M. C. Kurnaz
     website: "https://www.icsforge.nl"
 repository-code: "https://github.com/ICSForge/ICSForge"
 url: "https://www.icsforge.nl"
