@@ -54,6 +54,7 @@ _callback_timeout = 2
 
 _expect_lock = threading.Lock()
 _expectations: dict[str, dict] = {}  # run_id -> {expires_at, scenario, technique, steps}
+_expect_seq: int = 0  # monotonic registration counter (newest expectation wins)
 
 
 def register_expectation(run_id: str, scenario: str = "", technique: str = "",
@@ -86,12 +87,17 @@ def register_expectation(run_id: str, scenario: str = "", technique: str = "",
     if not run_id:
         return {}
     expires_at = time.time() + max(1.0, float(ttl_sec))
+    global _expect_seq
+    with _expect_lock:
+        _expect_seq += 1
+        _seq = _expect_seq
     entry = {
         "run_id": run_id,
         "scenario": str(scenario or ""),
         "technique": str(technique or ""),
         "steps": int(steps or 1),
         "expires_at": expires_at,
+        "_seq": _seq,  # monotonic registration order (newest wins in matching)
         "protos": list(protos) if protos else None,
         "received": 0,  # incremented per attributed packet
         "test_profile": str(test_profile or ""),
@@ -138,9 +144,11 @@ def _match_expectation(proto: str | None) -> dict | None:
     """
     Return the active expectation that should attribute incoming traffic.
 
-    Currently FIFO by registration order — if multiple expectations are
-    active, the oldest one matching proto wins. In practice we expect
-    one active expectation at a time (a single sender, single run).
+    Prefers the MOST RECENTLY registered matching expectation. The current run
+    is the newest announce; attributing fresh traffic to an older still-within-TTL
+    expectation (LIFO vs FIFO) would misassign it to a stale run. Registration
+    order is tracked via a monotonic sequence so this is correct even when two
+    expectations share a TTL.
     """
     now = time.time()
     with _expect_lock:
@@ -148,16 +156,14 @@ def _match_expectation(proto: str | None) -> dict | None:
         for k in list(_expectations.keys()):
             if _expectations[k]["expires_at"] <= now:
                 _expectations.pop(k, None)
-        # Find earliest-registered match
-        candidates = []
-        for v in _expectations.values():
-            if v["protos"] is None or proto is None or proto in v["protos"]:
-                candidates.append(v)
+        candidates = [
+            v for v in _expectations.values()
+            if v["protos"] is None or proto is None or proto in v["protos"]
+        ]
         if not candidates:
             return None
-        # Earliest expires_at = earliest registered (for FIFO semantics
-        # under the assumption of equal TTL)
-        return min(candidates, key=lambda x: x["expires_at"])
+        # Newest registration wins. Fall back to expires_at when no seq present.
+        return max(candidates, key=lambda x: (x.get("_seq", 0), x["expires_at"]))
 
 
 def set_callback_url(url: str):
@@ -216,9 +222,34 @@ def _parse_marker(payload: bytes, proto: str | None = None) -> dict:
         blob = payload[i:i + 13]
         proto_code = blob[4:5]
         run_hash = blob[5:13].decode("ascii", "ignore")
+        # The compact marker carries only an 8-char run hash, not the full
+        # run_id/technique. Resolve those from the active expectation registry
+        # (as the covert and expectation paths do) so the receipt — and every
+        # downstream counter, live feed, and run panel — actually carries the
+        # run_id and technique. Without this, marker-attributed runs (DNP3, MQTT,
+        # any --explicit-marker run) showed marker_found=True but empty run_id,
+        # so "Active runs" stayed 0 and run details never populated.
+        expectation = _match_expectation(proto)
+        if expectation is not None:
+            with _expect_lock:
+                if expectation["run_id"] in _expectations:
+                    _expectations[expectation["run_id"]]["received"] += 1
+            return {
+                "marker_found": True,
+                "run_id": expectation["run_id"],
+                "run_hash": run_hash,
+                "proto_code": proto_code.decode("ascii", "ignore"),
+                "technique": expectation["technique"],
+                "scenario": expectation["scenario"],
+                "step": "",
+                "attributed_via": "marker",
+                **_expectation_enrichment(expectation),
+            }
+        # Marker present but no active expectation to resolve it against — still
+        # a verified synthetic marker; run_id resolves later via the registry/hash.
         return {
             "marker_found": True,
-            "run_id": "",            # run_id not inline; resolved via registry/hash
+            "run_id": "",            # unresolved: no active expectation
             "run_hash": run_hash,
             "proto_code": proto_code.decode("ascii", "ignore"),
             "technique": "",

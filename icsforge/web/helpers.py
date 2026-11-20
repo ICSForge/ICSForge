@@ -298,7 +298,32 @@ def announce_expectation(run_id: str, scenario: str = "", technique: str = "",
     benefit from markerless attribution.
     """
     if not _receiver_ip:
+        # No remote receiver configured, but a single-process demo (sender and
+        # receiver served by the same app, capturing on loopback/L2) still needs
+        # the expectation in the shared in-process registry so covert-marker and
+        # markerless traffic can be attributed. Register locally and return.
+        try:
+            from icsforge.receiver.receiver import register_expectation as _reg
+            _reg(run_id=run_id, scenario=scenario or "", technique=technique or "",
+                 steps=int(steps or 1), ttl_sec=float(ttl_sec or 300.0),
+                 protos=list(protos) if protos else None,
+                 test_profile=test_profile or "", expected_alert=expected_alert or "")
+        except Exception as exc:
+            log.debug("local expectation register failed for run=%s: %s", run_id, exc)
         return {}
+    # Always ALSO register locally: if the receiver capture runs in this same
+    # process (common demo topology), the in-process registry is what actually
+    # attributes traffic — independent of whether the remote HTTP announce below
+    # reaches the right port. This is the fix for run_id/technique showing empty
+    # on the receiver when the announce hop misfires.
+    try:
+        from icsforge.receiver.receiver import register_expectation as _reg
+        _reg(run_id=run_id, scenario=scenario or "", technique=technique or "",
+             steps=int(steps or 1), ttl_sec=float(ttl_sec or 300.0),
+             protos=list(protos) if protos else None,
+             test_profile=test_profile or "", expected_alert=expected_alert or "")
+    except Exception as exc:
+        log.debug("local expectation register failed for run=%s: %s", run_id, exc)
     import hashlib as _hl
     import hmac as _hmac
     import json as _json
@@ -324,10 +349,79 @@ def announce_expectation(run_id: str, scenario: str = "", technique: str = "",
         req = _urlreq.Request(url, data=body, headers=headers, method="POST")
         with _urlreq.urlopen(req, timeout=2.0) as resp:
             raw = resp.read()
-        return _json.loads(raw.decode("utf-8", "ignore")) if raw else {}
+        result = _json.loads(raw.decode("utf-8", "ignore")) if raw else {}
+        result.setdefault("announced", True)
+        return result
     except Exception as exc:
-        log.debug("announce_expectation failed for run=%s: %s", run_id, exc)
-        return {}
+        # Surface the failure so the caller can WARN the operator: a failed
+        # announce means the receiver can't attribute run_id/technique to this
+        # run's traffic (empty run_id/technique on the receiver).
+        log.warning("expectation announce to %s failed for run=%s: %s",
+                    url, run_id, exc)
+        return {"announced": False, "error": str(exc), "url": url}
+
+
+def report_delivery(run_id: str, delivered: list | None, scenario: str = "") -> int:
+    """Self-report DELIVERED receipts to the receiver callback, one per step.
+
+    "Delivered" in the ICSForge model means the traffic was put on the wire toward
+    the target — which the sender knows authoritatively, independent of whether a
+    listening service completes a TCP handshake or an NSM fires (that's Detected).
+    Without this, the sender's live feed and the receiver's counters only move when
+    a separate packet-capturing receiver process is running and ACKing; in a demo
+    or firewall/sink target that never happens, so every counter sat at 0.
+
+    Posts to the SAME /api/receiver/callback the external receiver uses, with the
+    same token/HMAC auth, so receipts flow through one pipeline. Each receipt is
+    tagged attributed_via="delivery" so it's distinguishable from wire-observed
+    marker/expectation receipts. Returns the number of receipts accepted.
+
+    Non-fatal: any failure just means the live counters won't reflect this run.
+    """
+    if not delivered:
+        return 0
+    import hashlib as _hl
+    import hmac as _hmac
+    import json as _json
+    import urllib.request as _urlreq
+    # Prefer an explicit sender-callback URL; else the configured receiver; else
+    # loop back to this same app so a single-process demo still works.
+    if _sender_callback_url:
+        url = _sender_callback_url
+    elif _receiver_ip:
+        url = f"http://{_receiver_ip}:{_receiver_port}/api/receiver/callback"
+    else:
+        url = "http://127.0.0.1:8080/api/receiver/callback"
+    accepted = 0
+    for step in delivered:
+        tech = step.get("technique") or "unknown"
+        proto = step.get("proto") or "unknown"
+        count = int(step.get("count") or 0)
+        if count <= 0:
+            continue
+        receipt = {
+            "run_id": run_id,
+            "technique": tech,
+            "receiver.proto": proto,
+            "scenario": scenario or "",
+            "count": count,
+            "marker_found": True,          # sender-authoritative delivery
+            "attributed_via": "delivery",
+        }
+        body = _json.dumps(receipt, ensure_ascii=False).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if _callback_token:
+            headers["X-ICSForge-Callback-Token"] = _callback_token
+            headers["X-ICSForge-HMAC"] = _hmac.new(
+                _callback_token.encode("utf-8"), body, _hl.sha256,
+            ).hexdigest()
+        try:
+            req = _urlreq.Request(url, data=body, headers=headers, method="POST")
+            with _urlreq.urlopen(req, timeout=2.0):
+                accepted += 1
+        except Exception as exc:
+            log.debug("report_delivery failed for run=%s: %s", run_id, exc)
+    return accepted
 
 
 # Load persisted config at module import time

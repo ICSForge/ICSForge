@@ -37,8 +37,15 @@ MAX_ALERTS = int(os.environ.get("ICSFORGE_VIEWER_BUFFER", "500"))
 POLL_INTERVAL = float(os.environ.get("ICSFORGE_VIEWER_POLL", "0.5"))
 
 # ── Tier detection from rule message ─────────────────────────────────────
-_TIER_RE = re.compile(r"ICSForge\s+(lab_marker|heuristic|semantic)\b", re.IGNORECASE)
-_TECH_RE = re.compile(r"\[(T\d{4})\]")
+_TIER_RE = re.compile(
+    r"ICSForge\s+(LAB-MARKER|LAB_MARKER|HEURISTIC|SEMANTIC|OPERATION)\b",
+    re.IGNORECASE,
+)
+# Technique appears as a bare T#### token right after the tier label
+# (e.g. "ICSForge LAB-MARKER T0801 ..."). The bracketed field holds the
+# protocol ("[Modbus/TCP]"), NOT the technique, so match the bare token —
+# optionally with a sub-technique suffix (T0801.001).
+_TECH_RE = re.compile(r"\b(T\d{4}(?:\.\d{3})?)\b")
 
 
 def _classify(msg: str) -> tuple[str, str]:
@@ -46,7 +53,7 @@ def _classify(msg: str) -> tuple[str, str]:
     tech_m = _TECH_RE.search(msg or "")
     tier_m = _TIER_RE.search(msg or "")
     technique = tech_m.group(1) if tech_m else "unknown"
-    tier = tier_m.group(1).lower() if tier_m else "unknown"
+    tier = tier_m.group(1).lower().replace("-", "_") if tier_m else "unknown"
     if tier == "lab_marker":
         tier = "lab"
     return technique, tier

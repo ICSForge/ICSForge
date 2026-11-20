@@ -231,6 +231,57 @@ _PROTO_MAGIC = {
     },
 }
 
+# Generic reconnaissance / read styles that many techniques include as a
+# *context* step (baseline reads before the real action). These are NOT
+# distinguishing for an actuation technique, so the semantic (attribution) tier
+# must not emit a per-technique rule for them — otherwise every scenario that
+# does a recon read trips 20+ unrelated technique rules (mass mis-attribution).
+_RECON_READ_STYLES: frozenset[str] = frozenset({
+    # Modbus
+    "read_coils", "read_discrete", "read_holding", "read_input", "io_image_read",
+    "read_exception_status", "get_comm_event_counter", "exception_probe",
+    # DNP3
+    "read", "read_class1", "assign_class", "delay_measure",
+    # S7comm
+    "read_db", "read_var", "read_inputs", "szl_read", "setup",
+    # IEC-104
+    "available", "testfr", "startdt",
+    # OPC UA
+    "browse", "browse_next", "get_endpoints", "find_servers", "open_session",
+    "hello", "create_sub", "read_attr",
+    # EtherNet/IP
+    "register_session", "get_identity", "get_device_type", "get_param",
+    "assembly_read",
+    # BACnet
+    "read_property", "read_property_multi", "who_is", "who_has",
+    # MQTT / PROFINET
+    "pingreq", "identify", "get_name", "get_ip",
+    # Residual protocol-specific probes that over-attribute (v0.77.11 curation):
+    # general/broadcast reads used as recon context by non-observation techniques.
+    # They remain attributing for genuinely read-based techniques via the
+    # _READ_BASED_TECHNIQUES gate. Deliberately EXCLUDED: dos_read (the DoS
+    # signature for T0814) and broadcast_operate (an actuation, not a read).
+    "list_identity", "interrogation", "read_all_dbs",
+})
+
+# Techniques for which a *read/observation* IS the distinguishing action — these
+# legitimately keep semantic rules on recon/read styles (Collection, Monitoring,
+# Discovery, Point/Tag identification).
+_READ_BASED_TECHNIQUES: frozenset[str] = frozenset({
+    "T0801",  # Monitor Process State
+    "T0802",  # Automated Collection
+    "T0840",  # Network Connection Enumeration
+    "T0842",  # Network Sniffing
+    "T0846",  # Remote System Discovery
+    "T0861",  # Point & Tag Identification
+    "T0868",  # Detect Operating Mode
+    "T0877",  # I/O Image
+    "T0887",  # Wireless Sniffing
+    "T0888",  # Remote System Information Discovery
+    "T0893",  # Data from Local System
+})
+
+
 # Style → function code mapping per protocol
 _STYLE_FC: dict[str, dict[str, str]] = {
     "modbus": {
@@ -751,6 +802,13 @@ def _tier3_semantic(spec: dict, sid_start: int) -> list[str]:
     magic_hex = _hex_str(pm["magic"].replace(" ", ""))
 
     for style in spec.get("styles", []):
+        # Suppress mass mis-attribution: a generic recon/read style should only
+        # produce a semantic (technique-attributing) rule when the technique is
+        # genuinely observation/discovery-based. For actuation techniques the
+        # recon read is context, not signature — its rule would fire on every
+        # scenario that does a baseline read and wrongly tag it as this technique.
+        if style in _RECON_READ_STYLES and tech not in _READ_BASED_TECHNIQUES:
+            continue
         # ── ENIP: prefer a true CIP service-code match where the style carries
         # one (Read 0x4C vs Write 0x4D vs Reset 0x05 …). This is the real
         # operation-level semantic match — the CIP service lives in the
@@ -956,6 +1014,127 @@ def sigma_rule(spec: dict) -> str:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+def _iec104_rate_rules(sid_start: int) -> tuple[list[str], int]:
+    """Rate-based detection for IEC-104 U-format control-frame floods/blocks.
+
+    STARTDT/STOPDT/TESTFR are U-format frames (68 04 ...) with no ASDU type ID, so
+    the content/ASDU-keyed semantic generator cannot attribute them - and worse,
+    a plain content match can't tell a 2-frame session *setup* from a 60-frame
+    *flood* (they're byte-identical). The only correct signature is RATE: a real
+    DoS floods these frames, normal use sends 1-3. Suricata `detection_filter`
+    fires only after N matches in T seconds from one source, so these rules
+    attribute the flood/block techniques without false-positiving on setup.
+
+    U-format APDU control field (byte 2): STARTDT act = 07, STOPDT act = 13,
+    TESTFR act = 43; all share the 68 04 length prefix and dsize 6.
+    """
+    date_s = date.today().isoformat()
+    port = "2404"
+    specs = [
+        ("T0814", "STARTDT flood (Denial of Service)", "68 04 07", 20, 2),
+        ("T0813", "STARTDT/available flood (Denial of Control)", "68 04 07", 20, 2),
+        ("T0829", "STOPDT flood (Loss of View)", "68 04 13", 10, 2),
+        ("T0881", "STOPDT flood (Service Stop)", "68 04 13", 10, 2),
+        ("T0804", "STOPDT block (Block Reporting)", "68 04 13", 10, 2),
+    ]
+    rules: list[str] = []
+    sid = sid_start
+    for tech, label, content, count, seconds in specs:
+        chex = content.replace(" ", "")
+        chex = " ".join(chex[i:i + 2] for i in range(0, len(chex), 2))
+        msg = _clean_msg(
+            f"ICSForge OPERATION [IEC-104] {label} - rate>{count}/{seconds}s [{tech}]"
+        )
+        rules.append(
+            f'alert tcp any any -> any {port} '
+            f'(msg:"{msg}"; '
+            f'flow:established,to_server; '
+            f'dsize:6; '
+            f'content:"|{chex}|"; offset:0; depth:3; '
+            f'detection_filter:track by_src, count {count}, seconds {seconds}; '
+            f'classtype:denial-of-service; '
+            f'sid:{sid}; rev:1; '
+            f'metadata:confidence operation, icsforge_tier operation, '
+            f'mitre_technique {tech}, icsforge_detection rate_flood, '
+            f'created_at {date_s};)'
+        )
+        sid += 1
+    return rules, sid
+
+
+def _build_operation_rules(semantic_rules: list[str], sid_start: int) -> tuple[list[str], int]:
+    """Consolidate per-technique semantic rules into operation-level rules.
+
+    Where several ATT&CK techniques share the same protocol operation (e.g. 14
+    techniques all manifest as a Modbus write FC06/16), a stateless content rule
+    cannot tell them apart — so emitting one rule per technique produces N alerts
+    for a single operation ("30 alerts for one run"). Real ICS detection reports
+    the *operation* ("unauthorized Modbus write") and leaves technique attribution
+    to an analyst with asset context.
+
+    This builds one rule per distinct (protocol, content-signature): the msg names
+    the operation, and the metadata lists every candidate technique the operation
+    could represent. Signatures unique to a single technique keep that technique in
+    the msg. Input is the already-built tier-3 semantic rule lines; output is a new
+    ruleset (does not modify the per-technique rules, which remain available).
+    """
+    import re
+    # Group emitted semantic rules by their firing signature: protocol transport +
+    # the ordered content/offset/depth/byte_test clauses (everything that decides
+    # whether the rule matches), ignoring msg/sid/metadata which differ per technique.
+    groups: dict[str, dict[str, Any]] = {}
+    for line in semantic_rules:
+        if not line.startswith("alert"):
+            continue
+        tech_m = re.search(r"mitre_technique (T\d{4})", line)
+        msg_m = re.search(r'msg:"([^"]+)"', line)
+        proto_m = re.search(r"(alert \w+ any any -> any \S+)", line)
+        # the match body = content:… through the last content/byte_test clause
+        body_m = re.search(r"flow:[^;]+;\s*(.*?)classtype:", line)
+        if not (tech_m and msg_m and proto_m and body_m):
+            continue
+        tech = tech_m.group(1)
+        # operation label = the part of the msg after the [proto] tag (the FC/service name)
+        op_label = msg_m.group(1).split("]")[-1].strip() or "operation"
+        proto_lbl_m = re.search(r"\[([^\]]+)\]", msg_m.group(1))
+        proto_lbl = proto_lbl_m.group(1) if proto_lbl_m else ""
+        sig = (proto_m.group(1), body_m.group(1).strip())
+        key = repr(sig)
+        g = groups.setdefault(key, {
+            "header": proto_m.group(1), "body": body_m.group(1).strip(),
+            "op_label": op_label, "proto_lbl": proto_lbl, "techs": set(),
+        })
+        g["techs"].add(tech)
+
+    out: list[str] = []
+    sid = sid_start
+    for g in sorted(groups.values(), key=lambda x: (x["proto_lbl"], x["op_label"])):
+        techs = sorted(g["techs"])
+        if len(techs) > 1:
+            msg = _clean_msg(
+                f"ICSForge OPERATION [{g['proto_lbl']}] {g['op_label']} "
+                f"({len(techs)} candidate techniques)"
+            )
+        else:
+            msg = _clean_msg(
+                f"ICSForge OPERATION [{g['proto_lbl']}] {g['op_label']} ({techs[0]})"
+            )
+        out.append(
+            f'{g["header"]} '
+            f'(msg:"{msg}"; '
+            f'flow:to_server; '
+            f'{g["body"]} '
+            f'classtype:attempted-admin; '
+            f'sid:{sid}; rev:1; '
+            f'metadata:confidence operation, icsforge_tier operation, '
+            f'mitre_techniques {"-".join(techs)}, '
+            f'candidate_count {len(techs)}, '
+            f'created_at {date.today().isoformat()};)'
+        )
+        sid += 1
+    return out, sid
+
+
 def generate_all(
     technique_filter: list[str] | None = None,
     include_marker: bool = True,
@@ -982,6 +1161,7 @@ def generate_all(
     t1_lines = [header + "# === TIER 1: LAB MARKER ===\n"]
     t2_lines = [header + "# === TIER 2: PROTOCOL HEURISTIC ===\n"]
     t3_lines = [header + "# === TIER 3: SEMANTIC (RECOMMENDED) ===\n"]
+    _t3_rule_lines: list[str] = []  # bare rule lines for operation consolidation
     sigma_rules: dict[str, str] = {}
     zeek_signatures: list[str] = []  # L2-only protocols (GOOSE, PROFINET DCP)
     techniques: set[str] = set()
@@ -1014,6 +1194,7 @@ def generate_all(
             t3_lines.append(f"# {sc_id}")
             for r in r3_list:
                 t3_lines.append(r)
+                _t3_rule_lines.append(r)
                 sid += 1
                 c3 += 1
             t3_lines.append("")
@@ -1027,10 +1208,30 @@ def generate_all(
         sigma_rules[sc_id] = sigma_rule(spec)
         techniques.add(spec["technique"])
 
+    # Operation-level ruleset: consolidate shared-signature semantic rules so a
+    # single protocol operation fires ONE alert (naming the operation + candidate
+    # techniques) instead of N competing per-technique alerts.
+    op_header = (
+        header
+        + "# === OPERATION-LEVEL (shared-primitive consolidation) ===\n"
+        + "# One rule per distinct protocol operation. Where multiple ATT&CK\n"
+        + "# techniques share a primitive, the alert names the operation and\n"
+        + "# lists candidate techniques in metadata (mitre_techniques) — matching\n"
+        + "# how real ICS detection reports, and avoiding N alerts for one action.\n"
+    )
+    op_rules, sid = _build_operation_rules(_t3_rule_lines, sid)
+    # IEC-104 U-format flood/block rate rules — attribute STARTDT/STOPDT floods
+    # (T0813/T0814/T0829/T0881/T0804) that content rules cannot, via rate.
+    rate_rules, sid = _iec104_rate_rules(sid)
+    op_rules = op_rules + rate_rules
+    co = len(op_rules)
+    op_out = op_header + "\n" + "\n".join(op_rules) + "\n"
+
     return {
         "suricata_lab":        "\n".join(t1_lines),
         "suricata_heuristic":  "\n".join(t2_lines),
         "suricata_semantic":   "\n".join(t3_lines),
+        "suricata_operation":  op_out,
         "suricata":            "\n".join(t3_lines),  # legacy compat
         "sigma":               sigma_rules,
         "zeek":                _zeek_header() + "\n\n".join(zeek_signatures) + "\n",
@@ -1040,6 +1241,7 @@ def generate_all(
             "lab_marker":         c1,
             "protocol_heuristic": c2,
             "semantic":           c3,
+            "operation":          co,
             "zeek":               cz,
         },
     }
@@ -1057,6 +1259,8 @@ def _write_outputs(outdir: str, result: dict[str, Any]) -> None:
         f.write(result["suricata_heuristic"])
     with open(_os.path.join(outdir, "icsforge_semantic.rules"), "w", encoding="utf-8") as f:
         f.write(result["suricata_semantic"])
+    with open(_os.path.join(outdir, "icsforge_operation.rules"), "w", encoding="utf-8") as f:
+        f.write(result["suricata_operation"])
 
     sigma_dir = _os.path.join(outdir, "sigma")
     _os.makedirs(sigma_dir, exist_ok=True)

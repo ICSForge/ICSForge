@@ -26,7 +26,7 @@ def test_v19_coverage_script_runs():
         f"  stderr: {result.stderr}"
     )
     # Sanity: contains the expected headings
-    assert "v18 standalone:" in result.stdout
+    assert "v18 techniques:" in result.stdout
     assert "v19 standalone:" in result.stdout
     assert "v19 sub-techniques:" in result.stdout
 

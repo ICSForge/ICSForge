@@ -63,14 +63,20 @@ def eve_with_history():
     path = os.path.join(td, "eve.json")
     lines = [
         {"event_type": "stats", "stats": {}},  # noise — must be skipped
+        # Use the REAL signature format ICSForge rules emit (tier is an
+        # UPPERCASE hyphenated label, technique is a bare T#### token after it,
+        # brackets hold the PROTOCOL). Regression: the viewer's _classify regexes
+        # had drifted from this format, so every alert showed tier/technique
+        # "unknown" — the tests had been asserting a made-up format that no longer
+        # matched what Suricata actually produces.
         _alert("2026-01-01T00:00:00.000Z", 5000001,
-               "[T0855] ICSForge semantic modbus write_single_register"),
+               "ICSForge SEMANTIC T0855 Unauthorized Command [Modbus/TCP] write_single_register"),
         _alert("2026-01-01T00:00:01.000Z", 5000002,
-               "[T0855] ICSForge heuristic modbus"),
+               "ICSForge HEURISTIC T0855 Unauthorized Command [Modbus/TCP]"),
         _alert("2026-01-01T00:00:02.000Z", 5000003,
-               "[T0855] ICSForge lab_marker modbus T0855_unauth"),
+               "ICSForge LAB-MARKER T0855 Unauthorized Command [Modbus/TCP] T0855_unauth"),
         _alert("2026-01-01T00:00:03.000Z", 5000004,
-               "[T0800] ICSForge semantic s7comm cpu_stop", dst_port=102),
+               "ICSForge SEMANTIC T0800 Restart Device [S7comm] cpu_stop", dst_port=102),
         {"event_type": "flow"},  # noise — must be skipped
         _alert("2026-01-01T00:00:04.000Z", 5000005,
                "Suricata default rule"),  # no [Txxxx] -> unknown technique/tier

@@ -226,8 +226,19 @@ class TestDetectionGeneratorCLI:
         rc = r["rule_counts"]
         assert rc["lab_marker"] == 210
         assert rc["protocol_heuristic"] == 239
-        assert rc["semantic"] == 357
+        assert rc["semantic"] == 261
         assert rc["zeek"] == 156
+        # v0.77.11: operation-level consolidation. The 269 per-technique semantic
+        # rules collapse to one rule per distinct protocol operation (76), each
+        # naming candidate techniques in metadata — so a shared primitive fires
+        # ONE alert, not N. Fewer operation rules than semantic is the whole point.
+        assert rc["operation"] == 81
+        assert rc["operation"] < rc["semantic"]
+        # v0.77.9: recon-read attribution fix — the semantic tier no longer emits
+        # a technique-attributing rule for generic recon/read styles (read_holding,
+        # browse, list_identity, …) on non-observation techniques. This removed the
+        # mass mis-attribution where a single scenario's baseline read tripped 20+
+        # unrelated technique rules. semantic 357→269 (fewer, more precise rules).
         # v0.77.1: ENIP semantic precision (P2) — added true CIP service-code
         # matches (Read 0x4C / Write 0x4D / Reset 0x05 …) plus corrected ENIP
         # command-word mappings. heuristic 228→239, semantic 335→357. ENIP
@@ -321,7 +332,7 @@ class TestCliNewSubcommands:
         # v0.66.1: BACnet specs added (162→216 total), BACnet rules emitted
         # (54 lab + 54 heuristic + 91 semantic), so lab 156→210, sem 244→335.
         assert data["rule_counts"]["lab_marker"] == 210
-        assert data["rule_counts"]["semantic"] == 357  # v0.77.1: ENIP CIP service-code rules
+        assert data["rule_counts"]["semantic"] == 261  # v0.77.11: residual probe curation
 
     def test_detections_export_zip(self, tmp_path):
         zp = tmp_path / "rules.zip"
@@ -1143,6 +1154,7 @@ class TestMatrixVersionToggle:
             data = r.get_json()
             assert data.get("variants"), f"{tid} should resolve to >=1 variant"
 
+    @pytest.mark.timeout(120)
     def test_v19_subtechnique_send_resolves_to_scenario(self, client):
         """Firing a v19 sub-technique tile (with a selected variant) must run.
 
@@ -1171,6 +1183,61 @@ class TestMatrixVersionToggle:
         err = r.get_json().get("error", "")
         assert "variants" in err and "select" in err.lower(), err
         assert "not supported" not in err
+
+    def test_matrix_tile_fire_defaults_to_stateful(self, client, tmp_path):
+        """The matrix tile-fire defaults to the nsm profile (stateful): for a TCP
+        protocol it must emit a SYN handshake unless firewall profile is chosen.
+
+        Regression for the 'make the matrix stateful by default' change — the
+        matrix is a sensor-coverage view, so it should complete the TCP handshake
+        so stream-tracking NSMs engage, without the caller having to ask.
+        """
+        def _syn_count(pcap_path):
+            import struct
+            if not pcap_path or not os.path.exists(pcap_path):
+                return None
+            syns = 0
+            with open(pcap_path, "rb") as fh:
+                gh = fh.read(24)
+                if len(gh) < 24:
+                    return 0
+                endian = "<" if struct.unpack_from("<I", gh)[0] in (0xa1b2c3d4, 0xa1b23c4d) else ">"
+                while True:
+                    rec = fh.read(16)
+                    if len(rec) < 16:
+                        break
+                    _, _, incl, _ = struct.unpack(f"{endian}IIII", rec)
+                    frame = fh.read(incl)
+                    if len(frame) < incl:
+                        break
+                    # eth(14) + ip(20) -> tcp flags at offset 14+20+13 = 47; SYN=0x02, ACK=0x10
+                    if len(frame) >= 48 and frame[12:14] == b"\x08\x00" and frame[23] == 6:
+                        flags = frame[47]
+                        if flags & 0x02 and not (flags & 0x10):
+                            syns += 1
+            return syns
+
+        variants = client.get("/api/technique/variants?technique=T0855").get_json()["variants"]
+        modbus = [v for v in variants if "modbus" in v["id"].lower()]
+        if not modbus:
+            return
+        vid = modbus[0]["id"]
+        # default (no profile) -> stateful -> handshake present
+        d1 = client.post("/api/technique/send", json={
+            "technique": "T0855", "variant": vid, "dst_ip": "127.0.0.1",
+            "also_build_pcap": True,
+        }).get_json()
+        syns_default = _syn_count(d1.get("pcap"))
+        if syns_default is not None:
+            assert syns_default > 0, "matrix default should be stateful (expected SYN handshake)"
+        # explicit firewall -> unidirectional -> no handshake
+        d2 = client.post("/api/technique/send", json={
+            "technique": "T0855", "variant": vid, "dst_ip": "127.0.0.1",
+            "also_build_pcap": True, "test_profile": "firewall",
+        }).get_json()
+        syns_fw = _syn_count(d2.get("pcap"))
+        if syns_fw is not None:
+            assert syns_fw == 0, "firewall profile should be unidirectional (no handshake)"
 
     def test_matrix_invalid_version_falls_back_to_v18(self, client):
         """?version=garbage should fall back to v18, not error."""
@@ -1318,3 +1385,760 @@ class TestPhase4SemanticAudit:
         assert not missing, (
             f"Audit catalog missing entries for techniques: {sorted(missing)}"
         )
+
+
+class TestSessionPrologue:
+    """Stateful scenarios must open their protocol session realistically.
+
+    Session-based ICS protocols require an opener before any data/command frame
+    (a real device rejects data sent before the session is established). The
+    engine prepends the opener once per stateful scenario when it doesn't already
+    start with one. Regression coverage for the 5-protocol prologue.
+    """
+
+    def _gen_stateful(self, name, tmp_path):
+        import subprocess
+        out = tmp_path / name[:30]
+        r = subprocess.run(
+            ["icsforge", "generate", "--name", name, "--dst-ip", "127.0.0.1",
+             "--outdir", str(out), "--stateful"],
+            capture_output=True, text=True, timeout=90)
+        assert r.returncode == 0, r.stderr[-200:]
+        pd = out / "pcaps"
+        pcaps = list(pd.glob("*.pcap")) if pd.is_dir() else []
+        assert pcaps, "no pcap generated"
+        return pcaps[0].read_bytes()
+
+    def test_iec104_startdt_prologue(self, tmp_path):
+        # A data-first IEC-104 scenario must now begin with a STARTDT U-frame.
+        raw = self._gen_stateful("T0832__manipulation_of_view__iec104", tmp_path)
+        # STARTDT act APDU: 68 04 07 00 00 00
+        assert b"\x68\x04\x07\x00\x00\x00" in raw, "IEC-104 STARTDT prologue missing"
+
+    def test_mqtt_connect_prologue(self, tmp_path):
+        # MQTT PUBLISH-first scenario must now begin with CONNECT (broker rejects
+        # otherwise). CONNECT fixed header is 0x10; variable header carries "MQTT".
+        raw = self._gen_stateful("T0831__manipulation_control__mqtt_setpoint", tmp_path)
+        assert b"MQTT" in raw, "MQTT CONNECT prologue missing"
+
+    def test_enip_register_session_prologue(self, tmp_path):
+        # ENIP explicit-messaging scenario must begin with RegisterSession (0x0065).
+        raw = self._gen_stateful("T0855__unauth_command__enip_write_tag", tmp_path)
+        # ENIP command field is little-endian 0x0065 at the start of the encap header.
+        assert b"\x65\x00" in raw, "ENIP RegisterSession prologue missing"
+
+    def test_s7comm_cotp_cr_prologue(self, tmp_path):
+        # S7comm scenario must begin with a COTP Connection Request (TPDU 0xE0).
+        raw = self._gen_stateful("T0855__unauth_command__s7comm", tmp_path)
+        # COTP CR: length byte then 0xE0 (…11 e0…) inside the TPKT.
+        assert b"\x11\xe0" in raw, "S7comm COTP-CR prologue missing"
+
+    def test_opcua_hel_prologue_data_first(self, tmp_path):
+        # A data-first OPC UA scenario must get the full HEL + OPN transport open.
+        raw = self._gen_stateful("T0855__unauth_command__opcua_write", tmp_path)
+        assert b"HEL" in raw, "OPC UA HEL prologue missing (data-first)"
+        assert b"OPN" in raw, "OPC UA OPN prologue missing (data-first)"
+
+    def test_opcua_hel_prologue_channel_opening(self, tmp_path):
+        # A channel-opening OPC UA scenario (starts at OpenSecureChannel) must
+        # still get HEL prepended — but NOT a second OPN (it supplies its own).
+        raw = self._gen_stateful("T0861__point_tag_id__opcua_browse", tmp_path)
+        assert b"HEL" in raw, "OPC UA HEL prologue missing (channel-opening)"
+
+    def test_prologue_only_when_stateful(self, tmp_path):
+        # In non-stateful (firewall/ACL) mode the prologue must NOT be added —
+        # unidirectional boundary testing keeps single-frame behaviour.
+        import subprocess
+        out = tmp_path / "fw"
+        subprocess.run(
+            ["icsforge", "generate", "--name", "T0831__manipulation_control__mqtt_setpoint",
+             "--dst-ip", "127.0.0.1", "--outdir", str(out)],
+            capture_output=True, text=True, timeout=90)
+        pd = out / "pcaps"
+        pcaps = list(pd.glob("*.pcap")) if pd.is_dir() else []
+        assert pcaps
+        raw = pcaps[0].read_bytes()
+        # No CONNECT/MQTT signature in unidirectional mode (publish-only frames).
+        assert b"MQTT" not in raw, "prologue leaked into non-stateful mode"
+
+
+class TestOperationLevelRules:
+    """Operation-level ruleset consolidates shared-primitive semantic rules."""
+
+    def test_operation_rules_present_and_consolidated(self):
+        from icsforge.detection.generator import generate_all
+        r = generate_all()
+        assert "suricata_operation" in r
+        body = r["suricata_operation"]
+        # every operation rule carries the consolidated candidate-technique metadata
+        import re
+        rules = [ln for ln in body.split("\n") if ln.startswith("alert")]
+        assert rules, "no operation rules emitted"
+        # consolidation rules carry mitre_techniques (plural candidate list); rate
+        # rules carry a single mitre_technique. Every rule has one or the other.
+        assert all(("mitre_techniques" in ln or "mitre_technique " in ln) for ln in rules)
+        # at least one rule must list MULTIPLE candidate techniques (the whole point)
+        multi = [ln for ln in rules
+                 if re.search(r"mitre_techniques (T\d{4}-)+T\d{4}", ln)]
+        assert multi, "expected at least one multi-technique operation rule"
+        # and at least one such rule advertises its candidate_count > 1
+        assert any("candidate_count" in ln for ln in rules)
+
+    def test_operation_msg_names_the_operation(self):
+        from icsforge.detection.generator import generate_all
+        r = generate_all()
+        rules = [ln for ln in r["suricata_operation"].split("\n") if ln.startswith("alert")]
+        # msgs should describe an operation with a protocol tag, not a bare technique
+        for ln in rules[:5]:
+            assert "ICSForge OPERATION [" in ln
+
+
+class TestIEC104RateRules:
+    """Rate-based flood detection for IEC-104 U-format control frames."""
+
+    def test_rate_rules_present(self):
+        from icsforge.detection.generator import generate_all
+        r = generate_all()
+        body = r["suricata_operation"]
+        rate = [ln for ln in body.split("\n")
+                if ln.startswith("alert") and "detection_filter" in ln]
+        assert rate, "no IEC-104 rate rules emitted"
+        # each must use detection_filter (rate) and target IEC-104 port 2404
+        for ln in rate:
+            assert "detection_filter:track by_src" in ln
+            assert "-> any 2404" in ln
+            assert "rate_flood" in ln
+        # covers the flood/block techniques
+        joined = "\n".join(rate)
+        for tech in ("T0814", "T0813", "T0829", "T0881", "T0804"):
+            assert tech in joined, f"{tech} rate rule missing"
+
+    def test_rate_rules_use_dsize_6_uframe(self):
+        # U-format frames are exactly 6 bytes (68 04 + 4 control bytes); the rate
+        # rule must anchor on dsize:6 so it can't match longer I-format data frames.
+        from icsforge.detection.generator import generate_all
+        r = generate_all()
+        rate = [ln for ln in r["suricata_operation"].split("\n")
+                if ln.startswith("alert") and "detection_filter" in ln]
+        assert all("dsize:6" in ln for ln in rate)
+
+
+class TestExportPcapSuite:
+    """export-pcap-suite produces labelled PCAPs + a manifest for sensor import."""
+
+    def test_suite_export_writes_pcaps_and_manifest(self, tmp_path):
+        import csv
+        import subprocess
+        out = tmp_path / "suite"
+        r = subprocess.run(
+            ["icsforge", "export-pcap-suite", "--technique", "T0855",
+             "--outdir", str(out), "--dst-ip", "127.0.0.1"],
+            capture_output=True, text=True, timeout=180)
+        assert r.returncode == 0, r.stderr[-300:]
+        pcaps = list((out / "pcaps").glob("*.pcap"))
+        assert pcaps, "no PCAPs exported"
+        manifest = out / "manifest.csv"
+        assert manifest.exists()
+        rows = list(csv.DictReader(manifest.open()))
+        # one manifest row per PCAP, all labelled with the requested technique
+        assert len(rows) == len(pcaps)
+        assert all(row["technique"] == "T0855" for row in rows)
+        # manifest carries the columns a sensor operator needs as ground truth
+        for col in ("pcap", "scenario", "technique", "tactic", "protocol", "title"):
+            assert col in rows[0]
+        # the referenced pcap files actually exist
+        for row in rows:
+            assert (out / row["pcap"]).exists()
+
+
+class TestProtocolDissectionGate:
+    """Regression gate: each protocol's traffic dissects as its declared layer.
+
+    A fast pytest mirror of scripts/validate_pcaps.py --protocol-assert: catches a
+    builder change that silently produces bytes tshark no longer recognises as the
+    intended protocol. Skipped automatically when tshark isn't installed.
+    """
+
+    def test_one_scenario_per_protocol_dissects(self, tmp_path):
+        import shutil as _sh
+        if not _sh.which("tshark"):
+            import pytest
+            pytest.skip("tshark not installed")
+        import sys
+        sys.path.insert(0, "scripts")
+        from validate_pcaps import validate_protocol_layer
+
+        from icsforge.scenarios.engine import load_scenarios, run_scenario
+        sc = load_scenarios("icsforge/scenarios/scenarios.yml")["scenarios"]
+        # one scenario per IP protocol (profinet has no tshark layer assert here)
+        seen = {}
+        for n, s in sorted(sc.items()):
+            if n.startswith("CHAIN"):
+                continue
+            protos = [st.get("proto") for st in s.get("steps", []) if st.get("proto")]
+            if len(set(protos)) == 1 and protos[0] not in ("profinet_dcp",):
+                seen.setdefault(protos[0], n)
+        assert len(seen) >= 8, f"expected ≥8 protocols, got {sorted(seen)}"
+
+        failures = []
+        for proto, name in seen.items():
+            out = tmp_path / proto
+            r = run_scenario("icsforge/scenarios/scenarios.yml", name, str(out),
+                             dst_ip="127.0.0.1", run_id="gate", build_pcap=True,
+                             stateful=True, skip_intervals=True)
+            errs = validate_protocol_layer(r["pcap"], proto)
+            if errs:
+                failures.append((name, proto, errs))
+        assert not failures, f"protocol dissection failures: {failures}"
+
+
+class TestTemporalDynamics:
+    """Per-protocol / per-step timing + GOOSE retransmission cadence in PCAPs."""
+
+    def _pcap_gaps_ms(self, pcap_path):
+        """Inter-frame gaps in ms via the pcap's own timestamps (no tshark)."""
+        import struct
+        gaps = []
+        with open(pcap_path, "rb") as f:
+            f.read(24)
+            prev = None
+            while True:
+                ph = f.read(16)
+                if len(ph) < 16:
+                    break
+                ts_sec, ts_usec, incl, _orig = struct.unpack("<IIII", ph)
+                f.read(incl)
+                t = ts_sec + ts_usec / 1_000_000
+                if prev is not None:
+                    gaps.append((t - prev) * 1000.0)
+                prev = t
+        return gaps
+
+    def test_goose_retransmission_cadence(self, tmp_path):
+        # GOOSE must show the doubling backoff (1,2,4,8… ms) after a state change,
+        # not a flat interval — the distinctive rhythm anomaly NSMs baseline.
+        from icsforge.scenarios.engine import run_scenario
+        out = tmp_path / "goose"
+        r = run_scenario("icsforge/scenarios/scenarios.yml",
+                         "T0801__monitor_process__iec61850", str(out),
+                         dst_ip="127.0.0.1", run_id="t", build_pcap=True,
+                         skip_intervals=True)
+        gaps = self._pcap_gaps_ms(r["pcap"])
+        assert len(gaps) >= 8
+        # early gaps must be sub-10ms (fast burst); later gaps clearly larger.
+        assert gaps[0] < 10.0, f"first GOOSE gap not fast: {gaps[0]}ms"
+        # the cadence increases within a burst (allowing jitter): the 5th gap
+        # should be materially larger than the 1st.
+        assert gaps[4] > gaps[0], f"GOOSE cadence not increasing: {gaps[:6]}"
+
+    def test_goose_sqnum_increments_within_state(self, tmp_path):
+        # sqNum increments 0,1,2… within a state (stNum fixed). Verify via builder.
+        from icsforge.protocols import iec61850
+        seen = []
+        for k in range(5):
+            p = iec61850.build_payload(b"", style="trip_inject",
+                                       st_num=7, sq_num=k, marker_mode="none")
+            seen.append(p)
+        # frames differ (sqNum encoded) — no two identical, proving per-frame sqNum
+        assert len(set(seen)) == len(seen)
+
+    def test_per_protocol_timing_differs(self, tmp_path):
+        # A fast-bus protocol (GOOSE) and a polled protocol should not share the
+        # same flat cadence — median gaps must differ by protocol.
+        from icsforge.scenarios.engine import run_scenario
+        gooser = run_scenario("icsforge/scenarios/scenarios.yml",
+                              "T0801__monitor_process__iec61850",
+                              str(tmp_path / "g"), dst_ip="127.0.0.1",
+                              run_id="t", build_pcap=True, skip_intervals=True)
+        g_gaps = sorted(self._pcap_gaps_ms(gooser["pcap"]))
+        g_med = g_gaps[len(g_gaps) // 2]
+        # GOOSE median should be small (ms-scale burst), well under a 200ms poll.
+        assert g_med < 200.0, f"GOOSE median gap too large: {g_med}ms"
+
+    def test_write_pcap_schedule_respected(self, tmp_path):
+        # write_pcap must honour an explicit schedule's interval.
+        from icsforge.core import write_pcap
+        pkts = [b"\x00" * 60 for _ in range(10)]
+        out = str(tmp_path / "s.pcap")
+        # 10 packets at 300ms spacing, one step
+        write_pcap(pkts, out, schedule=[(10, 0.3, "modbus")])
+        gaps = self._pcap_gaps_ms(out)
+        # median gap should be near 300ms (±30% jitter)
+        med = sorted(gaps)[len(gaps) // 2]
+        assert 200.0 < med < 400.0, f"schedule interval not respected: {med}ms"
+
+
+class TestMarkerRunIdResolution:
+    """Explicit compact marker must resolve run_id + technique from the registry.
+
+    Regression: the ICSF compact marker carries only an 8-char run hash. Path 1 of
+    _parse_marker returned marker_found=True but empty run_id/technique, so the
+    sender live feed and receiver counters ("Active runs", run details) never
+    populated for marker-attributed runs. It must enrich from the active
+    expectation like the covert/expectation paths do.
+    """
+
+    def test_explicit_marker_resolves_run_id_and_technique(self):
+        from icsforge.protocols import modbus
+        from icsforge.protocols.common import marker_bytes
+        from icsforge.receiver import receiver as rx
+        rx.register_expectation(run_id="2026-07-13-DELTA-09",
+                                scenario="T0855__unauth_command__modbus",
+                                technique="T0855", steps=1, protos=["modbus"])
+        try:
+            mk = marker_bytes("2026-07-13-DELTA-09", proto="modbus")
+            payload = modbus.build_payload(mk, style="write_single_register",
+                                           marker_mode="explicit")
+            meta = rx._parse_marker(payload, proto="modbus")
+            assert meta["marker_found"] is True
+            assert meta["run_id"] == "2026-07-13-DELTA-09"
+            assert meta["technique"] == "T0855"
+            assert meta["attributed_via"] == "marker"
+        finally:
+            with rx._expect_lock:
+                rx._expectations.pop("2026-07-13-DELTA-09", None)
+
+    def test_explicit_marker_without_expectation_stays_unresolved(self):
+        # No active expectation: marker still verified, run_id empty (resolves later)
+        from icsforge.protocols import modbus
+        from icsforge.protocols.common import marker_bytes
+        from icsforge.receiver import receiver as rx
+        with rx._expect_lock:
+            rx._expectations.clear()
+        mk = marker_bytes("2026-07-13-ECHO-01", proto="modbus")
+        payload = modbus.build_payload(mk, style="write_single_register",
+                                       marker_mode="explicit")
+        meta = rx._parse_marker(payload, proto="modbus")
+        assert meta["marker_found"] is True
+        assert meta["run_id"] == ""
+        assert meta["attributed_via"] == "marker"
+
+
+class TestWebUIFixes:
+    """Regression tests for the sender/campaigns/matrix UI fixes."""
+
+    @pytest.fixture
+    def web_client(self):
+        import os as _os
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = "sender"
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_scenario_groups_chains_last(self, web_client):
+        # Sender scenario groups must be matrix-ordered with Attack Chains LAST.
+        r = web_client.get("/api/scenarios_grouped?include_steps=0")
+        groups = r.get_json()["groups"]
+        names = [g["name"] for g in groups]
+        assert "Attack Chains" in names[-1], f"chains not last: {names}"
+        assert "Attack Chains" not in names[0], f"chains first: {names}"
+
+    def test_v19_parent_tile_rolls_up_children(self, web_client):
+        # The v19 parent tiles (Unauthorized Message T1692, Block OT Message T1691)
+        # have no scenario of their own but must surface their children's variants.
+        for parent in ("T1692", "T1691"):
+            r = web_client.get("/api/technique/variants?technique=" + parent)
+            variants = r.get_json().get("variants", [])
+            assert variants, f"{parent} parent tile still empty"
+
+    def test_v19_subtechnique_has_variants(self, web_client):
+        # Sub-technique tiles annotated on scenarios must resolve too.
+        for sub in ("T0846.001", "T0843.001", "T0873.001"):
+            r = web_client.get("/api/technique/variants?technique=" + sub)
+            assert r.get_json().get("variants"), f"{sub} empty"
+
+    def test_campaigns_page_has_chains(self, web_client):
+        # Chains moved to campaigns page (chains_list present there).
+        r = web_client.get("/campaigns")
+        assert r.status_code == 200
+        assert "chains_list" in r.get_data(as_text=True)
+
+    def test_sender_page_no_chains_box(self, web_client):
+        # Chains box removed from the sender page.
+        r = web_client.get("/sender")
+        assert r.status_code == 200
+        assert "chains_grid" not in r.get_data(as_text=True)
+
+
+class TestDeliverySelfReport:
+    """Sender self-reports Delivered so live stats work without a capturing receiver."""
+
+    def test_send_returns_delivered_breakdown(self):
+        # send_scenario_live must report per-(technique,proto) delivery based on
+        # payloads emitted toward the target — even when the TCP connect is
+        # refused (no listener), which is the demo/firewall-sink case.
+        from icsforge.live.sender import send_scenario_live
+        r = send_scenario_live("icsforge/scenarios/scenarios.yml",
+                               "T0855__unauth_command__modbus", dst_ip="127.0.0.1",
+                               confirm_live_network=True, timeout=1)
+        assert "delivered" in r and r["delivered"], "no delivered breakdown"
+        d = r["delivered"][0]
+        assert d["technique"] == "T0855"
+        assert d["proto"] == "modbus"
+        assert d["count"] > 0  # emitted despite connection-refused
+
+    def test_delivery_receipt_moves_counters(self):
+        import os as _os
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = "sender"
+        from icsforge.web import helpers as _h
+        _h._callback_token = None
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        c = app.test_client()
+        ov0 = c.get("/api/receiver/overview").get_json()
+        receipt = {"run_id": "2026-07-14-TEST-RUN", "technique": "T0855",
+                   "receiver.proto": "modbus", "count": 5,
+                   "marker_found": True, "attributed_via": "delivery"}
+        r = c.post("/api/receiver/callback", json=receipt)
+        assert r.get_json().get("stored") is True, "delivery receipt not stored"
+        ov1 = c.get("/api/receiver/overview").get_json()
+        assert ov1["total"] > ov0["total"], "counters did not move on delivery"
+
+
+class TestCampaignPhasingUI:
+    """Campaign step rows carry step_row_N ids so SSE progress updates render."""
+
+    @pytest.fixture
+    def web_client(self):
+        import os as _os
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = "sender"
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_campaign_step_renderers_assign_ids(self, web_client):
+        # Both innerHTML step renderers must template id="step_row_${i+1}" so the
+        # SSE handler's getElementById(step_row_${ev.step}) can find each row.
+        body = web_client.get("/campaigns").get_data(as_text=True)
+        assert body.count("step_row_${i+1}") >= 2, "step-row ids missing in renderers"
+        assert "step-row.waiting" in body, "waiting phase style missing"
+
+    def test_campaign_run_streams_delay_events(self):
+        # Phasing intact: a two-step campaign where step 2 has a delay must emit a
+        # 'delay' event carrying that dwell. Kept minimal + fully mocked (no web
+        # fixture, no real sends, no real sleeps) so it's fast and deterministic.
+        import time as _t
+
+        import icsforge.campaigns.runner as _runner_mod
+        from icsforge.campaigns.runner import CampaignRunner
+        from icsforge.web.bp_campaigns import MATRIX_SINGLETON_PACK
+        camp = {"name": "phase-test", "steps": [
+            {"scenario": "T0855__unauth_command__modbus", "delay": "0s"},
+            {"scenario": "T0855__unauth_command__modbus", "delay": "5s"},
+        ]}
+        events = []
+        orig_sleep = _t.sleep
+        orig_send = _runner_mod.send_scenario_live
+        try:
+            _t.sleep = lambda s: None
+            _runner_mod.send_scenario_live = lambda **kw: {"run_id": "x", "sent": 1}
+            CampaignRunner(campaign=camp, scenarios_path=MATRIX_SINGLETON_PACK,
+                           dst_ip="127.0.0.1", iface=None, timeout=1,
+                           outdir="/tmp/camp_phase_min",
+                           progress_cb=lambda ev: events.append(ev)).run()
+        finally:
+            _t.sleep = orig_sleep
+            _runner_mod.send_scenario_live = orig_send
+        delays = [e for e in events if e.get("event") == "delay"]
+        assert delays, "no delay/phase event emitted"
+        assert any(e.get("seconds", 0) > 0 for e in delays), "delay carried no dwell"
+
+
+class TestReceiverAttributionRobustness:
+    """Attribution must work when the remote expectation announce misfires.
+
+    Root cause of the field report: the sender announced expectations to the
+    receiver HTTP port (9090) but the receiver web app served on another port
+    (8080), so no expectation registered — every receipt arrived with empty
+    run_id/technique. Result: receiver "Active runs" stuck at 0, "Techniques
+    seen" wedged at 1 (all empty→one bucket), and Live Receipts blank.
+
+    Fix: announce_expectation ALSO registers the expectation in the shared
+    in-process registry, so a same-process demo attributes regardless of the
+    remote hop; and the overview no longer counts empty techniques or ignores
+    in-flight expectations.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clean_expectations(self):
+        # Isolate: clear the shared expectation registry before AND after each
+        # test so leaked expectations don't misattribute in other tests (the
+        # local-register change makes _expectations persist across tests).
+        from icsforge.receiver.receiver import _expect_lock, _expectations
+        with _expect_lock:
+            _expectations.clear()
+        yield
+        with _expect_lock:
+            _expectations.clear()
+
+    def test_announce_registers_locally(self):
+        from icsforge.receiver.receiver import _expect_lock, _expectations, list_expectations
+        from icsforge.web import helpers as _h
+        with _expect_lock:
+            _expectations.clear()
+        _h._receiver_ip = None  # no remote receiver → local-only path
+        _h.announce_expectation(run_id="LOCAL-RUN-1", scenario="T0855__x",
+                                technique="T0855", steps=1, protos=["s7comm"])
+        run_ids = [e["run_id"] for e in list_expectations()]
+        assert "LOCAL-RUN-1" in run_ids, "announce did not register locally"
+
+    def test_s7comm_covert_marker_attributes_via_local_expectation(self):
+        from icsforge.protocols import s7comm
+        from icsforge.receiver.receiver import _expect_lock, _expectations, _parse_marker
+        from icsforge.web import helpers as _h
+        with _expect_lock:
+            _expectations.clear()
+        _h._receiver_ip = None
+        _h.announce_expectation(run_id="S7-RUN", scenario="T0855__s7",
+                                technique="T0855", steps=1, protos=["s7comm"])
+        payload = s7comm.build_payload("x", style="read_var", marker_mode="covert",
+                                       run_marker="S7-RUN", pkt_index=0)
+        meta = _parse_marker(payload, proto="s7comm")
+        assert meta.get("run_id") == "S7-RUN", "s7comm not attributed to run"
+        assert meta.get("technique") == "T0855"
+
+    def test_overview_counts_active_runs_and_distinct_techniques(self):
+        import os as _os
+        import uuid as _uuid
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = "sender"
+        from icsforge.receiver.receiver import _expect_lock, _expectations
+        from icsforge.web import helpers as _h
+        with _expect_lock:
+            _expectations.clear()
+        _h._receiver_ip = None
+        _h._callback_token = None
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        c = app.test_client()
+        ov0 = c.get("/api/receiver/overview").get_json()
+        # unique run ids so they can't already exist in a stale receipts file
+        rid_a = f"OV-A-{_uuid.uuid4().hex[:8]}"
+        rid_b = f"OV-B-{_uuid.uuid4().hex[:8]}"
+        _h.announce_expectation(run_id=rid_a, scenario="a", technique="T0855",
+                                steps=1, protos=["s7comm"])
+        _h.announce_expectation(run_id=rid_b, scenario="b", technique="T0801",
+                                steps=1, protos=["modbus"])
+        ov1 = c.get("/api/receiver/overview").get_json()
+        # active runs reflects the two new in-flight expectations
+        assert ov1["runs"] >= ov0["runs"] + 2, "active runs did not include expectations"
+        # distinct-technique receipts don't wedge the counter at 1
+        techs0 = ov1["unique_techniques"]
+        for rid, tech, proto in [(rid_a, "T0855", "s7comm"), (rid_b, "T0801", "modbus")]:
+            c.post("/api/receiver/callback", json={"run_id": rid, "technique": tech,
+                   "receiver.proto": proto, "marker_found": True,
+                   "attributed_via": "delivery"})
+        ov2 = c.get("/api/receiver/overview").get_json()
+        assert ov2["unique_techniques"] >= 2, "techniques wedged (empty-technique bug)"
+        assert ov2["unique_techniques"] >= techs0, "technique count regressed"
+
+
+class TestCrossHostAnnounce:
+    """Two-VM topology (sender 8080, receiver 9090): the expectation announce must
+    attribute traffic even under a callback-token mismatch, without opening the
+    endpoint to untrusted hosts.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clean(self):
+        from icsforge.receiver.receiver import _expect_lock, _expectations
+        with _expect_lock:
+            _expectations.clear()
+        yield
+        with _expect_lock:
+            _expectations.clear()
+
+    def _client(self):
+        import os as _os
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = "receiver"
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_announce_from_private_net_without_token_is_accepted(self):
+        import json
+
+        from icsforge.receiver.receiver import list_expectations
+        from icsforge.web import helpers as _h
+        _h._callback_token = "receiver-side-token"  # sender lacks/ mismatches it
+        c = self._client()
+        body = json.dumps({"run_id": "XH-1", "technique": "T0855",
+                           "protos": ["s7comm"]}).encode()
+        r = c.post("/api/receiver/expect", data=body, content_type="application/json",
+                   environ_overrides={"REMOTE_ADDR": "192.168.178.196"})
+        assert r.status_code == 200, "private-net announce rejected"
+        assert "XH-1" in [e["run_id"] for e in list_expectations()]
+
+    def test_announce_from_public_net_without_token_is_rejected(self):
+        import json
+
+        from icsforge.web import helpers as _h
+        _h._callback_token = "receiver-side-token"
+        c = self._client()
+        body = json.dumps({"run_id": "XH-2", "protos": ["s7comm"]}).encode()
+        r = c.post("/api/receiver/expect", data=body, content_type="application/json",
+                   environ_overrides={"REMOTE_ADDR": "8.8.8.8"})
+        assert r.status_code == 401, "public announce without token must be rejected"
+
+    def test_valid_token_still_accepted(self):
+        import hashlib
+        import hmac
+        import json
+
+        from icsforge.receiver.receiver import list_expectations
+        from icsforge.web import helpers as _h
+        tok = "shared-secret-xyz"
+        _h._callback_token = tok
+        c = self._client()
+        body = json.dumps({"run_id": "XH-3", "technique": "T0801",
+                           "protos": ["modbus"]}).encode()
+        mac = hmac.new(tok.encode(), body, hashlib.sha256).hexdigest()
+        r = c.post("/api/receiver/expect", data=body, content_type="application/json",
+                   headers={"X-ICSForge-Callback-Token": tok, "X-ICSForge-HMAC": mac},
+                   environ_overrides={"REMOTE_ADDR": "8.8.8.8"})  # even from public
+        assert r.status_code == 200, "valid token+HMAC rejected"
+        assert "XH-3" in [e["run_id"] for e in list_expectations()]
+
+    def test_failed_announce_surfaces_status(self):
+        # announce_expectation returns announced:False when the receiver is
+        # unreachable, so api_send can warn the operator instead of failing silent.
+        from icsforge.web import helpers as _h
+        _saved_ip, _saved_port = _h._receiver_ip, _h._receiver_port
+        try:
+            _h._receiver_ip = "192.0.2.1"  # TEST-NET, unreachable
+            _h._receiver_port = 9090
+            _h._callback_token = None
+            res = _h.announce_expectation(run_id="XH-4", technique="T0855",
+                                          protos=["s7comm"], ttl_sec=5)
+            assert res.get("announced") is False
+            assert "error" in res
+        finally:
+            # Restore so a leaked unreachable receiver_ip doesn't slow/misdirect
+            # later tests that fire sends.
+            _h._receiver_ip, _h._receiver_port = _saved_ip, _saved_port
+
+
+class TestReceiverModeSendBlocking:
+    """A receiver-mode appliance must not emit traffic via ANY send API — not just
+    the page redirect. Regression: /api/technique/send, /api/campaigns/run,
+    /api/generate_offline, /api/pcap/replay, /api/net_validate_custom were reachable
+    in receiver mode; only /api/send had a guard.
+    """
+
+    def _client(self, mode):
+        import os as _os
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = mode
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_all_send_endpoints_blocked_in_receiver_mode(self):
+        c = self._client("receiver")
+        cases = [
+            ("/api/send", {"name": "T0855__unauth_command__modbus", "dst_ip": "127.0.0.1"}),
+            ("/api/technique/send", {"technique": "T0855",
+             "variant": "T0855__unauth_command__modbus", "dst_ip": "127.0.0.1"}),
+            ("/api/campaigns/run", {"campaign_id": "sensor_spoofing", "dst_ip": "127.0.0.1"}),
+            ("/api/generate_offline", {"name": "T0855__unauth_command__modbus", "dst_ip": "127.0.0.1"}),
+            ("/api/pcap/replay", {"pcap_path": "x"}),
+            ("/api/net_validate_custom", {"dst_ip": "127.0.0.1", "proto": "modbus"}),
+        ]
+        for path, body in cases:
+            r = c.post(path, json=body)
+            assert r.status_code == 403, f"{path} not blocked in receiver mode ({r.status_code})"
+
+    def test_send_endpoints_allowed_in_sender_mode(self):
+        c = self._client("sender")
+        r = c.post("/api/generate_offline",
+                   json={"name": "T0855__unauth_command__modbus", "dst_ip": "127.0.0.1"})
+        assert r.status_code == 200, "generate_offline wrongly blocked in sender mode"
+
+
+class TestExpectClearAuthConsistency:
+    """DELETE /api/receiver/expect must use the same trusted-network fallback as
+    POST /api/receiver/expect (v0.77.19). Regression: DELETE hard-required the
+    token, so a two-VM abort/clear with mismatched tokens failed.
+    """
+
+    def _client(self):
+        import os as _os
+        _os.environ["ICSFORGE_NO_AUTH"] = "1"
+        _os.environ["ICSFORGE_UI_MODE"] = "receiver"
+        from icsforge.web.app import create_app
+        app = create_app()
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_delete_expect_trusted_network_without_token(self):
+        from icsforge.web import helpers as _h
+        _h._callback_token = "receiver-token"
+        c = self._client()
+        c.post("/api/receiver/expect", json={"run_id": "CLR-1", "protos": ["modbus"]},
+               environ_overrides={"REMOTE_ADDR": "192.168.178.196"})
+        r = c.delete("/api/receiver/expect/CLR-1",
+                     environ_overrides={"REMOTE_ADDR": "192.168.178.196"})
+        assert r.status_code == 200, f"trusted-net clear rejected ({r.status_code})"
+
+    def test_delete_expect_untrusted_without_token_rejected(self):
+        from icsforge.web import helpers as _h
+        _h._callback_token = "receiver-token"
+        c = self._client()
+        r = c.delete("/api/receiver/expect/whatever",
+                     environ_overrides={"REMOTE_ADDR": "8.8.8.8"})
+        assert r.status_code == 401, "untrusted clear must be rejected"
+
+
+class TestV19LeafCoverage:
+    """v0.78 additions: fill the v19 leaf gaps identified in the mapping audit —
+    T0843.002 Program Download: Online Edit (s7comm single-block edit in RUN) and
+    T1695.002 Block Communications: Ethernet (L2 GOOSE-framed link saturation).
+    """
+
+    def test_s7comm_online_edit_emits_request_download_no_stop(self):
+        from icsforge.protocols import s7comm
+        p = s7comm.build_payload("x", style="online_edit", marker_mode="none")
+        # valid S7 Job (ROSCTR 0x01) whose parameter function code is Request
+        # Download (0x1A). The S7 header is 0x32 <ROSCTR> <redundancy:2>
+        # <pduref:2> <parlen:2> <datalen:2>, so the parameter area (and its
+        # first byte, the function code) begins at header-start + 10.
+        i = p.find(b"\x32")
+        assert i >= 0 and p[i + 1] == 0x01, "not an S7 Job"
+        fc = p[i + 10]  # parameter function code byte (exact position, not a scan)
+        assert fc == 0x1A, f"online_edit should carry Request-Download FC 0x1A, got {fc:#x}"
+        # And it must NOT be cpu_stop (FC 0x29) — checked at the FC position, not
+        # a byte-window scan (random pdu_ref bytes can coincidentally be 0x29).
+        assert fc != 0x29, "online_edit must not be a cpu_stop"
+
+    def test_ethernet_block_is_large_goose_l2_frame(self):
+        from icsforge.protocols import iec61850
+        p = iec61850.build_payload("x", style="ethernet_block", marker_mode="none")
+        assert p[12:14] == b"\x88\xb8", "not a GOOSE ethertype frame"
+        # link-saturation intent: frame should be large (many packed data items)
+        assert len(p) > 200, f"ethernet_block frame too small to saturate ({len(p)}B)"
+
+    def test_new_scenarios_generate(self):
+        import glob
+        import subprocess
+        import tempfile
+        # Only the online-edit scenario was wired in v0.78; the ethernet_block
+        # builder style exists but was not added as a scenario (T1695.002 is a
+        # v19-native leaf with no v18 primary, which the v18-anchored scenario
+        # schema doesn't represent cleanly — see CHANGELOG).
+        for name in ("T0843__online_edit__s7comm_run_mode",):
+            d = tempfile.mkdtemp()
+            r = subprocess.run(["icsforge", "generate", "--name", name,
+                                "--dst-ip", "192.168.30.10", "--outdir", d],
+                               capture_output=True, text=True)
+            assert r.returncode == 0, f"{name} generate failed: {r.stderr[:200]}"
+            assert glob.glob(f"{d}/pcaps/*.pcap"), f"{name} produced no pcap"

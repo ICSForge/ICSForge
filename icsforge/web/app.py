@@ -83,6 +83,18 @@ def _guard_ui_mode():
             return redirect(url_for("web.receiver"))
         if ep == "web.index":
             return redirect(url_for("web.receiver"))
+        # Defense in depth: a receiver appliance must not emit traffic. Block every
+        # traffic-generating API endpoint (not just the pages), so the receiver
+        # can't be driven to send even via a direct API call.
+        _SEND_ENDPOINTS = {
+            "bp_scenarios.api_send", "bp_scenarios.api_technique_send",
+            "bp_scenarios.api_generate_offline", "bp_campaigns.api_campaigns_run",
+            "bp_runs.api_pcap_replay", "bp_runs.api_net_validate_custom",
+        }
+        if ep in _SEND_ENDPOINTS:
+            from flask import jsonify
+            return jsonify({"ok": False,
+                            "error": "traffic generation disabled in receiver mode"}), 403
 
 
 

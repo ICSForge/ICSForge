@@ -285,12 +285,15 @@ def api_scenarios_grouped():
         if include_steps and sc_name.startswith("CHAIN__"):
             entry["steps"] = steps
         groups[group].append(entry)
-    order = ["\u26d3 Attack Chains",
-             "Initial Access", "Execution", "Persistence", "Privilege Escalation",
+    # Matrix tactic order (as the ATT&CK for ICS matrix presents them), with
+    # Attack Chains LAST — chains are multi-tactic composites and belong after the
+    # per-technique groups, not before them.
+    order = ["Initial Access", "Execution", "Persistence", "Privilege Escalation",
              "Evasion", "Discovery", "Lateral Movement", "Collection",
              "Command and Control",
              "Inhibit Response Function", "Impair Process Control",
-             "Impact", "Other"]
+             "Impact", "Other",
+             "\u26d3 Attack Chains"]
     sorted_groups = []
     seen = set()
     for g in order:
@@ -375,8 +378,9 @@ def api_send():
 
     from icsforge.live.sender import generate_run_id as _gen_run_id
     pre_run_id = _gen_run_id()
+    _announce_result = {}
     try:
-        announce_expectation(
+        _announce_result = announce_expectation(
             run_id=pre_run_id,
             scenario=name,
             technique=(sc_doc.get("technique") if isinstance(sc_doc, dict) else "") or "",
@@ -405,6 +409,14 @@ def api_send():
             run_id=pre_run_id or None,
         )
 
+        # Self-report DELIVERED receipts so the live feed + receiver counters
+        # reflect what was put on the wire, even with no separate capturing
+        # receiver (demo, firewall/sink target). Non-fatal.
+        try:
+            from icsforge.web.helpers import report_delivery
+            report_delivery(res["run_id"], res.get("delivered"), scenario=name)
+        except Exception as exc:  # noqa: BLE001
+            log.debug("delivery self-report failed: %s", exc)
         # Create ground-truth artifacts (events jsonl + optional pcap)
         gt = run_scenario(
             pack,
@@ -442,13 +454,23 @@ def api_send():
         with suppress(OSError, ValueError):
             _append_run_index(entry)
 
+        # Warn the operator if the cross-host expectation announce failed — the
+        # receiver won't be able to attribute run_id/technique to this traffic.
+        _warnings = list(res.get("warnings", []))
+        if _announce_result and _announce_result.get("announced") is False:
+            _warnings.append(
+                "Expectation announce to the receiver failed — the receiver may "
+                "show empty run_id/technique for this run. Check the receiver IP/"
+                "port and that the callback token matches on both hosts. "
+                f"({_announce_result.get('error', 'unreachable')})")
+
         return jsonify(
             {
                 "run_id": res["run_id"],
                 "sent": res["sent"],
                 "events": gt.get("events"),
                 "pcap": gt.get("pcap"),
-                "warnings": res.get("warnings", []),
+                "warnings": _warnings,
             }
         )
     except ValueError as exc:
@@ -490,6 +512,28 @@ def api_technique_variants():
     v19_to_v18 = _v19_to_v18_map()
     if technique in v19_to_v18:
         technique = v19_to_v18[technique]
+
+    # v19 PARENT roll-up: in v19 several old techniques became sub-techniques of a
+    # new parent (e.g. Unauthorized Message T1692 ⊃ T1692.001=old T0855,
+    # T1692.002=old T0856; Block OT Message T1691 ⊃ T1691.001=T0803, .002=T0804).
+    # A parent tile has no scenario of its own, so gather every child's v18 IDs and
+    # match those too — otherwise the parent tile looks empty though its children
+    # are fully covered.
+    child_v18_ids: set[str] = set()
+    child_v19_ids: set[str] = set()
+    if requested_v19 == technique and "." not in requested_v19:
+        try:
+            cw = json.loads(
+                Path(os.path.join(_repo_root(), "icsforge", "data",
+                                  "mitre_v18_v19_crosswalk.json")).read_text(encoding="utf-8")
+            )
+            for v18, v in (cw.get("existing-techniques", {}) or {}).items():
+                nv = v.get("attack-v19-attack-id", "") if isinstance(v, dict) else ""
+                if nv.split(".")[0] == requested_v19:
+                    child_v18_ids.add(v18)
+                    child_v19_ids.add(nv)
+        except Exception:
+            pass
     try:
         doc = _load_scenarios_cached()
         scenarios = doc.get("scenarios") or {}
@@ -500,9 +544,17 @@ def api_technique_variants():
             if name.startswith("CHAIN__"):
                 continue
             # Match if the scenario's top-level technique == the resolved v18 ID,
-            # OR its v19 annotation == the originally requested v19 (sub-)technique.
+            # OR its v19 annotation == the originally requested v19 (sub-)technique,
+            # OR (parent roll-up) it belongs to one of the parent's children.
             ann = sc.get("technique_v19")
-            if sc.get("technique") != technique and not (ann and ann == requested_v19):
+            sc_tech = sc.get("technique")
+            matches = (
+                sc_tech == technique
+                or (ann and ann == requested_v19)
+                or (sc_tech in child_v18_ids)
+                or (ann in child_v19_ids if ann else False)
+            )
+            if not matches:
                 continue
             # Derive variant id: strip the "T0XXX__" prefix from scenario name
             var_id = name[len(prefix):] if name.startswith(prefix) else name
@@ -526,6 +578,8 @@ def api_technique_variants():
 # ── Technique send
 @bp.route("/api/technique/send", methods=["POST"])
 def api_technique_send():
+    if os.environ.get('ICSFORGE_UI_MODE', 'sender').strip().lower() == 'receiver':
+        return jsonify({'ok': False, 'error': 'send disabled in receiver mode'}), 403
     data = request.get_json(force=True) or {}
     technique = (data.get("technique") or "").strip()
     variant = (data.get("variant") or "").strip()
@@ -561,9 +615,14 @@ def api_technique_send():
         return jsonify({"error": str(e)}), 400
     no_marker = bool(data.get("no_marker"))
     explicit_marker = bool(data.get("explicit_marker"))
-    test_profile = (data.get("test_profile") or "firewall").strip().lower()
+    # The matrix is a sensor-coverage view — "does my NSM detect this technique?" —
+    # so tile-fire defaults to the nsm profile (stateful: completes the TCP
+    # handshake so stream-tracking sensors engage). Callers can still pass
+    # test_profile="firewall" for boundary/ACL testing, and an explicit
+    # `stateful` in the request always wins.
+    test_profile = (data.get("test_profile") or "nsm").strip().lower()
     if test_profile not in ("firewall", "nsm"):
-        test_profile = "firewall"
+        test_profile = "nsm"
     from icsforge.scenarios.engine import profile_defaults as _profile_defaults
     stateful = bool(data.get("stateful")) or _profile_defaults(test_profile).get("stateful", False)
 

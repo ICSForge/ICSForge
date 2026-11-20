@@ -54,7 +54,7 @@ v0.62.3 removes/re-tags them:
   "Damage to Property" as a chain objective) = **77 of 83 (92.8%)**
 - **v19 mapping**: 73 of 79 standalone + 17 of 18 sub-techniques = 90/97 (92.8%) combined
 - **33 techniques** at full 10/10 protocol coverage
-- **Detection rules**: 210 lab + 239 heuristic + 357 semantic = 806 total
+- **Detection rules**: 210 lab + 239 heuristic + 261 semantic = 710 total, plus 76 operation-level rules (shared-primitive consolidation)
 - **Drift**: 0 orphan rules, 0 missing rules
 
 ### Per-protocol breakdown

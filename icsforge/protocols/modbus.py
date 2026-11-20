@@ -138,6 +138,18 @@ def build_payload(marker: str, style: str = "read_holding", **kwargs) -> bytes:
         qty  = int(kwargs.get("quantity", rnd.randint(1, 8))) & 0xFFFF
         pdu  = bytes([unit, 0x01]) + struct.pack(">HH", addr, qty)
 
+    elif style == "register_sweep":
+        # FC03 holding-register address sweep — the classic Modbus enumeration
+        # signature an NSM watches for during discovery (walking the address
+        # space to map which registers exist). Complements the FC43 device-ID
+        # sweep with the register-space probe reviewers expect for T0846.
+        base = int(kwargs.get("base_address", 0)) & 0xFFFF
+        # walk the address space in blocks so successive frames cover a range
+        step = int(kwargs.get("step", 16))
+        addr = (base + (rnd.randint(0, 64) * step)) & 0xFFFF
+        qty  = int(kwargs.get("quantity", 8)) & 0xFFFF
+        pdu  = bytes([unit, 0x03]) + struct.pack(">HH", addr, qty)
+
     elif style == "dos_read":
         # FC03 max quantity (125 regs = 250 bytes) — T0814 DoS
         addr = int(kwargs.get("address", 0))    & 0xFFFF

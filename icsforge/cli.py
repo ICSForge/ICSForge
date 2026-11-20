@@ -4,6 +4,7 @@ import datetime as _dt
 import json
 import os
 import random as _rnd
+import shutil
 import signal
 import sqlite3
 import subprocess
@@ -622,6 +623,119 @@ def cmd_detections_export(args) -> int:
     return 0
 
 
+def cmd_export_pcap_suite(args) -> int:
+    """Batch-export every scenario as a labelled PCAP + manifest CSV.
+
+    Produces an offline validation kit for commercial ICS sensors (Microsoft
+    Defender for IoT, Nozomi, Claroty, Dragos): one PCAP per scenario, plus a
+    manifest.csv mapping each file to its ATT&CK technique, tactic, protocol and
+    title. Import the PCAPs into a sensor's offline/replay mode and use the
+    manifest as ground truth for what each capture should trigger.
+    """
+    import csv as _csv
+
+    from icsforge.scenarios.engine import load_scenarios, profile_defaults, run_scenario
+
+    # Resolve scenario file to the installed package if not found from CWD.
+    scfile = args.file
+    if not os.path.isabs(scfile) and not os.path.exists(scfile):
+        import icsforge as _pkg
+        cand = os.path.join(os.path.dirname(_pkg.__file__), "scenarios", "scenarios.yml")
+        if os.path.exists(cand):
+            scfile = cand
+    scfile = os.path.abspath(scfile)
+    outdir = os.path.abspath(args.outdir)
+    pcap_dir = os.path.join(outdir, "pcaps")
+    os.makedirs(pcap_dir, exist_ok=True)
+
+    scenarios = load_scenarios(scfile)["scenarios"]
+    names = sorted(n for n in scenarios if not n.startswith("CHAIN__"))
+    if args.technique:
+        wanted = set(args.technique)
+        names = [n for n in names if scenarios[n].get("technique") in wanted]
+
+    # Stateful by default for sensor import (a real session the sensor can parse);
+    # --profile firewall or --no-stateful overrides.
+    pdef = profile_defaults(getattr(args, "profile", "nsm"))
+    stateful = not getattr(args, "no_stateful", False) and pdef.get("stateful", True)
+
+    manifest_rows = []
+    ok = 0
+    fail = 0
+    for i, name in enumerate(names, 1):
+        spec = scenarios[name]
+        safe = "".join(c for c in name if c.isalnum() or c in "._-")[:180]
+        tmp_out = os.path.join(outdir, "_work")
+        try:
+            res = run_scenario(scfile, name, tmp_out, dst_ip=args.dst_ip,
+                               run_id=safe, build_pcap=True, stateful=stateful,
+                               skip_intervals=True)
+            src_pcap = res.get("pcap")
+            if not src_pcap or not os.path.exists(src_pcap):
+                fail += 1
+                continue
+            dest = os.path.join(pcap_dir, f"{safe}.pcap")
+            shutil.copyfile(src_pcap, dest)
+            manifest_rows.append({
+                "pcap": f"pcaps/{safe}.pcap",
+                "scenario": name,
+                "technique": spec.get("technique", ""),
+                "technique_v19": spec.get("technique_v19", ""),
+                "tactic": spec.get("tactic", ""),
+                "protocol": _suite_primary_proto(spec),
+                "confidence": spec.get("confidence", ""),
+                "title": spec.get("title", ""),
+                "stateful": str(stateful).lower(),
+            })
+            ok += 1
+        except Exception as exc:  # noqa: BLE001 — a bad scenario shouldn't abort the batch
+            log.warning("suite export: %s failed: %s", name, exc)
+            fail += 1
+        if i % 50 == 0:
+            print(f"[suite] {i}/{len(names)} scenarios…")
+
+    # tidy the scratch dir
+    shutil.rmtree(os.path.join(outdir, "_work"), ignore_errors=True)
+
+    manifest_path = os.path.join(outdir, "manifest.csv")
+    with open(manifest_path, "w", newline="", encoding="utf-8") as f:
+        w = _csv.DictWriter(f, fieldnames=[
+            "pcap", "scenario", "technique", "technique_v19", "tactic",
+            "protocol", "confidence", "title", "stateful"])
+        w.writeheader()
+        w.writerows(manifest_rows)
+
+    # a short README so the kit is self-describing
+    techniques = sorted({r["technique"] for r in manifest_rows if r["technique"]})
+    protos = sorted({r["protocol"] for r in manifest_rows if r["protocol"]})
+    with open(os.path.join(outdir, "README.txt"), "w", encoding="utf-8") as f:
+        f.write(
+            "ICSForge PCAP validation suite\n"
+            f"{ok} labelled PCAPs across {len(protos)} protocols, "
+            f"{len(techniques)} ATT&CK for ICS techniques.\n\n"
+            "manifest.csv columns:\n"
+            "  pcap, scenario, technique, technique_v19, tactic, protocol,\n"
+            "  confidence, title, stateful\n\n"
+            "Usage: import the pcaps/ directory into your sensor's offline/replay\n"
+            "mode (Defender for IoT, Nozomi, Claroty, Dragos). Use manifest.csv as\n"
+            "ground truth for what each capture represents.\n"
+        )
+
+    print(f"[suite] wrote {ok} PCAPs + manifest.csv to {outdir}"
+          + (f" ({fail} failed)" if fail else ""))
+    return 0 if fail == 0 else 1
+
+
+def _suite_primary_proto(spec: dict) -> str:
+    """Best-effort primary protocol label for a scenario's manifest row."""
+    for st in spec.get("steps", []):
+        p = st.get("proto")
+        if p:
+            return p
+    return ""
+
+
+
 def _demo_compose_path() -> str:
     """Find docker-compose.demo.yml: repo root first, then package dir."""
     here = Path(__file__).resolve().parent  # icsforge/
@@ -949,6 +1063,22 @@ def build_parser() -> argparse.ArgumentParser:
     de.add_argument("--no-marker", action="store_true",
                     help="Omit lab_marker tier")
     de.set_defaults(func=cmd_detections_export)
+
+    # ── export-pcap-suite: labelled PCAP kit for commercial sensors ────
+    eps = sub.add_parser(
+        "export-pcap-suite",
+        help="Batch-export every scenario as a labelled PCAP + manifest.csv "
+             "for offline import into commercial ICS sensors")
+    eps.add_argument("--file", default="icsforge/scenarios/scenarios.yml")
+    eps.add_argument("--outdir", default="pcap_suite")
+    eps.add_argument("--dst-ip", default="198.51.100.42")
+    eps.add_argument("--technique", action="append",
+                     help="Limit to specific technique ID(s); repeatable")
+    eps.add_argument("--profile", choices=["firewall", "nsm"], default="nsm",
+                     help="Test profile (default nsm = stateful sessions)")
+    eps.add_argument("--no-stateful", dest="no_stateful", action="store_true",
+                     help="Force single-frame (firewall) traffic instead of sessions")
+    eps.set_defaults(func=cmd_export_pcap_suite)
 
     # ── demo up / down / fire ─────────────────────────────────────────
     dm = sub.add_parser("demo", help="Run the end-to-end demo stack (docker compose)")

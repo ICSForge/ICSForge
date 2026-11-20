@@ -27,41 +27,7 @@ function logln(msg, cls=""){
 async function loadGroups(){
   const data = await API("/api/scenarios_grouped");
   allGroups = data.groups || [];
-  renderChainCards();
   renderScenarioList("");
-}
-
-/* ── Chain cards ────────────────────────────────────────────── */
-const CHAIN_META = {
-  CHAIN__industroyer2__power_grid:   {icon:"⚡",label:"Industroyer2",sub:"Ukraine 2022 · IEC-104 + S7comm"},
-  CHAIN__triton__safety_system:      {icon:"☢",label:"SIS Targeting (TRITON-inspired)",sub:"Modbus+S7comm surrogate · SIS disable pattern"},
-  CHAIN__stuxnet__siemens_plc:       {icon:"⚙",label:"Stuxnet-style",sub:"Siemens PLC · Program manipulation"},
-  CHAIN__water_treatment_tampering:  {icon:"💧",label:"Water Treatment",sub:"Oldsmar-style · Setpoint tampering"},
-  CHAIN__industrial_espionage__opcua:{icon:"🕵",label:"OPC UA Espionage",sub:"Silent exfil via OPC UA sessions"},
-  CHAIN__enip_manufacturing_attack:  {icon:"🏭",label:"EtherNet/IP MFG",sub:"Allen-Bradley · CIP manipulation"},
-};
-function renderChainCards(){
-  const grid = $("chains_grid");
-  const chains = (allGroups.find(g=>g.name.includes("Attack Chains"))||{}).scenarios||[];
-  if(!chains.length){grid.innerHTML='<div class="small">No chains found.</div>';return;}
-  // Split: named chains (in CHAIN_META) first row, generic chains second row
-  const named   = chains.filter(sc => sc.id in CHAIN_META);
-  const generic = chains.filter(sc => !(sc.id in CHAIN_META));
-  function renderCard(sc){
-    const m = CHAIN_META[sc.id]||{icon:"⛓",label:sc.title,sub:sc.protocols.join(" · ")};
-    const pills = sc.techniques.slice(0,4).map(t=>`<span class="chain-pill">${t}</span>`).join("");
-    return `<div class="chain-card" onclick="selectScenario('${sc.id}')">
-      <div class="chain-name">${m.icon} ${m.label}</div>
-      <div class="chain-sub">${m.sub}</div>
-      <div class="chain-pills">${pills}</div>
-    </div>`;
-  }
-  let html = named.map(renderCard).join("");
-  if(generic.length){
-    html += `<div style="width:100%;font-size:10px;color:var(--muted);margin:6px 0 2px;letter-spacing:.04em">MULTI-PROTOCOL CHAINS</div>`;
-    html += generic.map(renderCard).join("");
-  }
-  grid.innerHTML = html;
 }
 
 /* ── Scenario list ──────────────────────────────────────────── */
@@ -86,9 +52,11 @@ function renderScenarioList(filter){
     for(const sc of items){
       const active = sc.id === selectedName ? " active" : "";
       const dots = sc.protocols.map(p=>protoDot(p)).join("");
-      const nameStr = sc.title.length > 50 ? sc.title.slice(0,48)+"…" : sc.title;
-      html += `<div class="sc-item${active}" onclick="selectScenario('${sc.id}')">
-        <span>${nameStr}</span>
+      // Show the full title; the .sc-name span flexes to the available width and
+      // only ellipsizes as a CSS safety net for genuinely oversized titles, so
+      // names use all the real space in the box instead of a fixed char cap.
+      html += `<div class="sc-item${active}" onclick="selectScenario('${sc.id}')" title="${(sc.title||'').replace(/"/g,'&quot;')}">
+        <span class="sc-name">${sc.title}</span>
         <span class="sc-protos">${dots}</span>
       </div>`;
       total++;

@@ -33,6 +33,45 @@ bp = Blueprint("bp_receiver", __name__)
 
 
 # ── Receiver overview
+def _announce_auth_ok(require_for_action: str = "announce") -> tuple[bool, str]:
+    """Shared auth for expectation announce/clear (sender -> receiver).
+
+    Returns (ok, note). Accepts when EITHER a valid callback token+HMAC is
+    supplied OR the request comes from a trusted (private/loopback/link-local)
+    network. Announces/clears from untrusted networks without a valid token are
+    rejected. This keeps the POST /expect and DELETE /expect endpoints consistent
+    (the DELETE path previously required a token even on a trusted LAN, so a
+    two-VM abort/clear with mismatched tokens failed).
+    """
+    if not _h._callback_token:
+        return True, ""
+    supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
+    supplied_hmac = (request.headers.get("X-ICSForge-HMAC") or "").strip()
+    if supplied and secrets.compare_digest(supplied, _h._callback_token) and supplied_hmac:
+        import hashlib as _hl
+        import hmac as _hmac
+        expected = _hmac.new(
+            _h._callback_token.encode("utf-8"), request.get_data(), _hl.sha256,
+        ).hexdigest()
+        if _hmac.compare_digest(supplied_hmac, expected):
+            return True, "token"
+    # Token missing/mismatched — fall back to network trust.
+    import ipaddress as _ip
+    remote = (request.remote_addr or "").strip()
+    try:
+        ra = _ip.ip_address(remote)
+        trusted = ra.is_private or ra.is_loopback or ra.is_link_local
+    except ValueError:
+        trusted = False
+    if trusted:
+        _h.log.warning(
+            "%s from %s WITHOUT valid callback token (trusted network). Align "
+            "the callback token on sender and receiver for authenticated %ss.",
+            require_for_action, remote or "?", require_for_action)
+        return True, "trusted-network"
+    return False, "untrusted"
+
+
 @bp.route("/api/receiver/overview")
 def api_receiver_overview():
     receipts_path = _default_receipts_path()
@@ -50,12 +89,26 @@ def api_receiver_overview():
     protos = {}
     runs = set()
     for r in items:
-        t = r.get("technique") or "unknown"
+        t = r.get("technique") or ""
         p = r.get("receiver.proto") or "unknown"
-        techniques[t] = techniques.get(t, 0) + 1
+        # Only count non-empty techniques toward the unique-technique KPI, so an
+        # unattributed receipt (empty technique) doesn't wedge the counter at 1.
+        if t:
+            techniques[t] = techniques.get(t, 0) + 1
         protos[p]     = protos.get(p, 0) + 1
         if r.get("run_id"):
             runs.add(r["run_id"])
+    # Active runs = distinct run_ids seen in receipts PLUS any live expectations
+    # still within their TTL (a run announced/in-flight that hasn't produced an
+    # attributed receipt yet). This makes "Active runs" reflect in-flight runs
+    # rather than sitting at 0 when attribution is momentarily pending.
+    try:
+        from icsforge.receiver.receiver import list_expectations
+        for e in (list_expectations() or []):
+            if e.get("run_id"):
+                runs.add(e["run_id"])
+    except Exception:
+        pass
     top_tech  = sorted(techniques.items(), key=lambda x: x[1], reverse=True)[:8]
     top_proto = sorted(protos.items(),     key=lambda x: x[1], reverse=True)[:8]
     l2_iface  = os.environ.get("ICSFORGE_L2_IFACE", "").strip()
@@ -143,10 +196,28 @@ def api_receiver_callback():
     # only stored marker_found receipts, silently dropping every IEC-104 / stealth
     # receipt — so those runs showed no delivery on the sender even though the
     # receiver saw the traffic.
-    if not (data.get("marker_found") or data.get("attributed_via") == "expectation"):
+    if not (data.get("marker_found") or data.get("attributed_via") in ("expectation", "delivery")):
         return jsonify({"ok": True, "stored": False})
     data["_received_at"] = datetime.now(timezone.utc).isoformat()
     _h._live_receipts.append(data)
+    # Persist to receipts.jsonl so the overview counters (packets received, active
+    # runs, techniques/protocols seen) — read by BOTH the receiver page and the
+    # sender's live feed via /api/receiver/overview — actually reflect live
+    # traffic. In web/demo mode there is no standalone receiver process writing
+    # this file, so without this append the file stays empty and every counter
+    # stays at 0 even as receipts stream into memory. This is the root cause of
+    # "live statistics not working" on both pages.
+    try:
+        receipts_path = _default_receipts_path()
+        os.makedirs(os.path.dirname(receipts_path), exist_ok=True)
+        # Normalise timestamp field the overview reader looks for.
+        if "@timestamp" not in data and "ts" not in data:
+            data["@timestamp"] = data["_received_at"]
+        with open(receipts_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(data, default=str) + "\n")
+    except Exception as exc:  # noqa: BLE001 — persistence must not break the live push
+        _h.log.warning("callback: failed to persist receipt: %s", exc) \
+            if hasattr(_h, "log") else None
     # Push to SSE subscribers
     notify_sse(data)
     return jsonify({"ok": True, "stored": True})
@@ -307,21 +378,21 @@ def api_receiver_expect():
     endpoint when token is configured. This prevents unauthenticated peers
     from attributing arbitrary traffic to fake runs.
     """
-    if _h._callback_token:
-        supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
-        if not supplied or not secrets.compare_digest(supplied, _h._callback_token):
-            return jsonify({"error": "invalid callback token"}), 401
-        import hashlib as _hl
-        import hmac as _hmac
-        raw_body = request.get_data()
-        supplied_hmac = (request.headers.get("X-ICSForge-HMAC") or "").strip()
-        if not supplied_hmac:
-            return jsonify({"error": "HMAC required"}), 401
-        expected = _hmac.new(
-            _h._callback_token.encode("utf-8"), raw_body, _hl.sha256,
-        ).hexdigest()
-        if not _hmac.compare_digest(supplied_hmac, expected):
-            return jsonify({"error": "HMAC verification failed"}), 401
+    # Auth model for the expectation announce (sender -> receiver):
+    #   * If a token is configured AND the sender supplies a matching token+HMAC,
+    #     accept (strong path).
+    #   * If a token is configured but the sender's token/HMAC is missing or wrong,
+    #     DO NOT hard-401 into a silent attribution blackout — instead accept the
+    #     announce when it comes from a trusted (private/loopback) network and log a
+    #     clear warning. The announce only says "traffic for run X is coming"; the
+    #     real anti-forgery guarantee is the keyed covert HMAC marker on the traffic
+    #     itself, verified independently. A mismatched callback-token between two
+    #     VMs must not leave the receiver unable to attribute anything — that was
+    #     the field failure (empty run_id/technique, Active runs stuck at 0).
+    ok, _note = _announce_auth_ok("expectation announce")
+    if not ok:
+        return jsonify({"error": "expectation announce rejected: bad/absent "
+                        "callback token from untrusted network"}), 401
 
     data = request.get_json(force=True, silent=True) or {}
     run_id = (data.get("run_id") or "").strip()
@@ -360,10 +431,10 @@ def api_receiver_expectations():
 @bp.route("/api/receiver/expect/<run_id>", methods=["DELETE"])
 def api_receiver_expect_clear(run_id: str):
     """Clear an expectation early (e.g. on scenario abort)."""
-    if _h._callback_token:
-        supplied = (request.headers.get("X-ICSForge-Callback-Token") or "").strip()
-        if not supplied or not secrets.compare_digest(supplied, _h._callback_token):
-            return jsonify({"error": "invalid callback token"}), 401
+    ok, _note = _announce_auth_ok("expectation clear")
+    if not ok:
+        return jsonify({"error": "expectation clear rejected: bad/absent callback "
+                        "token from untrusted network"}), 401
     try:
         from icsforge.receiver.receiver import clear_expectation
     except Exception:

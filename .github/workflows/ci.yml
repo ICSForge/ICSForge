@@ -54,6 +54,14 @@ jobs:
         if: matrix.python-version == '3.12'
         run: python scripts/validate_pcaps.py --quick -v
 
+      - name: Install tshark (protocol dissection gate)
+        if: matrix.python-version == '3.12'
+        run: sudo apt-get update && sudo apt-get install -y tshark
+
+      - name: protocol-assert — every scenario dissects as its declared protocol
+        if: matrix.python-version == '3.12'
+        run: python scripts/validate_pcaps.py --protocol-assert
+
       - name: Upload coverage
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4

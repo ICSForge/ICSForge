@@ -1,3 +1,614 @@
+## v0.78.2 (2026-08-04) — Scenario list: single-line names use full width
+
+Corrects the v0.78.1 approach. v0.78.1 wrapped scenario names to two lines, but the
+intent was a single line that uses the full horizontal width of the (wide) box. The
+name span now stays on one line, flexes to fill all available width, and ellipsizes
+only when a title genuinely exceeds the box — so long names like "T0819 – Exploit
+Public-Facing Application — BACnet malformed service probe" display in full instead
+of being clipped at ~48 characters. The `title=` hover tooltip (full name) and the
+removal of the fixed 48-char JS cap from v0.78.1 are retained.
+
+CSS only (revert the 2-line clamp to single-line ellipsis; item alignment back to
+center). 37 web-API tests pass, ruff clean, drift in sync.
+
+## v0.78.1 (2026-08-04) — Sender scenario list shows full names (UI)
+
+The sender-page scenario picker hard-truncated every title to 48 characters with an
+ellipsis in JavaScript (`sc.title.slice(0,48)+"…"`), regardless of available width —
+so 566 of 612 scenarios (93%) showed clipped names even though the box had room.
+
+- Removed the fixed 48-char JS clamp; the name now renders in full and the layout
+  decides how much fits.
+- `.sc-name` flexes to the available width and wraps to up to two lines
+  (`-webkit-line-clamp:2`), ellipsizing only genuinely oversized titles at the end
+  of line two. At the default box width this raises fully-visible titles from ~33 to
+  ~385 of 612 (62%), with the rest showing far more than before.
+- Added a `title=` tooltip on each row so the complete name is always available on
+  hover for the long outliers.
+
+CSS/JS only; no Python behavior change. Web page serves, 37 web-API tests pass,
+ruff clean, drift in sync.
+
+## v0.78.0 (2026-07-29) — v19 leaf-coverage: Program Download Online Edit
+
+A v19 mapping audit re-examined the sub-technique leaves under the parents that
+"remain a technique but gained sub-techniques" in ATT&CK for ICS v19. Correcting an
+earlier analysis: of the three leaves initially flagged as gaps, **two were already
+covered** once the scenarios' explicit `v19_id` tags were read (rather than inferred
+from the crosswalk defaults):
+- T0843.002 Program Download: Online Edit — was tagged on `T0843__program_download__modbus`
+- T0843.003 Program Download: Program Append — `T0843__program_append__s7comm_online_edit`
+
+This release adds a **protocol-faithful S7comm representation** of the online-edit
+leaf, which the existing Modbus-tagged scenario represented only loosely:
+
+- New scenario `T0843__online_edit__s7comm_run_mode` (T0843 primary, v19 T0843.002):
+  a single S7comm Request-Download (FC 0x1A) for one logic block with the CPU left
+  in RUN — no preceding `cpu_stop`, no full block-replace sequence. This is the
+  genuine online-edit network signature, distinct from T0843.001 Download All
+  (stop-wrapped full replacement) and T0843.003 Program Append (multi-block append).
+- New builder styles: `s7comm/online_edit` (FC 0x1A single-block, RUN-mode) and
+  `iec61850/ethernet_block` (large L2 GOOSE-framed link-saturation frame).
+
+**Not shipped as a scenario — and why (honesty note):** T1695.002 Block
+Communications: Ethernet is the one genuinely-uncovered leaf. It is a *v19-native*
+sub-technique with **no v18 parent technique** — and ICSForge's scenario schema is
+entirely v18-anchored (every scenario's `primary.technique` is a T0xxx ID; the v19
+sub-IDs are crosswalk-derived annotations). Wiring T1695.002 would have meant either
+mislabelling it under T0805 (which is canonically T1695.001 Serial COM — a different
+sub-technique, correctly rejected by the schema tests) or introducing a v19-native
+primary mechanism the tool has never had. That is a schema decision, not a scenario
+add, so it was deliberately deferred rather than force-fit. The `ethernet_block`
+builder style is included so the capability exists when that schema question is
+settled. T1695.003 Wi-Fi remains correctly out of scope (RF-layer).
+
+Net v19 coverage: sub-techniques 17/18 = 94.4%, combined 90/97 = 92.8%.
+
+### Scenario/coverage counts
+- Standalone scenarios: 612 (was 611); total 628 (612 + 16 chains).
+- Mapping confidence: 457 HIGH / 152 MEDIUM / 19 LOW.
+
+### Tests
+- New `TestV19LeafCoverage` (3): online_edit emits request-download-without-stop,
+  ethernet_block is a large GOOSE L2 frame, and the new scenario generates.
+- 511 passed / 2 skipped, ruff clean on icsforge+tests+scripts, drift in sync.
+
+## v0.77.22 (2026-07-29) — Live Malcolm per-scenario detection harvester (tool)
+
+Adds `tools/malcolm_live_harvest.py` + runbook: a two-phase harness for measuring
+what a real OT NSM (Malcolm) detects per scenario in a live lab, producing a CSV
+identical in shape to the offline detection report so live and offline are directly
+comparable.
+
+- **fire** phase (on the sender): fires all 611 scenarios live, each at a unique
+  destination IP (192.168.<hi>.<lo>, zero collisions across the full set), and
+  writes a run manifest.
+- **harvest** phase: reads Malcolm's Suricata `eve.json` (and optionally Zeek
+  `conn.log`) and buckets detections back to scenarios by destination IP — no
+  cross-host clock sync required. Emits per-scenario columns: send_ok (Executed),
+  nsm_saw_flow_zeek (Delivered + Observed), suricata_alerts (Detected) + signatures.
+
+The three-column split makes the OT visibility gap explicit per scenario: the row
+`send_ok=yes, nsm_saw_flow_zeek=yes, suricata_alerts=0` is a delivered attack the
+NSM observed but no signature caught — the exact gap the tool exists to surface.
+
+Tool-only addition; no package behavior change. Firing/harvesting logic tested
+(enumeration, unique-IP mapping, eve.json/Zeek parsing, CSV output); live Malcolm
+validation is done in-lab per the runbook.
+
+### Tests
+- No new package tests (tool lives in tools/, outside the linted/tested package
+  paths). 508 passed / 2 skipped, ruff clean on icsforge+tests+scripts, drift in
+  sync.
+
+## v0.77.21 (2026-07-26) — Alert viewer (port 3000) classification fix
+
+The Suricata alert viewer displayed alerts but tagged every one as tier "unknown"
+and technique "unknown", defeating its purpose (colour-coding by detection tier
+and mapping each alert to its ATT&CK technique).
+
+**Root cause.** The viewer's `_classify()` regexes had drifted from the signature
+format the detection rules actually emit. Rules produce, e.g.,
+`ICSForge LAB-MARKER T0801 Monitor Process State [Modbus/TCP] …`, but the viewer
+looked for a lowercase-underscore tier (`lab_marker`) and expected the technique
+in brackets (`[T0801]`) — whereas the brackets hold the *protocol* and the
+technique is a bare token after an UPPERCASE hyphenated tier label. Nothing
+matched, so every alert fell through to "unknown".
+
+**Fixes:**
+- `_TIER_RE` now matches the real labels (`LAB-MARKER`, `HEURISTIC`, `SEMANTIC`,
+  `OPERATION`), and tier normalisation handles the hyphen/uppercase form.
+- `_TECH_RE` now matches the bare `T####` (and `T####.###` sub-technique) token,
+  not a bracketed one.
+- Verified end to end: generated a scenario PCAP, exported rules, ran it through
+  Suricata 7 (435 alerts), and confirmed the viewer classifies them correctly
+  (0 unknown tiers; tiers split lab/semantic; 14 distinct techniques extracted).
+
+**Note.** The viewer only ever shows what Suricata writes to its `eve.json`. If it
+shows nothing at all (not just "unknown"), the upstream chain isn't feeding it:
+Suricata must be running with the ICSForge rules loaded, watching the interface
+the traffic crosses, and writing to the `eve.json` the viewer tails
+(`--eve-path` / `ICSFORGE_EVE_PATH`). For a self-contained run without the docker
+stack, `icsforge viewer replay <pcap>` generates rules, runs Suricata, and serves
+the results. The viewer's `/api/health` reports `status`, `eve_path`, and
+`lines_read` to diagnose a silent feed.
+
+### Tests
+- Updated `test_viewer.py` fixtures to the REAL Suricata signature format (they had
+  asserted a made-up format that no longer matched production, which is why the bug
+  slipped through). Confirmed the tier-classification test now fails against the old
+  regex and passes with the fix. 484 passed / 26 skipped, ruff clean, drift in sync.
+
+## v0.77.20 (2026-07-25) — Web UI functional audit fixes
+
+A full functional sweep of all 76 web routes (not just page rendering) surfaced two
+real defects, both fixed:
+
+- **Receiver-mode traffic blocking was incomplete.** Only `/api/send` refused to
+  emit traffic in receiver mode; `/api/technique/send` (matrix fire),
+  `/api/campaigns/run`, `/api/generate_offline`, `/api/pcap/replay`, and
+  `/api/net_validate_custom` were all still reachable, so a receiver appliance
+  could be driven to send via a direct API call even though the pages redirect.
+  All traffic-generating endpoints are now blocked (403) in receiver mode via a
+  central guard, while remaining fully functional in sender mode.
+- **DELETE /api/receiver/expect auth was inconsistent** with the POST endpoint.
+  The v0.77.19 trusted-network fallback was applied to the announce (POST) but not
+  the clear (DELETE), which still hard-required the callback token — so a two-VM
+  abort/clear with mismatched tokens failed. Both endpoints now share one auth
+  helper: valid token+HMAC OR trusted (private/loopback) network; untrusted
+  without a token is rejected.
+
+The remaining routes (25 GET data endpoints, config save/read round-trips, PCAP
+upload→peek chain, report generation, run tag/rename, detections preview/export,
+config test buttons) were exercised and behave correctly, including graceful
+validation errors on bad input.
+
+### Tests
+- New `TestReceiverModeSendBlocking` (2) and `TestExpectClearAuthConsistency` (2).
+  508 passed / 2 skipped, ruff clean, drift in sync.
+
+## v0.77.19 (2026-07-14) — Cross-host expectation announce (two-VM attribution)
+
+Fixes receiver run_id/technique attribution in the **correct two-VM topology**
+(sender on one host, receiver on another — the deployment for testing firewalls,
+ACLs, and mirroring OT NSM sensors). v0.77.18's in-process fallback only helped a
+single-host demo; it did nothing for a real receiver on a separate VM.
+
+**Root cause.** The sender announces each upcoming run to the receiver's
+`/api/receiver/expect` endpoint so the receiver can bind covert-marker / markerless
+traffic (s7comm, IEC-104, …) to a run_id + technique. That endpoint required the
+shared callback token + HMAC when a token was configured on the receiver. If the
+two VMs' callback tokens didn't match (or the sender had none), the announce was
+**hard-401'd and silently dropped** — so the receiver held no expectation, every
+captured packet was recorded with empty run_id/technique, "Active runs" stayed 0,
+and "Techniques seen" wedged at 1.
+
+**Fixes:**
+- `/api/receiver/expect` now accepts an announce when EITHER a valid token+HMAC is
+  supplied OR the request comes from a trusted (private/loopback/link-local)
+  network — logging a clear warning in the token-mismatch case. Announces from
+  untrusted (public) networks without a valid token are still rejected. The real
+  anti-forgery guarantee remains the keyed covert HMAC marker verified on the
+  traffic itself; the announce only says "traffic for run X is coming".
+- `announce_expectation` now returns an explicit `{announced: true/false, error}`
+  status instead of failing silently, and `api_send` surfaces a **warning** in the
+  send response when the announce didn't reach the receiver ("receiver may show
+  empty run_id/technique — check receiver IP/port and callback token") so the
+  operator isn't left guessing.
+
+Verified: an announce from a private-network sender without a matching token is
+accepted and the expectation registers (so cross-host s7comm traffic attributes);
+a public-network announce without a token is rejected; a valid token+HMAC is
+accepted from anywhere.
+
+### Tests
+- New `TestCrossHostAnnounce` (4); updated the markerless expect-endpoint auth
+  tests for the trusted-network fallback. 505 passed / 2 skipped, ruff clean,
+  drift in sync.
+
+**Deployment note.** For authenticated cross-host announces, set the SAME callback
+token on both the sender and receiver. If they differ, attribution still works on a
+private network (with a logged warning) but the announce is unauthenticated.
+
+## v0.77.18 (2026-07-14) — Receiver attribution fix (run_id/technique, active runs, techniques-seen)
+
+Fixes the receiver showing every receipt with an empty technique ("-") and run_id
+("—"), "Active runs" stuck at 0, and "Techniques seen" wedged at 1 — while packet
+and protocol counts worked fine.
+
+**Root cause.** run_id/technique attribution depends on the receiver holding an
+*expectation* for the run (covert markers and markerless protocols like s7comm/
+IEC-104 carry no plaintext run_id — by design, the covert marker is a keyed HMAC,
+not a reversible id). The sender announced expectations over HTTP to the receiver
+port (default 9090), but if the receiver's web app was served on another port
+(e.g. 8080), the announce reached nothing, no expectation registered, and every
+captured packet was recorded unattributed. The counters then followed: empty
+technique on every receipt collapsed "Techniques seen" to a single bucket, and
+empty run_id left "Active runs" at 0.
+
+**Fixes:**
+- `announce_expectation` now ALSO registers the expectation in the shared
+  in-process registry, so when the receiver capture runs in the same process as
+  the sender (a common demo topology) attribution works regardless of whether the
+  remote HTTP announce reaches the right port.
+- `_match_expectation` now attributes to the **most recently registered** matching
+  expectation (LIFO), not the oldest — fresh traffic belongs to the current run,
+  not a stale still-within-TTL one. Backed by a monotonic registration sequence.
+- The receiver overview no longer counts empty techniques toward "Techniques seen"
+  (so an unattributed receipt can't wedge it at 1), and "Active runs" now includes
+  live in-flight expectations, not just run_ids already present in receipts.
+
+Verified: an s7comm covert-marker packet now resolves to its run_id + technique
+via the local expectation; distinct techniques count separately; active runs
+reflects in-flight runs.
+
+### Tests
+- New `TestReceiverAttributionRobustness` (3). 500 passed / 2 skipped, ruff clean,
+  drift in sync.
+
+**Deployment note.** For a two-machine setup, still point the sender's "Receiver
+Port" at the port the receiver's web app actually serves so the remote announce
+(and the richer cross-host attribution) works; the in-process fallback covers the
+single-host demo.
+
+## v0.77.17 (2026-07-14) — Live statistics + campaign phasing fixes
+
+Two conference-critical bugs in the live demo path.
+
+### Live statistics (sender live feed + receiver counters)
+Root cause was architectural, not cosmetic: the sender put packets on the wire but
+**never self-reported delivery** — receipts came only from a separate
+packet-capturing receiver process. In a demo, or when firing at a firewall/sink
+with no listener, the TCP connect is refused, the sent count is 0, no receipt is
+ever generated, and every counter — "packets received", "active runs", techniques
+and protocols seen, on both the receiver page and the sender's live feed — sat at
+0. This is why the live statistics kept appearing broken.
+
+Fix:
+- `send_scenario_live` now tracks **attempted emissions** (payloads put on the wire
+  toward the target) as the basis for "Delivered" — independent of whether the
+  target's TCP stack accepts the connection, which is exactly what an on-path
+  firewall/NSM observes. It returns a per-`(technique, proto)` delivery breakdown.
+- New `report_delivery()` posts one delivery receipt per step to the same
+  `/api/receiver/callback` the external receiver uses (same token/HMAC auth,
+  tagged `attributed_via="delivery"`), with a loopback fallback so a single-process
+  demo works. `api_send` calls it after each send; the callback now accepts
+  delivery receipts.
+- Verified end-to-end: a delivery receipt moves the overview counters, and a
+  T0855 modbus run reports 29 emitted frames even when the TCP connect is refused.
+
+### Campaign phasing not visible
+The v0.77.16 campaigns redesign rebuilt the step list via `innerHTML`, but those
+step rows were emitted **without `id="step_row_N"`** — the exact ids the SSE
+progress handler calls `getElementById` on to mark each step active/done and to
+surface the between-step dwell. So although the backend runner was correctly
+pacing steps (verified: 10s/10s/10s/15s dwell on sensor_spoofing), nothing updated
+on screen and the campaign looked like it ran with no phases. Both step renderers
+(campaign and chain) now assign `step_row_${i+1}`, and the delay phase visibly
+marks the upcoming step as "waiting" with a pulse animation and a countdown status.
+
+### Tests
+- New `TestDeliverySelfReport` (2) and `TestCampaignPhasingUI` (2). 497 passed /
+  2 skipped, ruff clean, drift in sync.
+
+## v0.77.16 (2026-07-13) — Sender/receiver UI fixes
+
+Five UI/UX and data-flow bugs across the sender, receiver, and matrix.
+
+### Live receiver feed + receiver counters (root cause: marker run_id resolution)
+The explicit compact `ICSF` marker carries only an 8-char run hash, and Path 1 of
+the receiver's `_parse_marker` returned `marker_found=True` but **empty run_id and
+technique** — so the sender's live receiver feed showed nothing after a run, the
+receiver's "Active runs" counter stayed 0, and live receipts had no run_id / run
+details. Path 1 now resolves run_id + technique from the active expectation
+registry (as the covert and expectation paths already did). Fixes both the sender
+live-feed and receiver-counter reports in one change.
+
+### Scenario ordering (sender)
+The sender scenario list started with Attack Chains (plain alphabetical sort put
+`CHAIN__…` first). Groups are now returned in ATT&CK-for-ICS matrix tactic order
+with **Attack Chains last**.
+
+### Attack Chains moved sender → campaigns
+The Attack Chains quick-launch box is removed from the sender page (it forced
+scrolling past a large box to reach the scenario workflow) and now lives on the
+Campaigns page, where multi-step sequences are more relevant.
+
+### Campaigns page redesign
+Replaced the `400px 1fr` two-column layout (a tall narrow left rail that required
+heavy scrolling) with a full-width **selector zone** — campaigns and chains as a
+responsive card grid — above the detail/run panel.
+
+### v19 matrix empty parent tiles
+In ATT&CK v19 several v18 techniques became sub-techniques of a new parent
+(Unauthorized Message T1692 ⊃ T0855/T0856; Block OT Message T1691 ⊃ T0803/T0804;
+Block Communications T1695 ⊃ T0805). The parent tiles showed empty because
+scenarios are annotated on the specific child IDs. The variants endpoint now
+**rolls sub-technique coverage up to the parent**, so those tiles surface their
+children's variants (T1692→27, T1691→22, T1695→2). The 9 remaining empty tiles are
+legitimately non-network techniques (Spearphishing, Drive-by, Hooking, System
+Binary Proxy, Screen Capture, Removable Media, Wi-Fi, Damage to Property) that an
+OT traffic generator cannot represent.
+
+### Tests
+- New `TestMarkerRunIdResolution` (2) and `TestWebUIFixes` (5). 493 passed /
+  2 skipped, ruff clean, drift in sync.
+
+## v0.77.15 (2026-07-11) — Temporal dynamics (per-protocol timing + GOOSE cadence)
+
+Offline PCAPs now carry realistic per-protocol / per-step timing instead of a
+single flat 50 ms cadence for every capture — the temporal texture anomaly-based
+NSMs (Dragos, Nozomi) baseline on.
+
+- **Per-step timing schedule**: the engine records each step's
+  `(n_packets, interval, protocol)` and hands it to `write_pcap`, which spaces
+  packets by the step's real interval — or, when a step gives none, by a
+  per-protocol default cadence (`_PROTO_BASE_MS`: GOOSE ~4 ms, Modbus/DNP3
+  ~200 ms, MQTT ~500 ms, …) — all with ±30 % jitter. Falls back to the legacy
+  flat cadence when no schedule is supplied, so nothing else changes.
+- **GOOSE retransmission cadence**: iec61850 steps now model the real publisher
+  rhythm — after a state change the inter-frame gap doubles (1→2→4→8… ms) up to a
+  steady heartbeat, while `sqNum` increments 0,1,2,… within the state and `stNum`
+  stays fixed. Verified in PCAP: gaps follow the doubling curve; sqNum resets on
+  the next state change. This is the single most distinctive signature an OT
+  anomaly sensor keys on, and flat traffic never reproduced it.
+- **Sequence continuity** confirmed across protocols (IEC-104 tx-seq, DNP3 app
+  seq, S7 PDU ref, Modbus TID, OPC UA sequence) — each increments coherently
+  within a session.
+
+### Tests
+- New `TestTemporalDynamics` (4): GOOSE doubling cadence, sqNum increment,
+  per-protocol timing differs, write_pcap honours an explicit schedule.
+- 486 passed / 2 skipped, ruff clean, drift in sync. No regression in the
+  structural PCAP validator (timestamps remain monotonic).
+
+## v0.77.14 (2026-07-11) — CI protocol-dissection regression gate
+
+Wired the generate→dissect→assert-protocol harness into CI so "every scenario
+dissects as its declared protocol" is enforced on every push — catching a builder
+change that silently produces bytes a third-party dissector (tshark) no longer
+recognises as the intended protocol, even when the packet is otherwise well-formed
+and on the right port.
+
+- New `validate_protocol_layer()` in `scripts/validate_pcaps.py` maps each ICSForge
+  protocol to its Wireshark dissector filter and asserts ≥1 frame dissects as that
+  layer. Exposed via `--protocol-assert` (implies `--tshark`).
+- CI (`.github/workflows/ci.yml`) installs tshark and runs the full
+  `--protocol-assert` gate on the 3.12 job.
+- New `TestProtocolDissectionGate` pytest mirror (one scenario per IP protocol),
+  auto-skipped when tshark is absent — fast local feedback without CI.
+- Fixed two pre-existing L2 false positives in the validator: GOOSE (iec61850) is
+  now validated with lenient malformed-flag handling (tshark is over-strict on
+  synthetic GOOSE APDUs though the frames are valid), and iec61850 is treated as
+  L2 for the IP port/proto check (its first frame may be raw L2).
+
+Verified: 45 scenarios across all 9 IP protocols + quick-mode 25/25 pass the gate.
+482 passed / 2 skipped, ruff clean, drift in sync.
+
+## v0.77.13 (2026-07-11) — Commercial-sensor PCAP validation kit
+
+New `icsforge export-pcap-suite` command: batch-exports every scenario as a
+labelled PCAP plus a `manifest.csv` mapping each file to its ATT&CK technique,
+tactic, protocol, confidence and title. Produces an offline validation kit for
+commercial ICS sensors (Microsoft Defender for IoT, Nozomi, Claroty, Dragos):
+import the `pcaps/` directory into a sensor's offline/replay mode and use the
+manifest as ground truth for what each capture should trigger.
+
+Verified: exports all 611 standalone scenarios (10 protocols, 76 techniques,
+~5 MB) with zero failures; stateful sessions by default (`--profile nsm`), with
+`--profile firewall` / `--no-stateful` for single-frame traffic and `--technique`
+to filter. A self-describing README.txt ships in the kit.
+
+This is the highest-value Black Hat Arsenal deliverable for demonstrating ICSForge
+against vendor sensors — vendor-branded detection screenshots become a repeatable,
+manifest-backed exercise instead of a manual one.
+
+### Tests
+- New `TestExportPcapSuite`: PCAPs + manifest written, one manifest row per PCAP,
+  all rows labelled and their referenced files present. 481 passed / 2 skipped.
+
+## v0.77.12 (2026-07-11) — IEC-104 rate-based flood detection + OPC UA HEL prologue
+
+Two more backlog items from the third-party NSM audits.
+
+### IEC-104 U-format flood/block rate detection
+
+STARTDT/STOPDT/TESTFR are U-format frames (`68 04 …`) with no ASDU type ID, so
+the content-keyed semantic generator could not attribute them — and a plain
+content match can't tell a 2-frame session *setup* from a 60-frame *flood*
+(byte-identical). The only correct signature is **rate**. Added 5 operation-tier
+rules using Suricata `detection_filter:track by_src, count N, seconds T` for the
+control-frame flood/block techniques: T0814 (DoS), T0813 (Denial of Control),
+T0829 (Loss of View), T0881 (Service Stop), T0804 (Block Reporting).
+
+Verified in Suricata: a T0814 flood (60 STARTDT frames) fires the rate rule; a
+T0831 setpoint scenario (2 STARTDT setup frames) fires **nothing** — attribution
+of the flood without false-positiving on normal session setup. This closes the
+one detection gap that content rules structurally could not.
+
+Operation ruleset: 76 → 81 rules.
+
+### OPC UA HEL transport prologue for channel-opening scenarios
+
+The session-prologue mechanism (v0.77.10) prepended HEL+OPN for data-first OPC UA
+scenarios, but scenarios that opened with OpenSecureChannel (browse, get_endpoints)
+started at OPN with no HEL. OPC UA requires HEL (transport Hello) before
+everything. The prologue now prepends HEL alone for channel-opening scenarios
+(keeping their own OPN, no double-OPN) and the full HEL+OPN for data-first ones.
+Verified: browse now emits HEL→OPN→MSG; write emits HEL→OPN→MSG.
+
+### Tests
+- New `TestIEC104RateRules` (rate rules present, use detection_filter + dsize:6);
+  OPC UA HEL prologue tests (data-first and channel-opening).
+- Operation count assertion 76 → 81. 480 passed / 2 skipped, ruff clean, drift in sync.
+
+## v0.77.11 (2026-07-11) — Operation-level alerting + discovery/curation improvements
+
+Three backlog items from the third-party NSM audits, all improving detection
+*optics and precision* without changing traffic correctness.
+
+### Operation-level alerting (shared-primitive consolidation)
+
+New `icsforge_operation.rules` output. Where several ATT&CK techniques share the
+same protocol operation (e.g. 14 techniques all manifest as a Modbus write
+FC06/16), a stateless content rule cannot tell them apart — so one action
+previously fired N per-technique alerts ("30 alerts for one run"). The operation
+ruleset consolidates the 261 per-technique semantic rules into **76 operation
+rules**: one per distinct protocol operation, whose msg names the operation and
+whose `mitre_techniques` metadata lists every candidate technique. This matches
+how mature ICS detection reports ("unauthorized Modbus write") and leaves
+technique attribution to an analyst with asset context.
+
+Measured: a T0855 Modbus run drops from **39 distinct alert types to 8** (one per
+real operation). The per-technique semantic ruleset is unchanged and still
+shipped — the operation ruleset is an additional deployment option.
+
+### Modbus T0846 register sweep
+
+Added a `register_sweep` style (FC03 walking the holding-register address space)
+and a step in the T0846 Remote System Discovery scenario. Previously T0846
+fingerprinted only via device-ID / exception-status; it now also emits the
+register address-sweep that NSM enumeration rules watch for — the fuller Modbus
+discovery signature reviewers expect.
+
+### Residual recon-read curation
+
+Added `list_identity`, `interrogation`, `read_all_dbs` to the recon-read
+suppression set (semantic 269 → 261). These general/broadcast probes were
+over-attributing to non-observation techniques; they remain attributing for
+genuinely read-based techniques via the existing `_READ_BASED_TECHNIQUES` gate.
+Deliberately excluded: `dos_read` (the DoS signature for T0814) and
+`broadcast_operate` (an actuation, not a read).
+
+### Tests / docs
+- New `TestOperationLevelRules`; rule-count assertions updated (semantic 261,
+  operation 76); MITRE_ALIGNMENT rule totals updated; audit-style classifier
+  extended for `register_sweep`.
+- 476 passed / 2 skipped, ruff clean, drift in sync.
+
+## v0.77.10 (2026-07-10) — Session-opener prologues for stateful protocols
+
+Stateful scenarios now open their protocol session realistically. Session-based
+ICS protocols require an opener exchange before any data/command frame — a real
+device rejects data sent before the session is established, and session-aware
+NSMs (Dragos, Nozomi, Zeek session tracking) baseline the opener. An audit found
+that a large fraction of scenarios started mid-session, and for MQTT/ENIP the
+traffic was actually protocol-invalid (a broker/PLC would reject it).
+
+The engine now prepends the required opener once per stateful scenario, on the
+first flow, when the scenario doesn't already begin with it:
+
+- **IEC-104** — STARTDT act (U-format) before data (IEC 60870-5-104 §5.3)
+- **S7comm** — COTP Connection Request (TPDU 0xE0) then S7 setup-communication
+- **OPC UA** — HEL (Hello) + OpenSecureChannel (OPN) before MSG service calls
+- **EtherNet/IP** — RegisterSession before SendRRData/UnitData explicit messaging
+- **MQTT** — CONNECT before PUBLISH/SUBSCRIBE
+
+Gated to **stateful mode only** — firewall/ACL (unidirectional boundary) testing
+deliberately keeps single-frame behaviour, so the prologue never leaks into that
+profile. Single engine-level mechanism (`_session_prologue_payloads`), applied
+per protocol, using the existing builders (no new payload code).
+
+### Measured third-party impact
+
+Re-tested against the independent Emerging Threats SCADA ruleset and Zeek/ICSNPP:
+
+- **IEC-104 third-party detection: 66% → 100%.** All 57 IEC-104 scenarios now
+  fire the independent ET STARTDT rule, because each opens its session as a real
+  IEC-104 client would. This is a consequence of correct traffic, not rule-tuning.
+- **S7comm** — the third-party ICSNPP `cotp.log` now records the COTP Connection
+  Request (previously absent); the analyzer sees the full COTP session lifecycle.
+- **MQTT/ENIP** — traffic is now protocol-valid (CONNECT / RegisterSession
+  present); a real broker/PLC would accept it.
+
+### Known limitation (documented, not a defect)
+
+Zeek's MQTT analyzer still produces no log: it requires the server's CONNACK
+response, and ICSForge models the attacker (client) side only. The client-side
+bytes are valid MQTT (tshark confirms CONNECT + PUBLISH). This is inherent to
+attack-traffic generation, not a traffic error.
+
+### Tests
+- New `TestSessionPrologue` (5 tests): IEC-104/MQTT/ENIP/S7comm openers present in
+  stateful mode; prologue absent in firewall mode.
+- 474 passed / 2 skipped, ruff clean, drift in sync.
+
+## v0.77.9 (2026-07-09) — Matrix stateful-by-default + semantic recon-read attribution fix
+
+Two changes, both grounded in live NSM testing (scenarios replayed through
+Suricata 7.0.3 with ICSForge's own rules and the third-party Emerging Threats
+SCADA ruleset).
+
+### Matrix tile-fire now defaults to the NSM (stateful) profile
+
+The matrix is a sensor-coverage view — "does my NSM detect this technique?" — so
+firing a tile now defaults to the **nsm** profile, completing the TCP handshake
+(stateful) so stream-tracking sensors engage. Previously it defaulted to the
+firewall profile (unidirectional), which meant flow-stateful NSM rules (anything
+with `flow:established`) never evaluated the traffic — a first NSM test could
+silently produce zero alerts. A **Test profile** selector was added to the matrix
+send modal (NSM stateful ⟷ Firewall/ACL unidirectional); an explicit `stateful`
+or `test_profile` in the request still wins. Stateful correctly applies only to
+TCP protocols — UDP (BACnet) and L2 (GOOSE, PROFINET) are unaffected.
+
+### Semantic detection tier: recon-read attribution fix
+
+Live Suricata testing showed a single scenario firing 200+ alerts across 20+
+techniques, almost all on shared recon reads ("Read Holding Registers"). Root
+cause: the semantic-rule generator emitted a technique-attributing rule for
+**every** style including generic recon/read styles that many techniques include
+as a baseline step. The generator now suppresses semantic rules for recon/read
+styles unless the technique is genuinely observation/discovery-based (Monitor,
+Collection, Discovery, Point&Tag ID, I/O Image). This removes the mass
+mis-attribution and makes the correct technique the dominant alert.
+
+- Semantic rules: **357 → 269** (fewer, more precise — 88 false-attribution read
+  rules removed). Lab (210) and heuristic (239) tiers unchanged. Total 806 → 718.
+- A residual set of protocol-specific read/probe styles (dos_read, list_identity,
+  interrogation, …) still needs per-style curation — tracked in the backlog.
+
+Note: multiple actuation techniques legitimately share a write primitive (14
+techniques use Modbus FC06/16) — that ambiguity is fundamental to network-only
+ICS detection and is *not* addressed by this fix; it is documented as a framing
+point (attribute to the operation class, not a single technique).
+
+### Tests / docs
+- New regression test: matrix tile-fire defaults to stateful (SYN handshake
+  present) and firewall profile stays unidirectional.
+- Rule-count assertions updated to 269 semantic; MITRE_ALIGNMENT rule total
+  updated to 718; USER_MANUAL documents the matrix stateful default.
+- 469 passed / 2 skipped, ruff clean, drift in sync.
+
+## v0.77.8 (2026-06-28) — Consistent 76-vs-77 technique labelling
+
+The 76 / 77 technique figures were both correct but inconsistently *labelled*,
+making the docs read as if they disagreed. Standardised the wording everywhere;
+no coverage or behaviour change.
+
+The distinction, stated once: **76** = techniques with a standalone runnable
+scenario (the denominator for per-protocol and per-scenario counts); **77** =
+total ATT&CK techniques represented = the 76 standalone **+ T0879 "Damage to
+Property"**, which has no standalone scenario and is exercised only via the
+`CHAIN__damage_to_property__substation` chain.
+
+### Fixed (labelling)
+
+* **README** — the Key Numbers row said "77 unique technique IDs *in scenario
+  steps*", which was inaccurate (T0879 is not in any standalone step). Reworded
+  to "76 standalone + T0879 (chain objective) = 77 total represented". The intro
+  paragraph's first "77" now carries the same parenthetical, and the
+  Protocol-Coverage table (which counts "of 76") has an explicit note explaining
+  why it differs from the headline 77.
+* **`scripts/v19_coverage.py`** — the drift checker printed "v18 standalone: 77 /
+  83", mislabelling the total as standalone. Now prints "v18 techniques: 77 / 83
+  (76 standalone + T0879 via chain)". This is the authoritative figure source, so
+  the fix stops the mislabel propagating.
+* **MITRE_V19_CROSSWALK.md** — the coverage table and explanation called 77 "v18
+  standalone"; corrected to "v18 techniques covered (76 standalone + T0879 via
+  chain)".
+* MITRE_ALIGNMENT.md already carried the correct "76 standalone + T0879 = 77"
+  wording and is unchanged; ROADMAP_V5.md is left as a dated historical record.
+
 ## v0.77.7 (2026-06-28) — Fix: firing v19 sub-technique tiles
 
 ### Fixed

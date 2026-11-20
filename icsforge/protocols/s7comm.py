@@ -211,6 +211,25 @@ def build_payload(marker: str, style: str = "read_var", **kwargs) -> bytes:
                  + filename + b"A")
         s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
 
+    elif style == "online_edit":
+        # Online edit (T0843.002): download a single modified block to the CPU
+        # while it stays in RUN — no preceding cpu_stop. The network-observable
+        # signature is a download_req/block/end for ONE block on a session where
+        # the CPU is never stopped, distinct from Download All (.001, stop-wrapped)
+        # and Program Append (.003, multi-block append). Here we emit the request
+        # for a single online block edit targeting an existing OB/FB.
+        block_num = kwargs.get("block_num", rnd.randint(1, 120))
+        filename = b"_0" + f"{block_num:05d}".encode()
+        # FC Request Download, with the "P" (program) block-type and an in-place
+        # edit flag pattern (running-mode download uses the same FC1A but the
+        # engineering station keeps the CPU in RUN).
+        param = (bytes([FC_REQUEST_DL, 0x00])
+                 + b"\x00\x00"
+                 + b"\x00\x00\x01\x00"
+                 + bytes([len(filename) + 1])
+                 + filename + b"P")
+        s7    = _s7_job_header(pdu_ref, len(param)) + param + mb
+
     elif style == "download_block":
         # Download block data chunk — T0824 Full Program Download
         # Same parameter shape as download_req; chunk follows in data section.

@@ -23,6 +23,89 @@ from icsforge.protocols.common import (
 _SCENARIO_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
+# ── Session prologue (stateful realism) ──────────────────────────────────────
+# Session-based ICS protocols require an opener exchange before any data/command
+# frames: a real device rejects data sent before the session is established, and
+# session-aware NSMs (Dragos, Nozomi, Zeek session tracking) baseline the opener.
+# When a stateful scenario does NOT already begin with its opener, the engine
+# prepends the opener frame(s) once, on the first flow, so the trace reflects a
+# real conversation. Gated to stateful mode only — firewall/ACL (unidirectional)
+# testing deliberately keeps single-frame behaviour.
+#
+# Each entry: proto -> (ordered list of opener build styles, set of styles that
+# ALREADY constitute the opener so we don't double it up).
+_SESSION_PROLOGUE: dict[str, tuple[list[str], frozenset[str]]] = {
+    # IEC-104: U-format STARTDT act must enable data transfer (IEC 60870-5-104 §5.3).
+    "iec104": (["startdt"], frozenset({"startdt", "available", "testfr", "stopdt"})),
+    # S7comm: COTP Connection Request (TPDU 0xE0) then S7 setup-communication.
+    # Note: the S7 'setup' style rides COTP DT and does NOT itself open the COTP
+    # connection, so it must NOT count as already-opened — only a COTP CR does.
+    "s7comm": (["native_cotp", "setup"],
+               frozenset({"native_cotp", "cotp_connect", "connect"})),
+    # OPC UA: HEL (Hello) then OpenSecureChannel (OPN) before any MSG service call.
+    # If the scenario already starts by opening the channel (open_session=OPN,
+    # get_endpoints/find_servers which include their own OPN), don't double it;
+    # otherwise prepend the full HEL+OPN opener.
+    "opcua": (["hello", "open_session"],
+              frozenset({"hello", "open_session", "get_endpoints",
+                         "find_servers", "create_sub"})),
+    # EtherNet/IP: RegisterSession before SendRRData/UnitData explicit messaging.
+    "enip": (["register_session"],
+             frozenset({"register_session", "list_identity", "list_services"})),
+    # MQTT: CONNECT before any PUBLISH/SUBSCRIBE (broker drops otherwise).
+    "mqtt": (["connect"],
+             frozenset({"connect", "connect_anonymous", "connect_creds"})),
+}
+
+
+def _session_prologue_payloads(proto: str, first_style: str) -> list[bytes]:
+    """Return the opener payload frames for a stateful session of ``proto``.
+
+    Empty when the protocol needs no prologue, or when the scenario already
+    opens with its session opener (``first_style`` is one of the opener styles).
+
+    Special case OPC UA: HEL (transport Hello) must precede *everything*,
+    including a scenario that opens with OpenSecureChannel/GetEndpoints. So for
+    OPC UA, if the scenario starts by opening a channel (but not with HEL), we
+    still prepend HEL alone; if it starts data-first we prepend the full HEL+OPN.
+    """
+    spec = _SESSION_PROLOGUE.get(proto)
+    if not spec:
+        return []
+    styles, already = spec
+    from icsforge.protocols import TCP_PROTOS as _tp
+    entry = _tp.get(proto)
+    if not entry:
+        return []
+    builder = entry[1]
+
+    def _build(style_list: list[str]) -> list[bytes]:
+        out: list[bytes] = []
+        for st in style_list:
+            try:
+                out.append(builder(b"", style=st, marker_mode="none"))
+            except Exception:
+                log.debug("session prologue: %s has no '%s' opener style", proto, st)
+        return out
+
+    # OPC UA transport rule: HEL precedes everything. A channel-opening scenario
+    # (open_session / get_endpoints / find_servers / create_sub) supplies its own
+    # OPN, so it only needs HEL prepended — not a second OPN.
+    if proto == "opcua":
+        if first_style == "hello":
+            return []
+        if first_style in {"open_session", "get_endpoints", "find_servers", "create_sub"}:
+            return _build(["hello"])
+        return _build(["hello", "open_session"])
+
+    if first_style in already:
+        return []
+    return _build(styles)
+
+
+
+
+
 def load_scenarios(scenario_path: str) -> dict[str, Any]:
     # Use libyaml's C loader when available — it parses the ~700 KB scenarios
     # file roughly 8x faster than the pure-Python SafeLoader (≈0.2s vs ≈1.5s),
@@ -164,6 +247,12 @@ def run_scenario(
     _modbus_tid:  int = _rnd_eng.randint(0, 0xFFFF)        # Modbus transaction ID
     _bacnet_inv:  int = _rnd_eng.randint(0, 255)           # BACnet invoke ID
     _pkt_index:   int = 0                                  # global packet index (covert marker HMAC input)
+    _session_prologue_done: bool = False                   # inject opener once per scenario (stateful)
+    # Per-step timing schedule: (n_packets_added, interval_seconds, proto). Lets
+    # write_pcap reproduce realistic per-protocol/per-step inter-packet timing in
+    # the offline PCAP instead of a flat global cadence — what anomaly NSMs
+    # (Dragos, Nozomi) baseline on. Captured as each step appends its packets.
+    _pkt_schedule: list[tuple[int, float, str]] = []
 
     with open(events_path, "w", encoding="utf-8") as ef:
         for idx, step in enumerate((sc.get("steps") or []), start=1):
@@ -202,6 +291,7 @@ def run_scenario(
 
             # Build PCAP packets (optional) — after events are safely written
             pcap_step = (stype == "pcap") or (stype == "packet" and bool(step.get("pcap")))
+            _pkt_count_before = len(packets)
             if build_pcap and pcap_step:
                 if proto == "profinet_dcp":
                     for _ in range(count):
@@ -218,14 +308,35 @@ def run_scenario(
                         if interval and not skip_intervals:
                             time.sleep(interval)
                 elif proto == "iec61850":
-                    for _ in range(count):
+                    # GOOSE retransmission cadence: after a state change a publisher
+                    # bursts fast then backs off — sqNum increments 0,1,2,… within a
+                    # state while the inter-frame gap doubles 1→2→4→8ms up to a
+                    # steady heartbeat (~1s). stNum stays fixed within the state.
+                    # This is the distinctive rhythm anomaly NSMs baseline; a flat
+                    # interval would look nothing like real GOOSE. Each frame gets
+                    # its own schedule entry so write_pcap reproduces the curve.
+                    _steady_ms = 1000.0
+                    if interval and interval > 0:
+                        _steady_ms = interval * 1000.0
+                    _base_st = int(options.get("st_num", _rnd_eng.randint(1, 50)))
+                    for _k in range(count):
                         marker = b'' if no_marker else build_marker(run_id, tech, step_id)
+                        _g_opts = {**options}
+                        # sqNum increments within the state; stNum fixed for this step.
+                        _g_opts.setdefault("st_num", _base_st)
+                        _g_opts["sq_num"] = _k
                         # iec61850.build_payload returns a complete Ethernet frame
                         # (GOOSE: EtherType 0x88B8, GOOSE multicast DST)
-                        pkt = iec61850.build_payload(marker, style=style, **options)
+                        pkt = iec61850.build_payload(marker, style=style, **_g_opts)
                         packets.append(pkt)
-                        if interval and not skip_intervals:
-                            time.sleep(interval)
+                        # doubling backoff 1,2,4,8,… ms capped at the steady heartbeat
+                        _gap_ms = min(1.0 * (2 ** _k), _steady_ms)
+                        _pkt_schedule.append((1, _gap_ms / 1000.0, "iec61850"))
+                        if not skip_intervals:
+                            time.sleep(_gap_ms / 1000.0)
+                    # already recorded per-frame schedule entries above; prevent the
+                    # step-level recorder below from double-counting these packets.
+                    _pkt_count_before = len(packets)
                 else:
                     pb = PROTO_PAYLOADS.get(proto)
                     upb = UDP_PAYLOADS.get(proto)
@@ -246,6 +357,15 @@ def run_scenario(
                                             client_isn=_tcp_seq,
                                             dst_mac=_dst_mac_bytes, proto=proto)
                             packets.extend(_flow.handshake())
+                            # Session prologue: prepend the protocol's opener
+                            # (STARTDT / COTP-CR+setup / HEL+OPN / RegisterSession
+                            # / CONNECT) once, on the first flow, when the scenario
+                            # doesn't already start with it — so stateful traces
+                            # reflect a real, device-acceptable session.
+                            if not _session_prologue_done:
+                                for _op in _session_prologue_payloads(proto, style):
+                                    packets.extend(_flow.client_data(_op))
+                                _session_prologue_done = True
                             _tcp_sport = 49152 + ((_tcp_sport - 49152 + 1) % 16383)
                         for _ in range(count):
                             marker = b'' if no_marker else build_marker(run_id, tech, step_id)
@@ -311,7 +431,12 @@ def run_scenario(
                             if interval and not skip_intervals:
                                 time.sleep(interval)
 
+            # Record this step's contribution to the timing schedule.
+            _added = len(packets) - _pkt_count_before
+            if _added > 0:
+                _pkt_schedule.append((_added, interval, proto or ""))
+
     if build_pcap and packets:
-        write_pcap(packets, pcap_path)
+        write_pcap(packets, pcap_path, schedule=_pkt_schedule)
 
     return {"run_id": (run_id or "offline"), "events": events_path, "pcap": pcap_path if (build_pcap and packets) else None}

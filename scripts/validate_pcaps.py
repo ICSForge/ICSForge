@@ -74,8 +74,47 @@ def validate_pcap_struct(pcap_path):
     return errors, pkt_count, timestamps
 
 
-def validate_pcap_tshark(pcap_path, verbose=False):
-    """Run tshark to validate PCAP dissection."""
+def validate_protocol_layer(pcap_path, proto):
+    """Assert tshark dissects the scenario's DECLARED protocol layer.
+
+    This is the regression gate: a builder change that silently produces bytes
+    tshark no longer recognises as (e.g.) modbus is caught here, even if the
+    packet is otherwise well-formed and on the right port.
+    """
+    PROTO_FILTER = {
+        "modbus": "modbus", "dnp3": "dnp3", "s7comm": "s7comm || cotp",
+        "iec104": "iec60870_104 || iec60870_asdu", "opcua": "opcua",
+        "enip": "enip || cip", "mqtt": "mqtt", "bacnet": "bacnet",
+        "iec61850": "goose", "profinet_dcp": "pn_dcp",
+    }
+    filt = PROTO_FILTER.get(proto)
+    if not filt:
+        return [f"no dissector filter mapping for proto '{proto}'"]
+    try:
+        result = subprocess.run(
+            ["tshark", "-r", pcap_path, "-Y", filt, "-T", "fields", "-e", "frame.number"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            return [f"tshark dissect error: {result.stderr.strip()[:160]}"]
+        n = len([ln for ln in result.stdout.splitlines() if ln.strip()])
+        if n == 0:
+            return [f"NO frames dissected as '{proto}' (filter: {filt})"]
+        return []
+    except FileNotFoundError:
+        return ["tshark not found"]
+    except subprocess.TimeoutExpired:
+        return ["tshark timed out"]
+
+
+def validate_pcap_tshark(pcap_path, verbose=False, lenient_malformed=False):
+    """Run tshark to validate PCAP dissection.
+
+    ``lenient_malformed`` suppresses the per-packet MALFORMED flag, used for L2
+    GOOSE where tshark is over-strict on synthetic APDUs whose frames are
+    otherwise valid (ethertype 0x88b8, dissected as goose) — a tshark artifact,
+    not a traffic defect.
+    """
     errors = []
     try:
         result = subprocess.run(
@@ -102,7 +141,7 @@ def validate_pcap_tshark(pcap_path, verbose=False):
                 "udp_dst": fields[4] if len(fields) > 4 else "",
                 "malformed": fields[5] if len(fields) > 5 else "",
             }
-            if pkt["malformed"]:
+            if pkt["malformed"] and not lenient_malformed:
                 errors.append(f"Packet {pkt['frame']}: MALFORMED")
             packets.append(pkt)
 
@@ -126,7 +165,12 @@ def main():
     ap.add_argument("--scenario", default=None, help="Test only this scenario name")
     ap.add_argument("--quick", action="store_true",
                     help="Test one scenario per protocol + all CHAINs (fast representative check)")
+    ap.add_argument("--protocol-assert", action="store_true",
+                    help="Assert tshark dissects each scenario's DECLARED protocol layer "
+                         "(regression gate; implies --tshark)")
     args = ap.parse_args()
+    if args.protocol_assert:
+        args.tshark = True
 
     from icsforge.scenarios.engine import load_scenarios, run_scenario
 
@@ -153,11 +197,15 @@ def main():
                 quick[k] = v
         scenarios = quick
 
-    # Skip PROFINET (L2 only) and chains with mixed L2+TCP
+    # Fully skip pure-PROFINET (no tshark dissector mapping we assert on here).
+    # GOOSE (iec61850) IS validated (tshark dissects it), but like all L2 it
+    # skips the IP port/proto check since its first frame may be raw L2.
+    _L2 = {"profinet_dcp", "iec61850"}
     skip_l2 = {k for k, v in scenarios.items()
-               if all(s.get("proto") == "profinet_dcp" for s in v.get("steps", []))}
+               if v.get("steps") and all(s.get("proto") == "profinet_dcp"
+                                          for s in v.get("steps", []))}
     has_l2 = {k for k, v in scenarios.items()
-              if any(s.get("proto") == "profinet_dcp" for s in v.get("steps", []))}
+              if any(s.get("proto") in _L2 for s in v.get("steps", []))}
 
     total = len(scenarios) - len(skip_l2)
     passed = 0
@@ -232,8 +280,19 @@ def main():
                                 errs.append(f"ip_proto {ip_proto} not in {sorted(all_expected_protos)}")
 
             if use_tshark:
-                tshark_errs, _ = validate_pcap_tshark(pcap, verbose=args.verbose)
+                # GOOSE (iec61850) trips tshark's over-strict malformed flag on
+                # synthetic APDUs though the frames are valid L2 GOOSE; be lenient.
+                _lenient = "iec61850" in protos
+                tshark_errs, _ = validate_pcap_tshark(
+                    pcap, verbose=args.verbose, lenient_malformed=_lenient)
                 errs.extend(tshark_errs)
+
+            # Regression gate: confirm the DECLARED protocol layer actually
+            # dissects. Skip L2 (profinet) which the earlier gate already skips,
+            # and single-proto scenarios only (chains mix layers).
+            if args.protocol_assert and use_tshark and name not in has_l2 and len(protos) == 1:
+                layer_errs = validate_protocol_layer(pcap, proto)
+                errs.extend(layer_errs)
 
             if errs:
                 failed += 1

@@ -168,7 +168,7 @@ def render_table(cov: dict) -> str:
     return (
         "ICSForge MITRE ATT&CK ICS coverage\n"
         "===================================\n\n"
-        f"v18 standalone:        {cov['v18']['covered_count']} / {cov['v18']['total']} = {cov['v18']['pct']}%\n"
+        f"v18 techniques:        {cov['v18']['covered_count']} / {cov['v18']['total']} = {cov['v18']['pct']}%  (76 standalone + T0879 via chain)\n"
         f"v19 standalone:        {cov['v19_standalone']['covered_count']} / {cov['v19_standalone']['total']} = {cov['v19_standalone']['pct']}%\n"
         f"v19 sub-techniques:    {cov['v19_subs']['covered_count']} / {cov['v19_subs']['total']} = {cov['v19_subs']['pct']}%\n"
         f"v19 combined:          {cov['v19_combined']['covered_count']} / {cov['v19_combined']['total']} = {cov['v19_combined']['pct']}%\n"

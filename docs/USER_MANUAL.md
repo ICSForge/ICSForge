@@ -291,7 +291,11 @@ each technique, **traffic witnessed at the sink** + **sensor fired / did NOT fir
   Toggle between **v18.1** and **v19** at the top: v19 shows the sub-techniques
   introduced in the April 2026 release (e.g. Program Download → Download All /
   Online Edit / Program Append), with your covered scenarios mapped forward
-  automatically. Click any runnable tile to fire it.
+  automatically. Click any runnable tile to fire it. Tile-fire defaults to the
+  **NSM (stateful)** profile — the matrix is a sensor-coverage view, so it
+  completes the TCP handshake automatically so stream-tracking NSMs engage.
+  Switch the tile's **Test profile** to Firewall/ACL for a unidirectional
+  boundary test.
 
 ---
 

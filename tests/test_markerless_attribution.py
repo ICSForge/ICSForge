@@ -189,15 +189,21 @@ class TestExpectationEndpoints:
         assert resp.status_code == 400
 
     def test_post_expect_rejects_missing_token(self, client):
+        # A missing token from an UNTRUSTED (public) network is still rejected.
+        # From a trusted (private/loopback) network the announce is accepted with
+        # a warning (v0.77.19): the covert HMAC marker on the traffic is the real
+        # anti-forgery guarantee, and a token mismatch must not silently break
+        # cross-host attribution.
         import icsforge.web.helpers as _h
         if not _h._callback_token:
             pytest.skip("no token configured in this env")
         body = json.dumps({"run_id": "x"}).encode("utf-8")
         resp = client.post("/api/receiver/expect", data=body,
-                           content_type="application/json")
+                           content_type="application/json",
+                           environ_overrides={"REMOTE_ADDR": "8.8.8.8"})
         assert resp.status_code == 401
 
-    def test_post_expect_rejects_bad_hmac(self, client):
+    def test_post_expect_bad_hmac_from_untrusted_rejected(self, client):
         import icsforge.web.helpers as _h
         if not _h._callback_token:
             pytest.skip("no token configured")
@@ -207,8 +213,22 @@ class TestExpectationEndpoints:
                            headers={
                                "X-ICSForge-Callback-Token": _h._callback_token,
                                "X-ICSForge-HMAC": "0" * 64,
-                           })
+                           },
+                           environ_overrides={"REMOTE_ADDR": "8.8.8.8"})
         assert resp.status_code == 401
+
+    def test_post_expect_trusted_network_fallback_accepts(self, client):
+        # Same bad-token request from a private-network peer is accepted (with a
+        # logged warning) so a token mismatch between two VMs doesn't blackout
+        # attribution — the field-reported failure.
+        import icsforge.web.helpers as _h
+        if not _h._callback_token:
+            pytest.skip("no token configured")
+        body = json.dumps({"run_id": "trusted-fallback"}).encode("utf-8")
+        resp = client.post("/api/receiver/expect", data=body,
+                           content_type="application/json",
+                           environ_overrides={"REMOTE_ADDR": "192.168.178.196"})
+        assert resp.status_code == 200
 
     def test_get_expectations_lists_active(self, client):
         _signed_post(client, "/api/receiver/expect", {

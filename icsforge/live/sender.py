@@ -152,6 +152,14 @@ def send_scenario_live(
     if not run_id:
         run_id = generate_run_id()
     sent   = 0
+    attempted = 0  # payloads emitted toward the target (delivery basis: this is
+                   # what an on-path firewall/NSM observes, whether or not the
+                   # target's stack accepts the connection).
+    # Per-(technique, protocol) delivery tally so the caller can self-report an
+    # accurate "Delivered" receipt per step — the sender authoritatively knows
+    # what it put on the wire, which is what Delivered means (distinct from
+    # Detected, which still requires the NSM). Keyed by (technique, proto).
+    delivered: dict[tuple[str, str], int] = {}
     errors = []
     confirmed_techniques: set[str] = set()  # techniques with at least one successful send
     # Monotonic packet index across the whole run, threaded into the covert
@@ -191,7 +199,16 @@ def send_scenario_live(
             _seq["opcua_request_id"]      = (_seq["opcua_request_id"] + 1) & 0xFFFF
         return o
 
+    _prev_step_key: tuple[str, str] | None = None
+    _prev_step_attempted = 0
     for idx, step in enumerate(sc.get("steps", []), start=1):
+        # Flush the previous step's delivered count (handles the branches that
+        # `continue` out of the loop body without a bottom-of-loop hook).
+        if _prev_step_key is not None:
+            _delta = attempted - _prev_step_attempted
+            if _delta > 0:
+                delivered[_prev_step_key] = delivered.get(_prev_step_key, 0) + _delta
+            _prev_step_key = None
         stype = (step.get("type") or "packet").strip().lower()
         if stype not in ("packet", "pcap"):
             continue
@@ -201,6 +218,8 @@ def send_scenario_live(
         style    = step.get("style", "auto")
         count    = int(step.get("count", 1))
         interval = parse_interval(step.get("interval", "0s"))
+        _prev_step_key = (tech or "unknown", proto or "unknown")
+        _prev_step_attempted = attempted
 
         if proto == "profinet_dcp":
             if not iface:
@@ -212,6 +231,7 @@ def send_scenario_live(
                     marker_mode=_marker_mode,
                     run_marker=run_id, pkt_index=_pkt_index[0])
                 _pkt_index[0] += 1
+                attempted += 1
                 try:
                     _send_profinet_dcp(iface, payload)
                     sent += 1
@@ -232,6 +252,7 @@ def send_scenario_live(
                     marker_mode=_marker_mode,
                     run_marker=run_id, pkt_index=_pkt_index[0], **opts)
                 _pkt_index[0] += 1
+                attempted += 1
                 try:
                     _send_iec61850(iface, goose_frame)
                     sent += 1
@@ -252,6 +273,7 @@ def send_scenario_live(
                         marker_mode=_marker_mode,
                         run_marker=run_id, pkt_index=_pkt_index[0], **opts)
                     _pkt_index[0] += 1
+                    attempted += 1
                     try:
                         _tcp_send(dst_ip, port, payload, timeout)
                         sent += 1
@@ -270,6 +292,7 @@ def send_scenario_live(
                         marker_mode=_marker_mode,
                         run_marker=run_id, pkt_index=_pkt_index[0], **opts)
                     _pkt_index[0] += 1
+                    attempted += 1
                     try:
                         _udp_send(dst_ip, port, payload, timeout)
                         sent += 1
@@ -283,7 +306,19 @@ def send_scenario_live(
                 errors.append(f"step {idx}: unsupported proto '{proto}' (skipped)")
                 continue
 
+    # Flush the final step's delivery.
+    if _prev_step_key is not None:
+        _delta = attempted - _prev_step_attempted
+        if _delta > 0:
+            delivered[_prev_step_key] = delivered.get(_prev_step_key, 0) + _delta
+
     result: dict = {"run_id": run_id, "dst_ip": dst_ip, "sent": sent}
+    # Per-(technique, proto) delivery breakdown for self-reported receipts.
+    if delivered:
+        result["delivered"] = [
+            {"technique": t, "proto": p, "count": n}
+            for (t, p), n in delivered.items()
+        ]
     if no_marker and confirmed_techniques:
         result["confirmed_techniques"] = sorted(confirmed_techniques)
     if errors:

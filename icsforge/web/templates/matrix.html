@@ -93,6 +93,13 @@
     <div class="hr"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
       <div class="field">
+        <label>Test profile</label>
+        <select id="m_profile" title="NSM: completes the TCP handshake (stateful) so stream-tracking sensors engage — use this to validate detection. Firewall: unidirectional, tests only whether traffic crosses a boundary/ACL.">
+          <option value="nsm" selected>NSM — sensor test (stateful)</option>
+          <option value="firewall">Firewall — boundary/ACL (unidirectional)</option>
+        </select>
+      </div>
+      <div class="field">
         <label>Destination IP</label>
         <input id="m_dst" placeholder="Receiver IP">
       </div>
@@ -355,7 +362,8 @@ async function sendTech(){
   document.getElementById("m_out").textContent = "Sending…";
 
   const data = await window.postJSON("/api/technique/send", {
-    technique: currentTech.tid, variant, dst_ip, timeout, src_ip, iface, also_build_pcap: also_pcap
+    technique: currentTech.tid, variant, dst_ip, timeout, src_ip, iface, also_build_pcap: also_pcap,
+    test_profile: (document.getElementById("m_profile")||{}).value || "nsm"
   });
   if(data.error){
     document.getElementById("m_out").textContent = data.error;

@@ -22,7 +22,7 @@ the new fine-grained classifications.
 
 | Reading | Number |
 |---|---|
-| v18 standalone techniques covered | **77 of 83** (92.8%) |
+| v18 techniques covered (76 standalone + T0879 via chain) | **77 of 83** (92.8%) |
 | v19 standalone techniques covered | **73 of 79** (92.4%) |
 | v19 sub-techniques covered | **17 of 18** (94.4%) |
 | **v19 combined coverage (standalone + subs)** | **90 of 97** (92.8%) |
@@ -30,7 +30,8 @@ the new fine-grained classifications.
 
 ### Why the v19 standalone count is higher than v18 might suggest
 
-In v18 we cover 77 of 83 = 92.8% of standalone techniques. In v19, 9
+In v18 we cover 77 of 83 = 92.8% of techniques (76 with standalone
+scenarios + T0879 via the damage-to-property chain). In v19, 9
 of those covered v18 IDs became sub-techniques under 5 new parent IDs.
 ICSForge keeps the v18 ID as the primary `technique` field for
 tooling stability, and adds `technique_v19` annotations on each

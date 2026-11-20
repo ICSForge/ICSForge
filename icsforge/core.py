@@ -189,17 +189,59 @@ def event_base(technique: str | None, source: str, no_marker: bool = False, **fi
     return ev
 
 # ── Pure-Python pcap writer (LINKTYPE_ETHERNET) ───────────────────────
-def write_pcap(packets: list, out_path: str, base_interval_ms: float = 50.0) -> int:
+_PROTO_BASE_MS = {
+    # Per-protocol default inter-packet cadence (ms) when a step gives no interval.
+    # Rough real-world rhythms an anomaly NSM baselines: fast L2 bus traffic vs
+    # slower polled SCADA. Used only as a fallback; explicit step intervals win.
+    "iec61850": 4.0,     # GOOSE process-bus retransmission (ms-scale)
+    "profinet_dcp": 10.0,
+    "modbus": 200.0,     # typical Modbus poll cadence
+    "dnp3": 200.0,
+    "s7comm": 100.0,
+    "iec104": 100.0,
+    "enip": 50.0,
+    "opcua": 100.0,
+    "bacnet": 250.0,
+    "mqtt": 500.0,       # telemetry publish cadence
+}
+
+
+def write_pcap(packets: list, out_path: str, base_interval_ms: float = 50.0,
+               schedule: "list | None" = None) -> int:
     """
     Write a list of raw-bytes packets to a pcap file.
 
     All packets are written as Ethernet frames (LINKTYPE_ETHERNET = 1).
-    Timestamps include realistic jitter (±30% of base_interval_ms) to avoid
-    the uniform-spacing pattern that flags synthetic PCAPs.
+
+    Timing: when ``schedule`` is given (a list of ``(n_packets, interval_s, proto)``
+    tuples covering the packets in order), each step's packets are spaced by that
+    step's real interval — or, when the step gave no interval, by a per-protocol
+    default cadence (``_PROTO_BASE_MS``) — with ±30% jitter. This reproduces the
+    per-protocol / per-step inter-packet rhythm that anomaly NSMs (Dragos, Nozomi)
+    baseline on, instead of a single flat cadence for every capture. Without a
+    schedule it falls back to the legacy flat ``base_interval_ms`` ± 30%.
     """
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     base_ts = time.time()
     rnd = random.Random(42)  # deterministic jitter for reproducibility
+
+    # Build a per-packet inter-arrival delta (seconds) for every packet.
+    dts: list[float] = []
+    if schedule:
+        for n_pkts, interval_s, proto in schedule:
+            # Interval basis: explicit step interval, else per-protocol default.
+            base_s = interval_s if interval_s and interval_s > 0 \
+                else _PROTO_BASE_MS.get(proto, base_interval_ms) / 1000.0
+            for _ in range(n_pkts):
+                dts.append(base_s * (0.7 + rnd.random() * 0.6))
+        # Cover any trailing packets not described by the schedule (e.g. TCP
+        # teardown appended after the step's data) with the last basis used.
+        while len(dts) < len(packets):
+            dts.append(base_interval_ms * (0.7 + rnd.random() * 0.6) / 1000.0)
+    else:
+        dts = [base_interval_ms * (0.7 + rnd.random() * 0.6) / 1000.0
+               for _ in packets]
+
     current_ts = base_ts
     with open(out_path, "wb") as f:
         f.write(_PCAP_GLOBAL_HDR)
@@ -209,9 +251,7 @@ def write_pcap(packets: list, out_path: str, base_interval_ms: float = 50.0) -> 
             ts_usec = int((current_ts - ts_sec) * 1_000_000)
             f.write(struct.pack("<IIII", ts_sec, ts_usec, len(raw), len(raw)))
             f.write(raw)
-            # Add jitter: base interval ± 30%
-            jitter = base_interval_ms * (0.7 + rnd.random() * 0.6) / 1000.0
-            current_ts += jitter
+            current_ts += dts[_i] if _i < len(dts) else 0.05
     return len(packets)
 
 
